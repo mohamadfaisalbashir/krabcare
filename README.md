@@ -87,13 +87,6 @@ User hanya bisa melihat device di kolam miliknya sendiri, kecuali role `admin`
 (tidak dibatasi). Perilaku ini sudah diuji otomatis di
 `backend/tests/test_kolam_isolation.py`.
 
-## Yang Belum Ada
-
-Supaya tim frontend tidak salah asumsi saat merencanakan UI:
-
-- Fitur notifikasi (belum ada endpoint maupun tabel)
-- Forgot password
-
 ## Referensi
 
 [http://localhost:8000/docs](http://localhost:8000/docs) adalah kontrak API yang
