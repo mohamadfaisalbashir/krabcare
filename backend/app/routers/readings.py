@@ -1,0 +1,39 @@
+"""GET endpoint — data historis sensor_readings (dengan filter waktu)."""
+
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.security import DataAccessScope, get_data_access_scope
+from app.db.session import get_db
+from app.schemas.sensor_reading import SensorReadingOut
+from app.services import reading_service
+
+router = APIRouter(prefix="/readings", tags=["readings"])
+
+
+@router.get("", response_model=list[SensorReadingOut])
+async def list_readings(
+    device_id: int | None = None,
+    device_code: str | None = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    limit: int = Query(default=100, gt=0, le=1000),
+    scope: DataAccessScope = Depends(get_data_access_scope),
+    db: AsyncSession = Depends(get_db),
+) -> list[SensorReadingOut]:
+    rows = await reading_service.get_readings(
+        db, device_id, device_code, start_time, end_time, limit, scope.allowed_device_ids
+    )
+    return [
+        SensorReadingOut(
+            device_id=reading.device_id,
+            device_code=code,
+            time=reading.time,
+            ph=float(reading.ph) if reading.ph is not None else None,
+            temperature_c=float(reading.temperature_c) if reading.temperature_c is not None else None,
+            salinity_ppt=float(reading.salinity_ppt) if reading.salinity_ppt is not None else None,
+        )
+        for reading, code in rows
+    ]

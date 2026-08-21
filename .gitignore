@@ -1,0 +1,65 @@
+# ── Python (backend/, ml/) ──────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+
+# ── Environment / secrets ───────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Docker ───────────────────────────────────────────────
+*.pid
+
+# ── Database ─────────────────────────────────────────────
+*.sqlite3
+pgdata/
+
+# ── Node / Next.js (web/) ───────────────────────────────
+web/node_modules/
+web/.next/
+web/out/
+web/.env*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Flutter (mobile/) ────────────────────────────────────
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/**/ios/Pods/
+mobile/**/*.g.dart
+
+# ── Firmware (PlatformIO / ESP-IDF) ─────────────────────
+firmware/**/.pio/
+firmware/**/build/
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+
+# ── ML artifacts ─────────────────────────────────────────
+ml/**/*.pkl
+ml/**/*.joblib
+ml/**/mlruns/
+backtest_result_*.csv
+
+# ── Editor / OS ──────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Claude Code (cache/session lokal, bukan konvensi proyek) ────
+.claude/
+
+docs

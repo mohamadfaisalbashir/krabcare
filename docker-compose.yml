@@ -1,0 +1,61 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: sismon_kepiting-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sismon_kepiting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
+      POSTGRES_DB: ${POSTGRES_DB:-sismon_kepiting_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Script di sini dijalankan otomatis, berurutan sesuai nama file, hanya saat volume pgdata masih kosong.
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sismon_kepiting} -d ${POSTGRES_DB:-sismon_kepiting_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: sismon_kepiting-backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      POSTGRES_USER: ${POSTGRES_USER:-sismon_kepiting}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-sismon_kepiting_db}
+      GATEWAY_API_KEY: ${GATEWAY_API_KEY:-ai-dilarangbaca}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-ai-dilarangbaca}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
+      ML_SCHEDULER_ENABLED: ${ML_SCHEDULER_ENABLED:-true}
+      ML_SCHEDULER_INTERVAL_MINUTES: ${ML_SCHEDULER_INTERVAL_MINUTES:-60}
+      ML_HISTORY_HOURS: ${ML_HISTORY_HOURS:-24}
+      ML_FORECAST_STEPS: ${ML_FORECAST_STEPS:-6}
+      ML_BUCKET_MINUTES: ${ML_BUCKET_MINUTES:-60}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-no-reply@example.com}
+      SMTP_USE_TLS: ${SMTP_USE_TLS:-true}
+      FRONTEND_RESET_PASSWORD_URL: ${FRONTEND_RESET_PASSWORD_URL:-http://localhost:3000/reset-password}
+      PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: ${PASSWORD_RESET_TOKEN_EXPIRE_MINUTES:-30}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./ml:/app/ml:ro
+
+volumes:
+  pgdata:
