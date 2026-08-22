@@ -18,8 +18,6 @@ import argparse
 import json
 import os
 import sys
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -27,28 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.fts import forecast_next
 from ml.fuzzy.mamdani import classify_water_quality
-
-
-def _http_get(url: str, api_key: str) -> list[dict]:
-    req = urllib.request.Request(url, headers={"X-API-Key": api_key})
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)
-
-
-def _http_post(url: str, api_key: str, payload: dict) -> dict:
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={"Content-Type": "application/json", "X-API-Key": api_key},
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8")
-        raise RuntimeError(f"POST {url} -> {exc.code}: {detail}") from exc
+from ml.scripts._http import http_get, http_post
 
 
 def main() -> None:
@@ -66,7 +43,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    readings = _http_get(
+    readings = http_get(
         f"{args.base_url}/api/v1/readings?device_code={args.device_code}&limit={args.limit}",
         args.api_key,
     )
@@ -120,7 +97,7 @@ def main() -> None:
         ]
     }
 
-    response = _http_post(f"{args.base_url}/api/v1/ingest/quality", args.api_key, payload)
+    response = http_post(f"{args.base_url}/api/v1/ingest/quality", args.api_key, payload)
     print("\nHasil POST /ingest/quality:")
     print(json.dumps(response, indent=2))
 

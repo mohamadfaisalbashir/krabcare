@@ -24,6 +24,16 @@ async def _latest_per_device(
     return result.scalars().all()
 
 
+async def _device_by_id(
+    db: AsyncSession, allowed_device_ids: set[int] | None
+) -> dict[int, Device]:
+    stmt = select(Device)
+    if allowed_device_ids is not None:
+        stmt = stmt.where(Device.id.in_(allowed_device_ids))
+    result = await db.execute(stmt)
+    return {d.id: d for d in result.scalars().all()}
+
+
 async def get_latest_quality(
     db: AsyncSession,
     device_id: int | None = None,
@@ -36,12 +46,7 @@ async def get_latest_quality(
     )
     predictions = await _latest_per_device(db, FuzzyPrediction, device_id, allowed_device_ids)
     predictions_by_device = {p.device_id: p for p in predictions}
-
-    devices_stmt = select(Device)
-    if allowed_device_ids is not None:
-        devices_stmt = devices_stmt.where(Device.id.in_(allowed_device_ids))
-    devices_result = await db.execute(devices_stmt)
-    device_by_id = {d.id: d for d in devices_result.scalars().all()}
+    device_by_id = await _device_by_id(db, allowed_device_ids)
 
     items: list[dict] = []
     seen_device_ids: set[int] = set()
@@ -111,11 +116,7 @@ async def get_latest_predictions_full(
     result = await db.execute(stmt)
     rows = result.scalars().all()
 
-    devices_stmt = select(Device)
-    if allowed_device_ids is not None:
-        devices_stmt = devices_stmt.where(Device.id.in_(allowed_device_ids))
-    devices_result = await db.execute(devices_stmt)
-    device_by_id = {d.id: d for d in devices_result.scalars().all()}
+    device_by_id = await _device_by_id(db, allowed_device_ids)
 
     grouped: dict[int, list[FuzzyPrediction]] = {}
     for row in rows:

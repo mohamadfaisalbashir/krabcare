@@ -24,13 +24,16 @@ Contoh pakai:
 """
 
 import argparse
-import json
 import os
 import random
+import sys
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from ml.scripts._http import http_post
 
 # Rentang toleransi (universe of discourse) — disamakan dengan ml/fuzzy/fts.py
 # (FTS_PARAMS) & ml/fuzzy/mamdani.py (PARAMETER_SETS) supaya konsisten dengan
@@ -82,22 +85,6 @@ class DeviceState:
         return result
 
 
-def _http_post(url: str, api_key: str, payload: dict) -> dict:
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={"Content-Type": "application/json", "X-API-Key": api_key},
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8")
-        raise RuntimeError(f"POST {url} -> {exc.code}: {detail}") from exc
-
-
 def _send_batch(
     base_url: str,
     api_key: str,
@@ -119,7 +106,7 @@ def _send_batch(
             }
         )
 
-    response = _http_post(f"{base_url}/api/v1/ingest/readings", api_key, {"readings": readings})
+    response = http_post(f"{base_url}/api/v1/ingest/readings", api_key, {"readings": readings})
     print(
         f"[{timestamp.isoformat()}] inserted={response.get('inserted')} "
         f"skipped_duplicates={len(response.get('skipped_duplicates', []))} "

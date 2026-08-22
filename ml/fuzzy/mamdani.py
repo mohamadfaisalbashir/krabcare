@@ -60,6 +60,11 @@ CATEGORY_TO_DB = {"aman": "baik", "waspada": "sedang", "bahaya": "buruk"}
 
 _SEVERITY_ORDER = {"baik": 0, "sedang": 1, "buruk": 2}
 
+# Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali — dipakai backend
+# (ml_pipeline_service, notification_service) & script ml/scripts/forecast_anomaly_scan.py
+# untuk memicu notifikasi/peringatan.
+ANOMALY_CATEGORIES = {"sedang", "buruk"}
+
 
 def fuzzify(parameter: str, value: float) -> dict[str, float]:
     """Derajat keanggotaan `value` di tiap himpunan input `parameter`."""

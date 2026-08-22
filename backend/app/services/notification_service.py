@@ -10,9 +10,9 @@ from sqlalchemy.sql import func
 
 from app.core.push import send_push
 from app.models import Device, Kolam, Notification, PushToken, User
+from ml.fuzzy.mamdani import ANOMALY_CATEGORIES
 
 logger = logging.getLogger("app.services.notification_service")
-_ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
@@ -39,9 +39,9 @@ async def create_classification_notification(
     if previous == category:
         return None
 
-    if category in _ANOMALY_CATEGORIES:
+    if category in ANOMALY_CATEGORIES:
         message = f"Kualitas air {device.device_code} saat ini berstatus {category.upper()} (skor {quality_score:.1f})."
-    elif previous in _ANOMALY_CATEGORIES:
+    elif previous in ANOMALY_CATEGORIES:
         message = f"Kualitas air {device.device_code} kembali NORMAL (baik)."
     else:
         return None
@@ -105,7 +105,7 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         tokens = result.scalars().all()
         if not tokens:
             continue
-        title = "Peringatan Kualitas Air" if notif.quality_category in _ANOMALY_CATEGORIES else "Kualitas Air Membaik"
+        title = "Peringatan Kualitas Air" if notif.quality_category in ANOMALY_CATEGORIES else "Kualitas Air Membaik"
         any_success = False
         for pt in tokens:
             try:

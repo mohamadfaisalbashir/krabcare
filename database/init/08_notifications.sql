@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
     kolam_id INTEGER NOT NULL REFERENCES kolam(id) ON DELETE CASCADE,
     source TEXT NOT NULL CHECK (source IN ('classification', 'prediction')),
-    quality_category TEXT NOT NULL CHECK (quality_category IN ('baik', 'sedang', 'buruk')),
+    quality_category water_quality_category NOT NULL,
     event_time TIMESTAMPTZ NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,

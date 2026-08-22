@@ -16,11 +16,9 @@ from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
 from app.services import notification_service, quality_ingest_service
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step
-from ml.fuzzy.mamdani import classify_water_quality
+from ml.fuzzy.mamdani import ANOMALY_CATEGORIES, classify_water_quality
 
 logger = logging.getLogger("app.services.ml_pipeline_service")
-
-_ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
 
 async def _fetch_readings_as_dicts(
@@ -175,7 +173,7 @@ async def run_pipeline_for_device(
             )
         )
 
-        if result["quality_category"] in _ANOMALY_CATEGORIES:
+        if result["quality_category"] in ANOMALY_CATEGORIES:
             anomali_terdeteksi.append(h)
             prediction_anomalies.append(
                 {

@@ -22,9 +22,7 @@ import argparse
 import json
 import os
 import sys
-import urllib.error
 import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -32,32 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step
-from ml.fuzzy.mamdani import classify_water_quality
-
-# Kategori yang dianggap anomali (lihat app.models.enums.WaterQualityCategory: baik/sedang/buruk).
-_ANOMALY_CATEGORIES = {"sedang", "buruk"}
-
-
-def _http_get(url: str, api_key: str) -> list[dict]:
-    req = urllib.request.Request(url, headers={"X-API-Key": api_key})
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)
-
-
-def _http_post(url: str, api_key: str, payload: dict) -> dict:
-    body = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        method="POST",
-        headers={"Content-Type": "application/json", "X-API-Key": api_key},
-    )
-    try:
-        with urllib.request.urlopen(req) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8")
-        raise RuntimeError(f"POST {url} -> {exc.code}: {detail}") from exc
+from ml.fuzzy.mamdani import ANOMALY_CATEGORIES, classify_water_quality
+from ml.scripts._http import http_get, http_post
 
 
 def main() -> None:
@@ -81,7 +55,7 @@ def main() -> None:
     query = urllib.parse.urlencode(
         {"device_code": args.device_code, "start_time": start_time.isoformat(), "limit": 1000}
     )
-    readings = _http_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
+    readings = http_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
 
     if not readings:
         print(
@@ -142,7 +116,7 @@ def main() -> None:
             f"{predicted_salinity:<10.2f}{result['quality_score']:<8.2f}{result['quality_category']}"
         )
 
-        if result["quality_category"] in _ANOMALY_CATEGORIES:
+        if result["quality_category"] in ANOMALY_CATEGORIES:
             anomalies.append((h, target_time, result["quality_category"], result["quality_score"]))
 
         predictions_payload.append(
@@ -165,7 +139,7 @@ def main() -> None:
     else:
         print(f"Tidak ada anomali terdeteksi dalam {args.max_steps} jam ke depan (semua kategori baik).")
 
-    response = _http_post(
+    response = http_post(
         f"{args.base_url}/api/v1/ingest/quality",
         args.api_key,
         {"predictions": predictions_payload},

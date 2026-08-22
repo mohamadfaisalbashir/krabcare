@@ -23,11 +23,9 @@ Jalankan dari root project:
 
 import argparse
 import csv
-import json
 import os
 import sys
 import urllib.parse
-import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -35,16 +33,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step, rmse
+from ml.scripts._http import http_get
 
 # Batas kasar jumlah titik data teragregasi supaya hasil backtest cukup bisa dipercaya.
 _MIN_POINTS_FOR_RELIABLE_BACKTEST = 20
 _RECOMMENDED_POINTS = 30
-
-
-def _http_get(url: str, api_key: str) -> list[dict]:
-    req = urllib.request.Request(url, headers={"X-API-Key": api_key})
-    with urllib.request.urlopen(req) as resp:
-        return json.load(resp)
 
 
 def _fetch_history(
@@ -55,7 +48,7 @@ def _fetch_history(
     query = urllib.parse.urlencode(
         {"device_code": device_code, "start_time": start_time.isoformat(), "limit": 1000}
     )
-    readings = _http_get(f"{base_url}/api/v1/readings?{query}", api_key)
+    readings = http_get(f"{base_url}/api/v1/readings?{query}", api_key)
 
     return {
         "ph": [v for _, v in aggregate_by_time_bucket(readings, "ph", bucket_minutes)],

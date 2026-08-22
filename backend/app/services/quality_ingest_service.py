@@ -8,26 +8,18 @@ masing-masing tabel: fuzzy_classifications (device_id, time), fuzzy_predictions
 waktu forecast bisa menghasilkan banyak horizon sekaligus (multi-step forecast).
 """
 
-from datetime import datetime
-
-from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Device, FuzzyClassification, FuzzyPrediction
+from app.models import FuzzyClassification, FuzzyPrediction
 from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
 from app.schemas.sensor_reading import SkippedDuplicateOut
-
-
-async def _get_device_map(db: AsyncSession, device_codes: list[str]) -> dict[str, Device]:
-    result = await db.execute(select(Device).where(Device.device_code.in_(device_codes)))
-    return {d.device_code: d for d in result.scalars().all()}
+from app.services._ingest_common import get_device_map, idempotent_bulk_insert
 
 
 async def ingest_classifications(
     db: AsyncSession, classifications: list[FuzzyClassificationIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    device_map = await _get_device_map(db, [c.device_code for c in classifications])
+    device_map = await get_device_map(db, [c.device_code for c in classifications])
     unknown = sorted({c.device_code for c in classifications if c.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -49,17 +41,12 @@ async def ingest_classifications(
     skipped_duplicates: list[SkippedDuplicateOut] = []
 
     if rows:
-        stmt = (
-            pg_insert(FuzzyClassification)
-            .values(rows)
-            .on_conflict_do_nothing(
-                index_elements=[FuzzyClassification.device_id, FuzzyClassification.time]
-            )
-            .returning(FuzzyClassification.device_id, FuzzyClassification.time)
+        inserted, inserted_keys = await idempotent_bulk_insert(
+            db,
+            FuzzyClassification,
+            rows,
+            [FuzzyClassification.device_id, FuzzyClassification.time],
         )
-        result = await db.execute(stmt)
-        inserted_keys: set[tuple[int, datetime]] = {(r.device_id, r.time) for r in result.all()}
-        inserted = len(inserted_keys)
 
         skipped_duplicates = [
             SkippedDuplicateOut(device_code=device_code_by_id[row["device_id"]], time=row["time"])
@@ -75,7 +62,7 @@ async def ingest_classifications(
 async def ingest_predictions(
     db: AsyncSession, predictions: list[FuzzyPredictionIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    device_map = await _get_device_map(db, [p.device_code for p in predictions])
+    device_map = await get_device_map(db, [p.device_code for p in predictions])
     unknown = sorted({p.device_code for p in predictions if p.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -100,25 +87,12 @@ async def ingest_predictions(
         # PK (device_id, time, horizon_minutes) — satu waktu forecast bisa punya
         # banyak horizon sekaligus (multi-step forecast), jadi horizon_minutes
         # WAJIB ikut jadi bagian conflict target, bukan cuma device_id+time.
-        stmt = (
-            pg_insert(FuzzyPrediction)
-            .values(rows)
-            .on_conflict_do_nothing(
-                index_elements=[
-                    FuzzyPrediction.device_id,
-                    FuzzyPrediction.time,
-                    FuzzyPrediction.horizon_minutes,
-                ]
-            )
-            .returning(
-                FuzzyPrediction.device_id, FuzzyPrediction.time, FuzzyPrediction.horizon_minutes
-            )
+        inserted, inserted_keys = await idempotent_bulk_insert(
+            db,
+            FuzzyPrediction,
+            rows,
+            [FuzzyPrediction.device_id, FuzzyPrediction.time, FuzzyPrediction.horizon_minutes],
         )
-        result = await db.execute(stmt)
-        inserted_keys: set[tuple[int, datetime, int]] = {
-            (r.device_id, r.time, r.horizon_minutes) for r in result.all()
-        }
-        inserted = len(inserted_keys)
 
         skipped_duplicates = [
             SkippedDuplicateOut(

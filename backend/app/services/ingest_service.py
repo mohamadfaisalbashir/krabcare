@@ -1,19 +1,12 @@
 """Logika penyimpanan data sensor yang masuk dari gateway."""
 
-from datetime import datetime
-
-from sqlalchemy import select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
 from app.models import Device, SensorReading
 from app.schemas.sensor_reading import SensorReadingIn, SkippedDuplicateOut
-
-
-async def _get_device_map(db: AsyncSession, device_codes: list[str]) -> dict[str, Device]:
-    result = await db.execute(select(Device).where(Device.device_code.in_(device_codes)))
-    return {d.device_code: d for d in result.scalars().all()}
+from app.services._ingest_common import get_device_map, idempotent_bulk_insert
 
 
 async def ingest_readings(
@@ -26,7 +19,7 @@ async def ingest_readings(
     device_id+time) buat aman kalau gateway retry — baris yang sudah ada di-skip
     dan dilaporkan lewat `skipped_duplicates`, bukan ditimpa diam-diam.
     """
-    device_map = await _get_device_map(db, [r.device_code for r in readings])
+    device_map = await get_device_map(db, [r.device_code for r in readings])
     unknown = sorted({r.device_code for r in readings if r.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -46,15 +39,9 @@ async def ingest_readings(
     skipped_duplicates: list[SkippedDuplicateOut] = []
 
     if rows:
-        stmt = (
-            pg_insert(SensorReading)
-            .values(rows)
-            .on_conflict_do_nothing(index_elements=[SensorReading.device_id, SensorReading.time])
-            .returning(SensorReading.device_id, SensorReading.time)
+        inserted, inserted_keys = await idempotent_bulk_insert(
+            db, SensorReading, rows, [SensorReading.device_id, SensorReading.time]
         )
-        result = await db.execute(stmt)
-        inserted_keys: set[tuple[int, datetime]] = {(r.device_id, r.time) for r in result.all()}
-        inserted = len(inserted_keys)
 
         skipped_duplicates = [
             SkippedDuplicateOut(
