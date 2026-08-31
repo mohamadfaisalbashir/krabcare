@@ -1,4 +1,8 @@
-import { mockUser } from "@/lib/mock-data";
+"use client";
+
+import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
+import { User } from "@/lib/types";
 
 export default function Topbar({
   title,
@@ -7,7 +11,15 @@ export default function Topbar({
   title: string;
   subtitle?: string;
 }) {
-  const initial = mockUser.namaLengkap.charAt(0).toUpperCase();
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Backend TokenOut tidak membawa data user — diambil terpisah lewat GET /auth/me.
+    api.getMe().then(setUser).catch(() => {});
+  }, []);
+
+  const initial = user?.nama.charAt(0).toUpperCase() ?? "…";
+
   return (
     <header className="flex items-center justify-between border-b border-border bg-surface/80 px-5 py-4 backdrop-blur sm:px-8">
       <div>
@@ -18,8 +30,8 @@ export default function Topbar({
       </div>
       <div className="flex items-center gap-3">
         <div className="hidden text-right sm:block">
-          <p className="text-sm font-medium text-ink">{mockUser.namaLengkap}</p>
-          <p className="text-xs text-muted">{mockUser.namaTambak}</p>
+          <p className="text-sm font-medium text-ink">{user?.nama ?? "Memuat…"}</p>
+          <p className="text-xs text-muted">{user?.email ?? ""}</p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 font-display text-sm font-semibold text-white">
           {initial}

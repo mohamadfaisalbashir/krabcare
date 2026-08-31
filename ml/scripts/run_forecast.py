@@ -88,6 +88,9 @@ def main() -> None:
                 "horizon_minutes": args.horizon_minutes,
                 "predicted_quality_score": classification["quality_score"],
                 "predicted_category": classification["quality_category"],
+                "predicted_ph": predicted_ph,
+                "predicted_temperature_c": predicted_temp,
+                "predicted_salinity_ppt": predicted_salinity,
                 "model_version": "fuzzy-time-series-chen-v1",
             }
         ]

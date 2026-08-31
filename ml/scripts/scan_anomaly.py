@@ -127,6 +127,9 @@ def main() -> None:
                 "horizon_minutes": h * args.bucket_minutes,
                 "predicted_quality_score": result["quality_score"],
                 "predicted_category": result["quality_category"],
+                "predicted_ph": predicted_ph,
+                "predicted_temperature_c": predicted_temp,
+                "predicted_salinity_ppt": predicted_salinity,
                 "model_version": "fts",
             }
         )

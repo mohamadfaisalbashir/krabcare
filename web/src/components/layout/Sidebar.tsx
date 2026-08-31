@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import Logo from "./Logo";
+import { confirmLogout } from "@/lib/logout";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -56,13 +57,13 @@ export default function Sidebar({ className }: { className?: string }) {
         </nav>
       </div>
 
-      <Link
-        href="/login"
+      <button
+        onClick={confirmLogout}
         className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-ink/60 hover:bg-bg hover:text-status-bahaya"
       >
         <LogOut className="h-[18px] w-[18px]" strokeWidth={2.2} />
         Keluar
-      </Link>
+      </button>
     </aside>
   );
 }

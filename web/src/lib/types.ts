@@ -105,6 +105,10 @@ export interface FuzzyPrediction {
   horizon_minutes: number;
   predicted_quality_score: number | null;
   predicted_category: WaterQualityCategory | null;
+  /** Ramalan per parameter — null untuk baris sebelum migrasi 027f8214c47a. */
+  predicted_ph: number | null;
+  predicted_temperature_c: number | null;
+  predicted_salinity_ppt: number | null;
   model_version: string;
 }
 

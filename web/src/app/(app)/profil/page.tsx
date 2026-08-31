@@ -1,48 +1,94 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut, ShieldCheck, Pencil } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { api } from "@/lib/api";
+import { confirmLogout } from "@/lib/logout";
 import { User } from "@/lib/types";
 
+type Message = { type: "ok" | "err"; text: string } | null;
+
+/** Pesan hasil submit, dirender tepat di bawah form yang memicunya. */
+function FormMessage({ message }: { message: Message }) {
+  if (!message) return null;
+  return (
+    <p
+      className={`rounded-lg px-3.5 py-2.5 text-sm ${
+        message.type === "ok"
+          ? "bg-status-amanBg text-status-aman"
+          : "bg-status-bahayaBg text-status-bahaya"
+      }`}
+    >
+      {message.text}
+    </p>
+  );
+}
+
 export default function ProfilPage() {
-  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
+  const [nama, setNama] = useState("");
+  const [savingNama, setSavingNama] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(
-    null
-  );
+  // Dua state terpisah: kedua form sekarang berada di kolom yang berbeda, jadi
+  // satu state bersama akan memunculkan pesan di seberang form yang disubmit.
+  const [namaMessage, setNamaMessage] = useState<Message>(null);
+  const [passwordMessage, setPasswordMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.getMe().then(setUser).catch(console.error);
+    api
+      .getMe()
+      .then((u) => {
+        setUser(u);
+        setNama(u.nama);
+      })
+      .catch(console.error);
   }, []);
+
+  async function handleSaveNama(e: React.FormEvent) {
+    e.preventDefault();
+    setNamaMessage(null);
+    setSavingNama(true);
+    try {
+      setUser(await api.updateProfile(nama));
+      setNamaMessage({ type: "ok", text: "Nama berhasil diperbarui." });
+    } catch (err) {
+      setNamaMessage({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal memperbarui nama.",
+      });
+    } finally {
+      setSavingNama(false);
+    }
+  }
 
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
-    setMessage(null);
+    setPasswordMessage(null);
 
     if (newPassword !== confirmPassword) {
-      setMessage({ type: "err", text: "Konfirmasi kata sandi baru tidak cocok." });
+      setPasswordMessage({
+        type: "err",
+        text: "Konfirmasi kata sandi baru tidak cocok.",
+      });
       return;
     }
 
     setLoading(true);
     try {
       await api.changePassword(oldPassword, newPassword);
-      setMessage({ type: "ok", text: "Kata sandi berhasil diperbarui." });
+      setPasswordMessage({ type: "ok", text: "Kata sandi berhasil diperbarui." });
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err) {
-      setMessage({
+      setPasswordMessage({
         type: "err",
         text: err instanceof Error ? err.message : "Gagal memperbarui kata sandi.",
       });
@@ -51,93 +97,105 @@ export default function ProfilPage() {
     }
   }
 
-  function handleLogout() {
-    window.localStorage.removeItem("access_token");
-    router.push("/login");
-  }
-
   return (
     <>
       <Topbar title="Profil" subtitle="Kelola informasi akun Anda" />
 
-      <div className="flex-1 space-y-6 p-5 sm:max-w-xl sm:p-8">
-        {/* Identitas */}
-        <Card>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-500 font-display text-xl font-semibold text-white">
-              {user?.nama?.charAt(0).toUpperCase() ?? "?"}
-            </div>
-            <div>
-              <h3 className="font-display text-lg font-semibold text-ink">
-                {user?.nama ?? "Memuat..."}
-              </h3>
-              <p className="text-sm text-muted">{user?.email ?? "—"}</p>
-              <p className="text-xs font-medium text-muted mt-1 uppercase tracking-wider">
-                {user?.role ?? "—"}
-              </p>
-            </div>
+      <div className="flex-1 p-5 sm:p-8">
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+          {/* Kolom kiri: identitas, ubah nama, keluar akun */}
+          <div className="space-y-6">
+            <Card>
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-500 font-display text-xl font-semibold text-white">
+                  {user?.nama?.charAt(0).toUpperCase() ?? "?"}
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-ink">
+                    {user?.nama ?? "Memuat..."}
+                  </h3>
+                  <p className="text-sm text-muted">{user?.email ?? "—"}</p>
+                  <p className="text-xs font-medium text-muted mt-1 uppercase tracking-wider">
+                    {user?.role ?? "—"}
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Ubah nama profil (PUT /auth/me) */}
+            <Card>
+              <div className="mb-4 flex items-center gap-2.5">
+                <Pencil className="h-5 w-5 text-brand-500" />
+                <h3 className="font-display text-base font-semibold text-ink">
+                  Ubah Nama
+                </h3>
+              </div>
+              <form onSubmit={handleSaveNama} className="space-y-4">
+                <Input
+                  label="Nama lengkap"
+                  value={nama}
+                  onChange={(e) => setNama(e.target.value)}
+                  required
+                />
+                <FormMessage message={namaMessage} />
+                <Button type="submit" disabled={savingNama || nama === user?.nama}>
+                  {savingNama ? "Menyimpan..." : "Simpan nama"}
+                </Button>
+              </form>
+            </Card>
+
+            <button
+              onClick={confirmLogout}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
+            >
+              <LogOut className="h-4 w-4" /> Keluar Akun
+            </button>
           </div>
-        </Card>
 
-        {/* Ganti kata sandi */}
-        <Card>
-          <div className="mb-4 flex items-center gap-2.5">
-            <ShieldCheck className="h-5 w-5 text-brand-500" />
-            <h3 className="font-display text-base font-semibold text-ink">
-              Ubah Kata Sandi
-            </h3>
+          {/* Kolom kanan: ganti kata sandi */}
+          <div className="space-y-6">
+            <Card>
+              <div className="mb-4 flex items-center gap-2.5">
+                <ShieldCheck className="h-5 w-5 text-brand-500" />
+                <h3 className="font-display text-base font-semibold text-ink">
+                  Ubah Kata Sandi
+                </h3>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <Input
+                  label="Kata sandi lama"
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  required
+                />
+                <Input
+                  label="Kata sandi baru"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+                <Input
+                  label="Konfirmasi kata sandi baru"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                />
+
+                <FormMessage message={passwordMessage} />
+
+                <Button type="submit" disabled={loading}>
+                  {loading ? "Menyimpan..." : "Simpan perubahan"}
+                </Button>
+              </form>
+            </Card>
           </div>
-
-          <form onSubmit={handleChangePassword} className="space-y-4">
-            <Input
-              label="Kata sandi lama"
-              type="password"
-              value={oldPassword}
-              onChange={(e) => setOldPassword(e.target.value)}
-              required
-            />
-            <Input
-              label="Kata sandi baru"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-            <Input
-              label="Konfirmasi kata sandi baru"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-
-            {message && (
-              <p
-                className={`rounded-lg px-3.5 py-2.5 text-sm ${
-                  message.type === "ok"
-                    ? "bg-status-amanBg text-status-aman"
-                    : "bg-status-bahayaBg text-status-bahaya"
-                }`}
-              >
-                {message.text}
-              </p>
-            )}
-
-            <Button type="submit" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan perubahan"}
-            </Button>
-          </form>
-        </Card>
-
-        {/* Keluar akun */}
-        <button
-          onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
-        >
-          <LogOut className="h-4 w-4" /> Keluar Akun
-        </button>
+        </div>
       </div>
     </>
   );

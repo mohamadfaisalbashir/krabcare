@@ -177,6 +177,11 @@ async def run_pipeline_for_device(
                 horizon_minutes=h * bucket_minutes,
                 predicted_quality_score=result["quality_score"],
                 predicted_category=result["quality_category"],
+                # Nilai per parameter ikut disimpan, bukan cuma agregatnya —
+                # web menampilkan tren tiap parameter, bukan satu skor gabungan.
+                predicted_ph=ph_forecast[h - 1],
+                predicted_temperature_c=temp_forecast[h - 1],
+                predicted_salinity_ppt=salinity_forecast[h - 1],
                 model_version="fts",
             )
         )

@@ -12,6 +12,12 @@ services:
     # Menimpa CMD Dockerfile: tanpa --reload.
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
+  web:
+    build:
+      args:
+        # Domain API publik (lihat DOMAIN di env.production.example) — bukan localhost.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.domain-anda.com/api/v1}
+
   caddy:
     image: caddy:2-alpine
     container_name: sismon_kepiting-caddy
@@ -25,6 +31,7 @@ services:
       - caddy_config:/config
     depends_on:
       - backend
+      - web
     logging:
       driver: "json-file"
       options:

@@ -10,9 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { SensorReading } from "@/lib/types";
-
-/** Key-ke-field mapping sesuai SensorReadingOut backend. */
-type ParamKey = "ph" | "temperature_c" | "salinity_ppt";
+import { ParamKey } from "@/lib/parameter";
 
 const PARAM_CONFIG: Record<ParamKey, { label: string; color: string; unit: string }> = {
   ph: { label: "pH", color: "#0E6E5C", unit: "" },

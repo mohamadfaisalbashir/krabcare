@@ -85,5 +85,36 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  web:
+    build:
+      context: ./web
+      args:
+        # Dibaca browser pengguna, jadi harus alamat host — BUKAN nama service
+        # Docker. Next meng-inline nilai ini ke bundel saat build, bukan runtime,
+        # makanya lewat build args dan bukan environment.
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+    container_name: sismon_kepiting-web
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # Lihat catatan di service db — di VPS hanya Caddy yang boleh terekspos ke luar.
+      - "127.0.0.1:3000:3000"
+    healthcheck:
+      # "/" membalas 307 ke /login, jadi cek langsung ke halaman tujuannya.
+      # 127.0.0.1, BUKAN localhost: wget busybox mencoba ::1 duluan sedangkan
+      # server standalone hanya listen IPv4 (HOSTNAME=0.0.0.0) → connection refused.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   pgdata:

@@ -4,37 +4,24 @@ import { useEffect, useMemo, useState } from "react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import StatusBadge from "@/components/ui/StatusBadge";
-import {
-  SensorReading,
-  Kolam,
-  StatusLabel,
-  WaterQualityCategory,
-  categoryToLabel,
-} from "@/lib/types";
-import { mockKolam, mockHistoryReadings } from "@/lib/mock-data";
+import { SensorReading, Kolam, StatusLabel } from "@/lib/types";
+import { PARAM_KEYS, statusOf } from "@/lib/parameter";
 import { api } from "@/lib/api";
 import clsx from "clsx";
 
-// Batas parameter untuk menentukan status visual tiap reading
+const SEVERITY: StatusLabel[] = ["Aman", "Waspada", "Bahaya"];
+
+/** Status satu reading = status TERBURUK dari ketiga parameternya.
+ *  Ambangnya dipakai bersama halaman detail rak lewat lib/parameter.ts. */
 function readingStatus(reading: SensorReading): StatusLabel {
-  const { ph, temperature_c, salinity_ppt } = reading;
-  // Salah satu di luar toleransi → Bahaya
-  if (
-    (ph != null && (ph < 6.5 || ph > 9.0)) ||
-    (temperature_c != null && (temperature_c < 20 || temperature_c > 35)) ||
-    (salinity_ppt != null && (salinity_ppt < 5 || salinity_ppt > 40))
-  ) {
-    return "Bahaya";
+  let worst: StatusLabel = "Aman";
+  for (const param of PARAM_KEYS) {
+    const value = reading[param];
+    if (value == null) continue;
+    const status = statusOf(param, value);
+    if (SEVERITY.indexOf(status) > SEVERITY.indexOf(worst)) worst = status;
   }
-  // Salah satu di luar optimal → Waspada
-  if (
-    (ph != null && (ph < 7.5 || ph > 8.5)) ||
-    (temperature_c != null && (temperature_c < 28 || temperature_c > 30)) ||
-    (salinity_ppt != null && (salinity_ppt < 10 || salinity_ppt > 30))
-  ) {
-    return "Waspada";
-  }
-  return "Aman";
+  return worst;
 }
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
@@ -45,17 +32,20 @@ const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
 ];
 
 export default function LogHistorisPage() {
-  const [readings, setReadings] = useState<SensorReading[]>(
-    mockHistoryReadings(1)
-  );
-  const [kolamList, setKolamList] = useState<Kolam[]>(mockKolam);
+  const [readings, setReadings] = useState<SensorReading[]>([]);
+  const [kolamList, setKolamList] = useState<Kolam[]>([]);
+  // Reading hanya membawa device_id/device_code, tidak membawa kolam_id — jadi
+  // pemetaan kolam → device dibuat sekali di sini supaya filternya benar.
+  const [deviceIdsByKolam, setDeviceIdsByKolam] = useState<Record<number, number[]>>({});
   const [kolamFilter, setKolamFilter] = useState<string>("semua");
-  const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">(
-    "Semua"
-  );
+  const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
+      setError(null);
       try {
         const [kolams, allReadings] = await Promise.all([
           api.listKolam(),
@@ -63,8 +53,22 @@ export default function LogHistorisPage() {
         ]);
         setKolamList(kolams);
         setReadings(allReadings);
-      } catch {
-        // fallback ke mock data
+
+        const pairs = await Promise.all(
+          kolams.map(async (k) => {
+            try {
+              const devices = await api.getKolamDevices(k.id);
+              return [k.id, devices.map((d) => d.id)] as const;
+            } catch {
+              return [k.id, [] as number[]] as const;
+            }
+          })
+        );
+        setDeviceIdsByKolam(Object.fromEntries(pairs));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
+      } finally {
+        setLoading(false);
       }
     }
     load();
@@ -75,18 +79,12 @@ export default function LogHistorisPage() {
       readings
         .filter((r) => {
           if (kolamFilter === "semua") return true;
-          // Filter by device code sebagai proxy kolam (TODO: proper kolam-device mapping)
-          return r.device_code === kolamFilter;
+          const ids = deviceIdsByKolam[Number(kolamFilter)] ?? [];
+          return ids.includes(r.device_id);
         })
-        .filter((r) => {
-          if (statusFilter === "Semua") return true;
-          return readingStatus(r) === statusFilter;
-        })
-        .sort(
-          (a, b) =>
-            new Date(b.time).getTime() - new Date(a.time).getTime()
-        ),
-    [readings, kolamFilter, statusFilter]
+        .filter((r) => statusFilter === "Semua" || readingStatus(r) === statusFilter)
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
+    [readings, kolamFilter, statusFilter, deviceIdsByKolam]
   );
 
   return (
@@ -106,7 +104,7 @@ export default function LogHistorisPage() {
           >
             <option value="semua">Semua kolam</option>
             {kolamList.map((k) => (
-              <option key={k.id} value={k.nama}>
+              <option key={k.id} value={k.id}>
                 {k.nama}
               </option>
             ))}
@@ -130,10 +128,19 @@ export default function LogHistorisPage() {
           </div>
         </Card>
 
+        {error && (
+          <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
+            {error}
+          </p>
+        )}
+
         {/* Daftar reading */}
         <Card className="p-0">
           <div className="divide-y divide-border">
-            {filtered.length === 0 && (
+            {loading && (
+              <p className="p-6 text-center text-sm text-muted">Memuat log...</p>
+            )}
+            {!loading && filtered.length === 0 && (
               <p className="p-6 text-center text-sm text-muted">
                 Tidak ada data log untuk filter yang dipilih.
               </p>

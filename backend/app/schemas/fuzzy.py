@@ -28,6 +28,9 @@ class FuzzyPredictionOut(BaseModel):
     horizon_minutes: int
     predicted_quality_score: float | None
     predicted_category: WaterQualityCategory | None
+    predicted_ph: float | None = None
+    predicted_temperature_c: float | None = None
+    predicted_salinity_ppt: float | None = None
     model_version: str
 
     model_config = {"from_attributes": True}
@@ -71,6 +74,10 @@ class FuzzyPredictionIn(BaseModel):
     horizon_minutes: int = Field(gt=0)
     predicted_quality_score: float | None = Field(default=None, ge=0, le=100)
     predicted_category: WaterQualityCategory | None = None
+    # Ramalan per parameter — opsional supaya payload lama tetap diterima.
+    predicted_ph: float | None = None
+    predicted_temperature_c: float | None = None
+    predicted_salinity_ppt: float | None = None
     model_version: str = "v1"
 
 

@@ -11,6 +11,13 @@ function getToken(): string | null {
   return window.localStorage.getItem("access_token");
 }
 
+/** Buang token lalu lempar ke halaman login. Dipakai tombol keluar & handler 401. */
+export function logout(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem("access_token");
+  window.location.href = "/login";
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -27,10 +34,7 @@ async function request<T>(
   });
 
   if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      window.localStorage.removeItem("access_token");
-      window.location.href = "/login";
-    }
+    logout();
     throw new Error("Sesi berakhir, silakan login kembali.");
   }
 
@@ -53,6 +57,13 @@ export const api = {
     request<import("./types").TokenOut>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    }),
+
+  /** POST /auth/register → UserOut */
+  register: (email: string, password: string, nama: string) =>
+    request<import("./types").User>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password, nama }),
     }),
 
   /** GET /auth/me → UserOut */
@@ -87,6 +98,27 @@ export const api = {
     }),
 
   // ── Kolam (routers/kolam.py) ──────────────────────────────────────
+
+  /** POST /kolam → KolamOut */
+  createKolam: (nama: string, lokasi?: string) =>
+    request<import("./types").Kolam>("/kolam", {
+      method: "POST",
+      body: JSON.stringify({ nama, lokasi: lokasi || null }),
+    }),
+
+  /** PUT /kolam/:id → KolamOut. Backend menimpa nama DAN lokasi (bukan partial),
+   *  jadi kirim keduanya walau yang diubah cuma namanya. */
+  updateKolam: (kolamId: number, nama: string, lokasi?: string) =>
+    request<import("./types").Kolam>(`/kolam/${kolamId}`, {
+      method: "PUT",
+      body: JSON.stringify({ nama, lokasi: lokasi || null }),
+    }),
+
+  /** POST /kolam/:id/devices/:code → 204 (klaim device ke kolam) */
+  claimDevice: (kolamId: number, deviceCode: string) =>
+    request<void>(`/kolam/${kolamId}/devices/${deviceCode}`, {
+      method: "POST",
+    }),
 
   /** GET /kolam → KolamOut[] */
   listKolam: () => request<import("./types").Kolam[]>("/kolam"),

@@ -31,6 +31,12 @@ class FuzzyPrediction(Base):
     horizon_minutes: Mapped[int] = mapped_column(primary_key=True)
     target_time: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     predicted_quality_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
+    # Nilai ramalan per parameter (hasil FTS sebelum dilebur Mamdani jadi skor
+    # agregat di atas). Presisi disamakan dengan sensor_readings supaya nilai
+    # ramalan dan nilai terukur dibulatkan sama.
+    predicted_ph: Mapped[float | None] = mapped_column(Numeric(4, 2))
+    predicted_temperature_c: Mapped[float | None] = mapped_column(Numeric(4, 1))
+    predicted_salinity_ppt: Mapped[float | None] = mapped_column(Numeric(5, 2))
     predicted_category: Mapped[WaterQualityCategory | None] = mapped_column(
         SAEnum(
             WaterQualityCategory,

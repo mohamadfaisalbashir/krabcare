@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Device, Kolam, User
-from app.models.enums import DeviceType, UserRole
+from app.models.enums import UserRole
 from app.schemas.kolam import KolamCreateIn, KolamUpdateIn
 
 
@@ -17,7 +17,8 @@ class DeviceNotFoundError(KolamError):
 
 
 class DeviceAlreadyClaimedError(KolamError):
-    """Device sudah diklaim kolam lain."""
+    """Klaim ditolak karena konflik: device sudah milik kolam lain, ATAU kolam
+    tujuan sudah terhubung ke device lain (satu rak = satu device)."""
 
 
 async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) -> Kolam:
@@ -56,8 +57,9 @@ async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -
 async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Device:
     """Klaim device (by device_code) ke `kolam`.
 
-    Klaim master_node ikut menarik semua slave di bawahnya, supaya user tidak
-    perlu klaim satu-satu per level rak.
+    Satu kolam = satu rak = TEPAT SATU device. Klaim kedua ditolak 409, dan
+    tidak ada lagi cascade master -> slave: kalau cascade dibiarkan, mengklaim
+    master tetap menyeret semua slave ke satu kolam lewat API.
     """
     result = await db.execute(select(Device).where(Device.device_code == device_code))
     device = result.scalar_one_or_none()
@@ -67,16 +69,16 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
     if device.kolam_id is not None and device.kolam_id != kolam.id:
         raise DeviceAlreadyClaimedError(f"Device '{device_code}' sudah diklaim kolam lain")
 
-    device.kolam_id = kolam.id
-
-    if device.device_type == DeviceType.MASTER_NODE:
-        children_result = await db.execute(
-            select(Device).where(Device.parent_device_id == device.id)
+    # Klaim ulang device yang sama tetap idempoten; yang ditolak cuma device kedua.
+    occupant_result = await db.execute(select(Device).where(Device.kolam_id == kolam.id))
+    occupant = occupant_result.scalars().first()
+    if occupant is not None and occupant.id != device.id:
+        raise DeviceAlreadyClaimedError(
+            f"Kolam ini sudah terhubung ke device '{occupant.device_code}'. "
+            "Satu rak hanya boleh terhubung ke satu device."
         )
-        for child in children_result.scalars().all():
-            # Cascade tidak boleh mengambil-alih slave milik kolam lain.
-            if child.kolam_id is None or child.kolam_id == kolam.id:
-                child.kolam_id = kolam.id
+
+    device.kolam_id = kolam.id
 
     await db.commit()
     await db.refresh(device)

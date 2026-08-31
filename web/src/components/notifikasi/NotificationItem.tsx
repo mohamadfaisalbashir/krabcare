@@ -25,13 +25,19 @@ const STATUS_STYLE: Record<
   },
 };
 
-export default function NotificationItem({ item }: { item: Notification }) {
+export default function NotificationItem({
+  item,
+  onRead,
+}: {
+  item: Notification;
+  onRead?: (id: number) => void;
+}) {
   const label = categoryToLabel(item.quality_category as WaterQualityCategory);
   const style = STATUS_STYLE[label];
   const Icon = style.icon;
 
   return (
-    <div className="flex gap-4 px-5 py-4">
+    <div className={clsx("flex gap-4 px-5 py-4", !item.is_read && "bg-brand-50/40")}>
       <div
         className={clsx(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
@@ -49,14 +55,27 @@ export default function NotificationItem({ item }: { item: Notification }) {
           <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
             {SOURCE_LABEL[item.source] ?? item.source}
           </span>
+          {!item.is_read && (
+            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
+          )}
         </div>
         <p className="mt-1 text-sm leading-relaxed text-ink/80">{item.message}</p>
-        <p className="mt-1.5 text-xs text-muted">
-          {new Date(item.created_at).toLocaleString("id-ID", {
-            dateStyle: "medium",
-            timeStyle: "short",
-          })}
-        </p>
+        <div className="mt-1.5 flex items-center gap-3">
+          <p className="text-xs text-muted">
+            {new Date(item.created_at).toLocaleString("id-ID", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+          {!item.is_read && onRead && (
+            <button
+              onClick={() => onRead(item.id)}
+              className="text-xs font-semibold text-brand-600 hover:underline"
+            >
+              Tandai dibaca
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

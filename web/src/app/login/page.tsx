@@ -129,6 +129,16 @@ export default function LoginPage() {
             <Button type="submit" fullWidth disabled={loading}>
               {loading ? "Memproses..." : "Masuk"}
             </Button>
+
+            <p className="text-center text-sm text-muted">
+              Belum punya akun?{" "}
+              <Link
+                href="/daftar"
+                className="font-medium text-brand-600 hover:underline"
+              >
+                Daftar di sini
+              </Link>
+            </p>
           </form>
         </div>
       </section>

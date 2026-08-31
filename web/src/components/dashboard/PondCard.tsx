@@ -13,10 +13,11 @@ const STATUS_BORDER: Record<StatusLabel, string> = {
 export default function PondCard({ item }: { item: KolamDashboard }) {
   const { kolam, quality, latestReading } = item;
 
-  // Tentukan status UI dari klasifikasi terbaru device (fallback: Waspada)
-  const statusLabel: StatusLabel = quality?.classification
+  // null = belum ada klasifikasi (device belum diklaim / belum kirim data).
+  // Jangan dipaksa jadi "Waspada" — itu bikin kolam kosong terlihat seperti anomali.
+  const statusLabel: StatusLabel | null = quality?.classification
     ? categoryToLabel(quality.classification.quality_category)
-    : "Waspada";
+    : null;
 
   const updated = latestReading
     ? new Date(latestReading.time).toLocaleTimeString("id-ID", {
@@ -30,7 +31,7 @@ export default function PondCard({ item }: { item: KolamDashboard }) {
       href={`/kolam/${kolam.id}`}
       className={clsx(
         "card group flex items-center justify-between border-l-4 p-5 transition hover:shadow-lg",
-        STATUS_BORDER[statusLabel]
+        statusLabel ? STATUS_BORDER[statusLabel] : "border-l-border"
       )}
     >
       <div className="min-w-0">
@@ -38,7 +39,13 @@ export default function PondCard({ item }: { item: KolamDashboard }) {
           <h3 className="truncate font-display text-base font-semibold text-ink">
             {kolam.nama}
           </h3>
-          <StatusBadge status={statusLabel} size="sm" />
+          {statusLabel ? (
+            <StatusBadge status={statusLabel} size="sm" />
+          ) : (
+            <span className="rounded-full bg-bg px-2.5 py-1 text-xs font-medium text-muted">
+              Belum ada data
+            </span>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">

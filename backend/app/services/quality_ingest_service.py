@@ -71,6 +71,9 @@ async def ingest_predictions(
             "horizon_minutes": p.horizon_minutes,
             "predicted_quality_score": p.predicted_quality_score,
             "predicted_category": p.predicted_category,
+            "predicted_ph": p.predicted_ph,
+            "predicted_temperature_c": p.predicted_temperature_c,
+            "predicted_salinity_ppt": p.predicted_salinity_ppt,
             "model_version": p.model_version,
         }
         for p in predictions
