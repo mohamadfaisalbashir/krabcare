@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
-"""Script uji end-to-end pipeline fuzzy time series (Chen) untuk prediksi kualitas air:
+"""Prediksi satu langkah ke depan (FTS Chen) untuk satu device, lalu kirim hasilnya.
 
-1. Tarik histori reading per device dari GET /api/v1/readings
-2. Jalankan fuzzy time series (ml/fuzzy/fts.py) per parameter -> nilai prediksi mentah
-3. Klasifikasikan nilai prediksi lewat modul Mamdani Task 2 (ml/fuzzy/mamdani.py)
-   untuk mendapatkan predicted_quality_score/predicted_category
-4. Push hasil prediksi via POST /api/v1/ingest/quality (field `predictions`,
-   endpoint & schema yang sama seperti klasifikasi — tidak ada jalur ingest baru)
+Alur: GET /api/v1/readings -> forecast_next() per parameter -> nilai ramalan
+diklasifikasi ulang lewat Mamdani -> POST /api/v1/ingest/quality (field
+`predictions`, endpoint yang sama dengan klasifikasi).
 
-Standalone, tanpa dependency eksternal (urllib bawaan Python).
+Versi multi-langkah + deteksi anomali ada di scan_anomaly.py.
 
-Jalankan dari root project:
-    python ml/scripts/test_e2e_prediction.py
+    python ml/scripts/run_forecast.py --device-code SLV1
 """
 
 import argparse
@@ -25,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.fts import forecast_next
 from ml.fuzzy.mamdani import classify_water_quality
-from ml.scripts._http import http_get, http_post
+from ml.scripts.api_client import api_get, api_post
 
 
 def main() -> None:
@@ -43,7 +39,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    readings = http_get(
+    readings = api_get(
         f"{args.base_url}/api/v1/readings?device_code={args.device_code}&limit={args.limit}",
         args.api_key,
     )
@@ -54,7 +50,7 @@ def main() -> None:
         )
         return
 
-    # GET /readings mengembalikan urutan time DESC (terbaru dulu) -> balik ke kronologis (lama -> baru).
+    # API balas time DESC; FTS butuh kronologis (lama -> baru).
     readings.sort(key=lambda r: r["time"])
 
     ph_history = [r["ph"] for r in readings if r["ph"] is not None]
@@ -97,7 +93,7 @@ def main() -> None:
         ]
     }
 
-    response = http_post(f"{args.base_url}/api/v1/ingest/quality", args.api_key, payload)
+    response = api_post(f"{args.base_url}/api/v1/ingest/quality", args.api_key, payload)
     print("\nHasil POST /ingest/quality:")
     print(json.dumps(response, indent=2))
 

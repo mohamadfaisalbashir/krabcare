@@ -17,6 +17,7 @@ from app.services import kolam_service
 
 
 async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
+    """Dependency endpoint /ingest/*: wajib header X-API-Key milik gateway."""
     if x_api_key != settings.GATEWAY_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -26,12 +27,15 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
+    """Hash bcrypt untuk disimpan di kolom users.password_hash."""
     return _pwd_context.hash(password)
 
 def verify_password(password: str, password_hash: str) -> bool:
+    """Cocokkan password plaintext dengan hash-nya."""
     return _pwd_context.verify(password, password_hash)
 
 def create_access_token(user_id: int) -> str:
+    """Terbitkan JWT HS256 berisi user_id (sub) + masa berlaku."""
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user_id),
@@ -41,9 +45,9 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 async def _resolve_user_from_token(token: str, db: AsyncSession) -> User | None:
-    """Decode JWT & muat User terkait. Return None (bukan raise) kalau token/user
-    invalid — dipakai baik oleh get_current_user (yang lalu raise 401) maupun
-    get_data_access_scope (yang masih perlu fallback ke X-API-Key sebelum raise)."""
+    """Decode JWT & muat User-nya. Return None (bukan raise) kalau token/user invalid —
+    pemanggil yang menentukan: get_current_user langsung 401, get_data_access_scope
+    masih coba fallback ke X-API-Key dulu."""
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = int(payload["sub"])
@@ -64,6 +68,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Dependency endpoint khusus user (kolam, notifikasi, auth/me): wajib JWT valid."""
     user = await _resolve_user_from_token(credentials.credentials, db)
     if user is None:
         raise HTTPException(
@@ -75,11 +80,11 @@ async def get_current_user(
 
 @dataclass
 class DataAccessScope:
-    """Hasil resolusi akses baca data.
+    """Batas akses baca data hasil resolusi dua jalur auth.
 
-    - Dari gateway (X-API-Key valid): user=None, allowed_device_ids=None (tidak dibatasi).
-    - Dari user (JWT valid), role ADMIN: user=<User>, allowed_device_ids=None (tidak dibatasi).
-    - Dari user (JWT valid), role lain: user=<User>, allowed_device_ids=set[int] (bisa kosong).
+    - Gateway (X-API-Key valid): user=None, allowed_device_ids=None (tidak dibatasi).
+    - User role ADMIN: user=<User>, allowed_device_ids=None (tidak dibatasi).
+    - User role lain: user=<User>, allowed_device_ids=set[int] (bisa kosong).
     """
 
     user: User | None
@@ -94,9 +99,8 @@ async def get_data_access_scope(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme_optional),
     db: AsyncSession = Depends(get_db),
 ) -> DataAccessScope:
-    """Dua jalur akses baca data: X-API-Key gateway (full akses, tidak dibatasi
-    kolam) atau Bearer JWT user (dibatasi ke device dari kolam miliknya, kecuali
-    admin). 401 kalau dua-duanya tidak ada/tidak valid."""
+    """Dependency endpoint baca data (readings, quality): terima X-API-Key gateway
+    ATAU Bearer JWT user. 401 kalau dua-duanya tidak ada/tidak valid."""
     if x_api_key is not None and x_api_key == settings.GATEWAY_API_KEY:
         return DataAccessScope(user=None, allowed_device_ids=None)
 

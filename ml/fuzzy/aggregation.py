@@ -1,11 +1,9 @@
-"""Agregasi data time-series mentah ke bucket waktu N-menit (rata-rata per bucket).
+"""Agregasi reading mentah ke bucket waktu N-menit (rata-rata per bucket).
 
-Dipakai untuk meratakan reading sensor mentah (interval sampling bisa tidak
-teratur) jadi deret waktu per-jam yang siap dipakai fuzzy time series
-(ml/fuzzy/fts.py) — forecast_next()/forecast_multi_step() butuh histori dengan
-spasi waktu yang konsisten.
+Interval sampling sensor tidak selalu teratur, sedangkan FTS (ml/fuzzy/fts.py)
+butuh deret waktu berspasi konsisten — modul ini yang meratakannya.
 
-Murni Python stdlib, konsisten dengan modul ml/fuzzy/ lainnya.
+Murni stdlib, konsisten dengan modul ml/fuzzy/ lainnya.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -19,10 +17,9 @@ def _parse_iso(time_str: str) -> datetime:
 
 
 def _bucket_start(dt: datetime, bucket_minutes: int) -> datetime:
-    """Bulatkan `dt` ke awal bucket `bucket_minutes` sejak epoch (floor per-bucket).
+    """Floor `dt` ke awal bucket, dihitung dari epoch.
 
-    Untuk bucket_minutes=60, ini otomatis jatuh ke batas jam bulat UTC (00:00,
-    01:00, dst) — konsisten dengan istilah "per-jam" di seluruh modul ini.
+    Untuk bucket_minutes=60 hasilnya jatuh tepat di jam bulat UTC.
     """
     minutes_since_epoch = (dt - _EPOCH).total_seconds() / 60
     bucket_index = int(minutes_since_epoch // bucket_minutes)
@@ -32,14 +29,13 @@ def _bucket_start(dt: datetime, bucket_minutes: int) -> datetime:
 def aggregate_by_time_bucket(
     readings: list[dict], value_key: str, bucket_minutes: int = 60
 ) -> list[tuple[datetime, float]]:
-    """Kelompokkan `readings` ke bucket waktu `bucket_minutes`, rata-ratakan `value_key`.
+    """Kelompokkan `readings` per bucket waktu, rata-ratakan `value_key`.
 
-    - `readings`: list of dict, tiap dict minimal punya "time" (str ISO 8601) dan
-      field `value_key` (angka atau None).
-    - Nilai None di-skip (tidak ikut dihitung rata-rata).
-    - Bucket yang sama sekali tidak punya nilai valid ikut di-skip dari hasil
-      (bukan diisi None) — supaya deret hasil aggregasi tidak punya "lubang".
-    - Return: list (waktu_mulai_bucket, nilai_rata_rata) terurut kronologis.
+    Tiap reading minimal punya "time" (ISO 8601) & `value_key`. Nilai None
+    dilewati, dan bucket tanpa satu pun nilai valid tidak ikut keluar (bukan
+    diisi None) supaya deret hasilnya tidak berlubang.
+
+    Return: list (waktu_mulai_bucket, rata_rata) terurut kronologis.
     """
     sums: dict[datetime, float] = {}
     counts: dict[datetime, int] = {}

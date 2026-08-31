@@ -1,4 +1,4 @@
-"""Logika manajemen kolam (unit budidaya) & klaim device — dasar isolasi kepemilikan data."""
+"""Manajemen kolam & klaim device — dasar isolasi kepemilikan data."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +9,7 @@ from app.schemas.kolam import KolamCreateIn, KolamUpdateIn
 
 
 class KolamError(Exception):
-    """Error domain kolam (base class)."""
+    """Base error domain kolam."""
 
 
 class DeviceNotFoundError(KolamError):
@@ -21,6 +21,7 @@ class DeviceAlreadyClaimedError(KolamError):
 
 
 async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) -> Kolam:
+    """Kolam baru, langsung terikat ke pembuatnya."""
     kolam = Kolam(owner_user_id=owner.id, nama=payload.nama, lokasi=payload.lokasi)
     db.add(kolam)
     await db.commit()
@@ -29,13 +30,14 @@ async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) ->
 
 
 async def list_kolam(db: AsyncSession, owner: User) -> list[Kolam]:
+    """Kolam milik `owner` saja."""
     result = await db.execute(select(Kolam).where(Kolam.owner_user_id == owner.id))
     return list(result.scalars().all())
 
 
 async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam | None:
-    """None kalau kolam tidak ada ATAU bukan milik `owner` — sengaja tidak
-    dibedakan, supaya router balas 404 seragam tanpa bocorkan info kepemilikan."""
+    """None kalau kolam tidak ada ATAU bukan milik `owner` — sengaja tidak dibedakan,
+    supaya router balas 404 seragam tanpa membocorkan keberadaan kolam orang lain."""
     result = await db.execute(
         select(Kolam).where(Kolam.id == kolam_id, Kolam.owner_user_id == owner.id)
     )
@@ -43,6 +45,7 @@ async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam
 
 
 async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -> Kolam:
+    """Perbarui nama & lokasi kolam."""
     kolam.nama = payload.nama
     kolam.lokasi = payload.lokasi
     await db.commit()
@@ -53,10 +56,8 @@ async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -
 async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Device:
     """Klaim device (by device_code) ke `kolam`.
 
-    Kalau device yang diklaim adalah master_node, ikut assign kolam_id yang sama
-    ke semua slave node di bawahnya (parent_device_id = device ini) — supaya user
-    tidak perlu klaim satu-satu per level rak. Slave yang sudah diklaim kolam LAIN
-    dilewati (tidak diambil-alih diam-diam).
+    Klaim master_node ikut menarik semua slave di bawahnya, supaya user tidak
+    perlu klaim satu-satu per level rak.
     """
     result = await db.execute(select(Device).where(Device.device_code == device_code))
     device = result.scalar_one_or_none()
@@ -73,9 +74,7 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
             select(Device).where(Device.parent_device_id == device.id)
         )
         for child in children_result.scalars().all():
-            # Cuma assign slave yang belum diklaim atau sudah di kolam ini juga —
-            # cascade TIDAK boleh diam-diam mengambil-alih device yang sudah
-            # diklaim kolam lain (mis. milik user lain).
+            # Cascade tidak boleh mengambil-alih slave milik kolam lain.
             if child.kolam_id is None or child.kolam_id == kolam.id:
                 child.kolam_id = kolam.id
 
@@ -85,7 +84,7 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
 
 
 async def list_kolam_devices(db: AsyncSession, kolam: Kolam) -> list[Device]:
-    """Semua device yang diklaim ke `kolam` ini, urut level_number lalu device_code."""
+    """Device dalam `kolam`, urut level_number lalu device_code."""
     result = await db.execute(
         select(Device)
         .where(Device.kolam_id == kolam.id)
@@ -95,8 +94,7 @@ async def list_kolam_devices(db: AsyncSession, kolam: Kolam) -> list[Device]:
 
 
 async def get_allowed_device_ids(db: AsyncSession, user: User) -> set[int] | None:
-    """Return None kalau `user` admin (artinya: akses tidak dibatasi), selain itu
-    set device_id yang kolam-nya dimiliki `user` (bisa kosong)."""
+    """Himpunan device yang boleh dibaca `user`. None = admin, tidak dibatasi."""
     if user.role == UserRole.ADMIN:
         return None
 

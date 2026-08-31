@@ -1,11 +1,9 @@
-"""Test isolasi kepemilikan data kolam: user A tidak boleh lihat device milik user B,
-dan X-API-Key gateway tetap full-access (mereplikasi skenario manual testing 3-6).
+"""Test isolasi kepemilikan data: user A tidak boleh melihat device milik user B,
+sementara X-API-Key gateway tetap full-access.
 
-CATATAN: test ini jalan LANGSUNG terhadap DB dev yang sama (docker-compose db+backend
-harus sudah `up`), bukan DB test terpisah — pragmatis untuk skala proyek ini (belum
-ada infrastruktur test DB terisolasi). Supaya tidak bentrok dengan data dev yang
-sudah ada, test membuat device & user dummy dengan kode/email acak (uuid) dan
-membersihkannya sendiri di akhir.
+CATATAN: jalan LANGSUNG ke DB dev yang sama (docker compose db+backend harus up),
+bukan DB test terpisah. Data dummy dibuat dengan suffix uuid & dibersihkan sendiri
+di blok finally supaya tidak mengotori data dev.
 """
 
 import uuid
@@ -30,7 +28,7 @@ async def client():
 
 @pytest.fixture
 async def test_device_code():
-    """Bikin satu device dummy (belum diklaim) khusus buat test ini, hapus di akhir."""
+    """Device dummy yang belum diklaim siapa pun; dihapus lagi setelah test."""
     code = f"TEST-KOLAM-{uuid.uuid4().hex[:8]}"
     async with AsyncSessionLocal() as db:
         device = Device(device_code=code)
@@ -46,6 +44,7 @@ async def test_device_code():
 
 
 async def _register_and_login(client: AsyncClient, email: str) -> str:
+    """Register lalu login, balas access token."""
     await client.post(
         "/api/v1/auth/register",
         json={"email": email, "password": "testpass123", "nama": "Test User"},
@@ -88,10 +87,9 @@ async def test_kolam_isolation_between_users(client: AsyncClient, test_device_co
         assert resp.status_code == 200
         assert resp.json() == []  # device dummy ini memang tidak ada sensor_readings
 
-        # User B TIDAK boleh lihat device milik User A -> tetap 200, tapi (secara
-        # semantik) di-scope kosong. Karena device dummy ini juga kosong readingnya,
-        # yang benar-benar membuktikan isolasi adalah query TANPA filter device_code:
-        # User B harus tidak melihat device_code test ini sama sekali.
+        # Device dummy ini memang tidak punya reading, jadi filter per device_code
+        # tidak membuktikan apa-apa. Yang membuktikan isolasi: query TANPA filter —
+        # device milik User A tidak boleh muncul sama sekali di hasil User B.
         resp = await client.get(
             "/api/v1/readings",
             headers={"Authorization": f"Bearer {token_b}"},

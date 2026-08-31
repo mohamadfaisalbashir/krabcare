@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, Boolean, ForeignKey, Text
+from sqlalchemy import TIMESTAMP, Boolean, ForeignKey, Index, Text, UniqueConstraint
+from sqlalchemy import text as sa_text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -10,7 +11,20 @@ from app.models.enums import WaterQualityCategory
 
 
 class Notification(Base):
+    """Notifikasi in-app untuk pemilik kolam, dari klasifikasi maupun prediksi."""
+
     __tablename__ = "notifications"
+    # UNIQUE = satu-satunya dedup notifikasi sumber `prediction` (event_time absolut
+    # per horizon). Nama constraint harus persis sama dengan yang ada di Postgres.
+    __table_args__ = (
+        UniqueConstraint(
+            "device_id",
+            "source",
+            "event_time",
+            name="notifications_device_id_source_event_time_key",
+        ),
+        Index("idx_notifications_user", "user_id", sa_text("created_at DESC")),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
@@ -30,4 +44,6 @@ class Notification(Base):
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_pushed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )

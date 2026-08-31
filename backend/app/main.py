@@ -10,19 +10,20 @@ from app.core.config import settings
 from app.routers import auth, health, ingest, kolam, notifications, quality, readings
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
-# Tanpa ini logger.info() di modul lain (mis. scheduler) tidak tampil —
-# root logger default-nya WARNING.
+# Root logger default-nya WARNING — tanpa ini logger.info() modul lain (scheduler) tidak tampil.
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Nyalakan scheduler ML saat startup, matikan saat shutdown."""
     start_scheduler()
     yield
     shutdown_scheduler()
 
 
 def create_app() -> FastAPI:
+    """Rakit app: middleware CORS + semua router (v1 di-prefix /api/v1)."""
     app = FastAPI(
         title=settings.PROJECT_NAME,
         debug=settings.DEBUG,

@@ -1,4 +1,4 @@
-"""Logika registrasi, login, dan manajemen profil user."""
+"""Registrasi, login, profil, ganti & reset password user."""
 
 import hashlib
 import secrets
@@ -15,10 +15,11 @@ from app.schemas.user import PasswordChangeIn, UserLoginIn, UserProfileUpdateIn,
 
 
 class AuthError(Exception):
-    """Error domain auth (email sudah dipakai, kredensial salah, password lama salah, dst)."""
+    """Error domain auth — router menerjemahkannya jadi 400/401."""
 
 
 async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
+    """Buat user baru; email wajib unik."""
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none() is not None:
         raise AuthError("Email sudah terdaftar")
@@ -35,6 +36,7 @@ async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
 
 
 async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
+    """Cek kredensial, balas JWT. Pesan error sengaja tidak membedakan email vs password."""
     result = await db.execute(select(User).where(User.email == payload.email))
     user = result.scalar_one_or_none()
     if (
@@ -47,6 +49,7 @@ async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
 
 
 async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdateIn) -> User:
+    """Ubah nama tampilan user."""
     user.nama = payload.nama
     await db.commit()
     await db.refresh(user)
@@ -54,6 +57,7 @@ async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdat
 
 
 async def change_password(db: AsyncSession, user: User, payload: PasswordChangeIn) -> None:
+    """Ganti password; wajib lolos verifikasi password lama."""
     if not verify_password(payload.old_password, user.password_hash):
         raise AuthError("Password lama salah")
     user.password_hash = hash_password(payload.new_password)
@@ -61,9 +65,11 @@ async def change_password(db: AsyncSession, user: User, payload: PasswordChangeI
 
 
 async def request_password_reset(db: AsyncSession, email: str) -> None:
-    """Selalu "sukses" dari sudut pandang pemanggil — email cuma benar-benar
-    dikirim kalau memang terdaftar & aktif, tapi caller tidak pernah tahu
-    bedanya (anti-enumeration, sama seperti kolam_service.get_owned_kolam)."""
+    """Terbitkan token reset & kirim linknya. Yang disimpan cuma hash token-nya.
+
+    Selalu "sukses" dari sisi pemanggil — email hanya benar-benar dikirim kalau
+    akunnya ada & aktif (anti-enumeration).
+    """
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
@@ -87,6 +93,7 @@ async def request_password_reset(db: AsyncSession, email: str) -> None:
 
 
 async def reset_password(db: AsyncSession, token: str, new_password: str) -> None:
+    """Set password baru kalau token cocok & belum kedaluwarsa; token lalu dihanguskan."""
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     result = await db.execute(select(User).where(User.reset_token_hash == token_hash))
     user = result.scalar_one_or_none()

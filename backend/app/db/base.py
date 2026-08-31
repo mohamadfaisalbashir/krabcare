@@ -1,8 +1,5 @@
-"""Base class declarative SQLAlchemy.
-
-Semua model di app/models harus mewarisi `Base` ini agar terdeteksi oleh
-Alembic saat autogenerate migrasi.
-"""
+"""Base declarative SQLAlchemy — semua model di app/models wajib mewarisi ini
+supaya tabelnya terdaftar di metadata & terbaca Alembic autogenerate."""
 
 from sqlalchemy.orm import DeclarativeBase
 

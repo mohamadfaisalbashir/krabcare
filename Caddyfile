@@ -1,0 +1,6 @@
+# Sertifikat Let's Encrypt diurus Caddy otomatis, syaratnya: DOMAIN sudah
+# mengarah ke IP VPS DAN port 80/443 terbuka SEBELUM container dijalankan.
+# backend:8000 dijangkau lewat jaringan internal Docker, bukan port host.
+{$DOMAIN} {
+    reverse_proxy backend:8000
+}

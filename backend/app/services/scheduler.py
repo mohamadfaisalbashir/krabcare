@@ -1,8 +1,7 @@
-"""Scheduler APScheduler untuk pipeline ML otomatis (klasifikasi + prediksi berkala).
+"""Scheduler APScheduler yang menjalankan pipeline ML secara berkala.
 
-Jalur sementara di sisi backend/cloud — menggantikan run manual script
-ml/scripts/test_e2e_classification.py & forecast_anomaly_scan.py untuk operasi
-rutin. Kedua script itu TETAP ada untuk debugging manual, tidak dihapus.
+Jalur sementara di sisi backend/cloud, menggantikan run manual script di
+ml/scripts/ untuk operasi rutin. Script-nya tetap ada untuk debugging manual.
 """
 
 import logging
@@ -23,6 +22,11 @@ _scheduler = AsyncIOScheduler()
 
 
 async def _run_pipeline_all_devices() -> None:
+    """Satu siklus untuk semua device aktif yang sudah diklaim ke kolam.
+
+    Device yang belum diklaim dilewati: notifikasi butuh pemilik (kolam.owner_user_id).
+    Tiap device dibungkus try/except sendiri supaya satu error tidak menjatuhkan sisanya.
+    """
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Device, Kolam)
@@ -52,6 +56,7 @@ async def _run_pipeline_all_devices() -> None:
 
 
 def start_scheduler() -> None:
+    """Daftarkan job berkala & jalankan (dipanggil dari lifespan app)."""
     if not settings.ML_SCHEDULER_ENABLED:
         logger.info("ML_SCHEDULER_ENABLED=false — scheduler tidak dijalankan.")
         return
@@ -61,8 +66,8 @@ def start_scheduler() -> None:
         id="ml_pipeline_cycle",
         coalesce=True,
         max_instances=1,
-        # next_run_time=None di APScheduler = job tidak dijadwalkan sama sekali,
-        # jadi harus eksplisit "sekarang" biar siklus pertama langsung jalan.
+        # next_run_time=None di APScheduler = tidak dijadwalkan sama sekali, jadi
+        # harus eksplisit "sekarang" biar siklus pertama langsung jalan saat startup.
         next_run_time=datetime.now(timezone.utc),
     )
     _scheduler.start()
@@ -72,5 +77,6 @@ def start_scheduler() -> None:
 
 
 def shutdown_scheduler() -> None:
+    """Hentikan scheduler saat app shutdown (tidak menunggu job berjalan selesai)."""
     if _scheduler.running:
         _scheduler.shutdown(wait=False)

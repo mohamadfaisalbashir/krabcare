@@ -8,7 +8,7 @@ from app.db.base import Base
 
 
 class SensorReading(Base):
-    """Data mentah sensor (pH, suhu, salinitas) per level. Hypertable TimescaleDB, partisi kolom `time`."""
+    """Reading mentah sensor (pH, suhu, salinitas) per level rak. Hypertable, partisi `time`."""
 
     __tablename__ = "sensor_readings"
 

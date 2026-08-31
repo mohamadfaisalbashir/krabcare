@@ -1,4 +1,4 @@
-"""Logika notifikasi in-app + dispatch push (FCM) dari hasil pipeline ML."""
+"""Notifikasi in-app + dispatch push (FCM) dari hasil pipeline ML."""
 
 import logging
 from datetime import datetime
@@ -16,6 +16,7 @@ logger = logging.getLogger("app.services.notification_service")
 
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
+    """Kategori pada notifikasi klasifikasi terakhir device ini — acuan transition-check."""
     result = await db.execute(
         select(Notification.quality_category)
         .where(Notification.device_id == device_id, Notification.source == "classification")
@@ -33,8 +34,11 @@ async def create_classification_notification(
     quality_score: float,
     sensor_reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi baru cuma dibuat kalau kategori BERUBAH dari yang terakhir —
-    supaya tidak spam tiap siklus scheduler selama anomali masih berlangsung."""
+    """Notifikasi status sekarang — hanya dibuat saat kategori BERUBAH.
+
+    Tanpa transition-check ini, tiap siklus scheduler akan memberi notifikasi
+    selama anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
+    """
     previous = await _last_classification_category(db, device.id)
     if previous == category:
         return None
@@ -44,6 +48,7 @@ async def create_classification_notification(
     elif previous in ANOMALY_CATEGORIES:
         message = f"Kualitas air {device.device_code} kembali NORMAL (baik)."
     else:
+        # Baik -> baik (atau notifikasi pertama & kondisinya baik): tidak perlu diberitahu.
         return None
 
     notification = Notification(
@@ -64,10 +69,12 @@ async def create_classification_notification(
 async def create_prediction_notifications(
     db: AsyncSession, device: Device, kolam: Kolam, anomalies: list[dict]
 ) -> list[Notification]:
-    """anomalies: [{"target_time": datetime, "category": str, "horizon_minutes": int}, ...].
-    Dedup lewat UNIQUE (device_id, source, event_time) — event_time = target_time
-    absolut, jadi ON CONFLICT DO NOTHING cukup (beda dari classification yang
-    butuh transition-check)."""
+    """Peringatan dini dari horizon yang diramal anomali.
+
+    `anomalies`: [{"target_time", "category", "horizon_minutes"}, ...]. Dedup cukup
+    lewat UNIQUE (device_id, source, event_time) karena target_time absolut —
+    beda dari klasifikasi yang butuh transition-check. Return yang benar-benar baru.
+    """
     if not anomalies:
         return []
 
@@ -100,6 +107,11 @@ async def create_prediction_notifications(
 
 
 async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> None:
+    """Kirim tiap notifikasi ke semua perangkat pemiliknya.
+
+    Gagal di satu token tidak menghentikan token lain; is_pushed baru true kalau
+    minimal satu perangkat berhasil menerima.
+    """
     for notif in notifications:
         result = await db.execute(select(PushToken).where(PushToken.user_id == notif.user_id))
         tokens = result.scalars().all()
@@ -107,9 +119,9 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
             continue
         title = "Peringatan Kualitas Air" if notif.quality_category in ANOMALY_CATEGORIES else "Kualitas Air Membaik"
         any_success = False
-        for pt in tokens:
+        for token in tokens:
             try:
-                if send_push(pt.fcm_token, title, notif.message):
+                if send_push(token.fcm_token, title, notif.message):
                     any_success = True
             except Exception:
                 logger.exception("Gagal kirim push ke user_id=%s", notif.user_id)
@@ -121,6 +133,7 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
 async def list_notifications(
     db: AsyncSession, user: User, unread_only: bool, limit: int
 ) -> list[Notification]:
+    """Notifikasi milik `user`, terbaru dulu."""
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
@@ -130,6 +143,7 @@ async def list_notifications(
 
 
 async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
+    """Tandai sudah dibaca. False = tidak ada / bukan milik user ini (router balas 404)."""
     result = await db.execute(
         select(Notification).where(
             Notification.id == notification_id, Notification.user_id == user.id
@@ -144,6 +158,7 @@ async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
 
 
 async def register_push_token(db: AsyncSession, user: User, fcm_token: str, platform: str) -> None:
+    """Simpan token FCM. Token yang sama bisa pindah pemilik, jadi upsert, bukan insert."""
     stmt = (
         pg_insert(PushToken)
         .values(user_id=user.id, fcm_token=fcm_token, platform=platform)

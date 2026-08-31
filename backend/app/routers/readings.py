@@ -1,4 +1,4 @@
-"""GET endpoint — data historis sensor_readings (dengan filter waktu)."""
+"""GET endpoint — histori reading sensor, difilter waktu & dibatasi hak akses."""
 
 from datetime import datetime
 
@@ -23,6 +23,7 @@ async def list_readings(
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[SensorReadingOut]:
+    """Histori reading (terbaru dulu); Decimal dari DB di-cast float untuk JSON."""
     rows = await reading_service.get_readings(
         db, device_id, device_code, start_time, end_time, limit, scope.allowed_device_ids
     )

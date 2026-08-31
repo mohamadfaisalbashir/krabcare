@@ -1,3 +1,5 @@
+"""Schema hasil ML: klasifikasi Mamdani & prediksi FTS (ingest + response)."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field, model_validator
@@ -7,6 +9,8 @@ from app.schemas.sensor_reading import SkippedDuplicateOut
 
 
 class FuzzyClassificationOut(BaseModel):
+    """Satu hasil klasifikasi; membership_degrees = rincian per parameter."""
+
     time: datetime
     quality_score: float
     quality_category: WaterQualityCategory
@@ -17,6 +21,8 @@ class FuzzyClassificationOut(BaseModel):
 
 
 class FuzzyPredictionOut(BaseModel):
+    """Satu horizon prediksi: `time` = kapan forecast dibuat, `target_time` = sasarannya."""
+
     time: datetime
     target_time: datetime
     horizon_minutes: int
@@ -28,7 +34,7 @@ class FuzzyPredictionOut(BaseModel):
 
 
 class LatestQualityOut(BaseModel):
-    """Hasil klasifikasi (fuzzy logic) & prediksi (fuzzy time series) terbaru untuk satu device."""
+    """Status terkini satu device: klasifikasi + prediksi terbaru (bisa None)."""
 
     device_id: int
     device_code: str | None
@@ -37,7 +43,7 @@ class LatestQualityOut(BaseModel):
 
 
 class DevicePredictionsOut(BaseModel):
-    """Seluruh horizon (jam+1 s.d. jam+N) dari run prediksi TERAKHIR satu device."""
+    """Seluruh horizon (jam+1..jam+N) dari run prediksi TERAKHIR satu device."""
 
     device_id: int
     device_code: str | None
@@ -45,7 +51,7 @@ class DevicePredictionsOut(BaseModel):
 
 
 class FuzzyClassificationIn(BaseModel):
-    """Payload ingest hasil klasifikasi fuzzy logic (Mamdani) dari pipeline ML."""
+    """Payload ingest satu hasil klasifikasi Mamdani."""
 
     device_code: str
     time: datetime
@@ -57,7 +63,7 @@ class FuzzyClassificationIn(BaseModel):
 
 
 class FuzzyPredictionIn(BaseModel):
-    """Payload ingest hasil prediksi fuzzy time series dari pipeline ML."""
+    """Payload ingest satu horizon prediksi FTS."""
 
     device_code: str
     time: datetime
@@ -69,19 +75,22 @@ class FuzzyPredictionIn(BaseModel):
 
 
 class QualityIngestIn(BaseModel):
-    """Payload batch ingest — bisa berisi hasil klasifikasi, prediksi, atau keduanya sekaligus."""
+    """Batch ingest: boleh isi klasifikasi saja, prediksi saja, atau keduanya."""
 
     classifications: list[FuzzyClassificationIn] = Field(default_factory=list)
     predictions: list[FuzzyPredictionIn] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "QualityIngestIn":
+        """Tolak payload yang dua-duanya kosong (kalau lolos, request jadi no-op diam)."""
         if not self.classifications and not self.predictions:
             raise ValueError("Minimal harus ada satu classification atau prediction")
         return self
 
 
 class QualityIngestResultOut(BaseModel):
+    """Ringkasan ingest ML — dipisah per jenis karena keduanya masuk satu request."""
+
     received_classifications: int
     received_predictions: int
     inserted_classifications: int

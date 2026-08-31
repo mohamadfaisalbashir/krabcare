@@ -3,11 +3,18 @@
 from .membership import trapezoid, triangle
 
 # Himpunan input per parameter: nama -> (a, b, c, d) fungsi trapesium (Persamaan 2-16).
+#
+# Invarian yang dipegang seluruh himpunan: (c, d) himpunan ke-k == (a, b) himpunan
+# ke-(k+1). Itu yang membuat jumlah derajat keanggotaan selalu tepat 1,0 di setiap
+# titik universe (partition of unity) — diuji di backend/tests/test_membership_partition.py.
+# Suhu "normal" di proposal tertulis (26, 28, 30, 32); nilai a=26 melanggar invarian
+# tersebut (menyisakan lubang di 24-28 dengan jumlah keanggotaan cuma 0,75) sementara
+# 14 himpunan lain patuh, jadi dikoreksi ke a=24 mengikuti (c, d) himpunan "rendah".
 PARAMETER_SETS: dict[str, dict[str, tuple[float, float, float, float]]] = {
     "suhu": {
         "sangat_rendah": (15, 15, 18, 20),
         "rendah": (18, 20, 24, 28),
-        "normal": (26, 28, 30, 32),
+        "normal": (24, 28, 30, 32),
         "tinggi": (30, 32, 33, 35),
         "sangat_tinggi": (33, 35, 45, 45),
     },
@@ -61,7 +68,7 @@ CATEGORY_TO_DB = {"aman": "baik", "waspada": "sedang", "bahaya": "buruk"}
 _SEVERITY_ORDER = {"baik": 0, "sedang": 1, "buruk": 2}
 
 # Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali — dipakai backend
-# (ml_pipeline_service, notification_service) & script ml/scripts/forecast_anomaly_scan.py
+# (ml_pipeline_service, notification_service) & script ml/scripts/scan_anomaly.py
 # untuk memicu notifikasi/peringatan.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 

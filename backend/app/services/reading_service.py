@@ -1,4 +1,4 @@
-"""Query data historis sensor_readings."""
+"""Query histori sensor_readings."""
 
 from datetime import datetime
 
@@ -17,9 +17,11 @@ async def get_readings(
     limit: int,
     allowed_device_ids: set[int] | None = None,
 ) -> list[Row]:
-    """`allowed_device_ids=None` berarti tidak dibatasi (gateway/admin). Kalau bukan
-    None, hasil dibatasi ke device tsb — device_id/device_code di luar himpunan ini
-    otomatis menghasilkan list kosong (bukan 404, ini endpoint list)."""
+    """Histori reading + device_code, terbaru dulu.
+
+    `allowed_device_ids=None` = tidak dibatasi (gateway/admin). Kalau diisi, device
+    di luar himpunan itu menghasilkan list kosong — bukan 404, ini endpoint list.
+    """
     stmt = select(SensorReading, Device.device_code).join(
         Device, SensorReading.device_id == Device.id
     )

@@ -2,10 +2,13 @@
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Seluruh setelan aplikasi. Nilai di bawah = default kalau .env tidak mengisinya."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -48,18 +51,43 @@ class Settings(BaseSettings):
     # Push notification (Firebase Cloud Messaging)
     FIREBASE_CREDENTIALS_PATH: str = ""
 
-    # Scheduler otomatis pipeline ML (klasifikasi Mamdani + prediksi FTS berkala).
-    # Jalur sementara di sisi cloud/backend — sesuai desain akhir, logic ini akan
-    # pindah ke Raspberry Pi sebagai edge computation.
+    # Scheduler pipeline ML (Mamdani + FTS berkala). Jalur sementara di cloud —
+    # sesuai desain akhir, nanti pindah ke Raspberry Pi (edge computation).
     ML_SCHEDULER_ENABLED: bool = True
     ML_SCHEDULER_INTERVAL_MINUTES: int = 60
     ML_HISTORY_HOURS: int = 24
     ML_FORECAST_STEPS: int = 6
     ML_BUCKET_MINUTES: int = 60
 
+    @model_validator(mode="after")
+    def _validate_production_secrets(self) -> "Settings":
+        """Tolak start kalau production masih pakai secret placeholder / DEBUG on.
+
+        Placeholder `ai-dilarangbaca` ada di repo publik — kalau terbawa ke VPS,
+        API dan database praktis terbuka. Dev tidak terpengaruh.
+        """
+        if self.ENVIRONMENT != "production":
+            return self
+        weak = {"ai-dilarangbaca", "change-me", "change-me-too", ""}
+        problems = []
+        if self.JWT_SECRET_KEY in weak:
+            problems.append("JWT_SECRET_KEY")
+        if self.GATEWAY_API_KEY in weak:
+            problems.append("GATEWAY_API_KEY")
+        if self.POSTGRES_PASSWORD in weak:
+            problems.append("POSTGRES_PASSWORD")
+        if self.DEBUG:
+            problems.append("DEBUG harus false di production")
+        if problems:
+            raise ValueError(
+                "Konfigurasi production tidak aman — masih memakai nilai placeholder "
+                f"atau setelan development: {', '.join(problems)}"
+            )
+        return self
+
     @property
     def DATABASE_URL(self) -> str:
-        """Async DSN untuk SQLAlchemy (driver asyncpg)."""
+        """DSN async (asyncpg) — dipakai aplikasi."""
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -67,7 +95,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
-        """DSN sinkron (driver psycopg2), dipakai Alembic untuk migrasi."""
+        """DSN sinkron (psycopg2) — dipakai Alembic."""
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -76,6 +104,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
+    """Settings dibaca sekali lalu di-cache; import `settings` di bawah untuk pakai."""
     return Settings()
 
 

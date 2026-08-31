@@ -1,3 +1,5 @@
+"""Enum bersama model & schema. Nilai string-nya = nilai yang tersimpan di DB."""
+
 import enum
 
 
@@ -8,6 +10,8 @@ class DeviceType(str, enum.Enum):
 
 
 class WaterQualityCategory(str, enum.Enum):
+    """Kategori hasil Mamdani: aman/waspada/bahaya dipetakan ke baik/sedang/buruk."""
+
     BAIK = "baik"
     SEDANG = "sedang"
     BURUK = "buruk"

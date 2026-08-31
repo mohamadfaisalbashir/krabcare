@@ -1,3 +1,5 @@
+"""Schema notifikasi in-app & pendaftaran token push."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -17,5 +19,7 @@ class NotificationOut(BaseModel):
 
 
 class PushTokenRegisterIn(BaseModel):
+    """platform dibatasi pattern supaya tidak ada nilai bebas masuk DB."""
+
     fcm_token: str = Field(min_length=1)
     platform: str = Field(pattern=r"^(android|ios|web)$")

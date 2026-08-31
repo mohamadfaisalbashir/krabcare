@@ -1,8 +1,8 @@
-"""Pipeline ML otomatis: klasifikasi Mamdani + prediksi FTS per device.
+"""Satu siklus ML per device: klasifikasi Mamdani + prediksi FTS + notifikasi.
 
-Dipanggil scheduler (scheduler.py). Sementara jalan di backend/cloud — di desain
-akhir pindah ke Raspberry Pi. Manggil service ingest langsung (bukan lewat HTTP)
-karena satu proses, jadi idempotensi ON CONFLICT DO NOTHING-nya ikut gratis.
+Dipanggil scheduler.py. Sementara jalan di backend/cloud — sesuai desain akhir
+nanti pindah ke Raspberry Pi. Service ingest dipanggil langsung (bukan lewat
+HTTP) karena satu proses, jadi idempotensi ON CONFLICT-nya ikut kepakai.
 """
 
 import logging
@@ -21,14 +21,11 @@ from ml.fuzzy.mamdani import ANOMALY_CATEGORIES, classify_water_quality
 logger = logging.getLogger("app.services.ml_pipeline_service")
 
 
-async def _fetch_readings_as_dicts(
-    db: AsyncSession, device_id: int, history_hours: int
-) -> list[dict]:
-    """Reading mentah device ini, urut ASC, siap pakai aggregate_by_time_bucket().
+async def _load_readings(db: AsyncSession, device_id: int, history_hours: int) -> list[dict]:
+    """Reading device ini (urut ASC) dalam bentuk dict siap masuk aggregate_by_time_bucket().
 
-    Query langsung, bukan reuse reading_service.get_readings (itu urut DESC +
-    join device_code, beda bentuk). Numeric SQLAlchemy balik sebagai Decimal,
-    di-cast float supaya bisa dihitung aggregate_by_time_bucket/forecast_next.
+    Query sendiri, bukan reading_service.get_readings — itu urut DESC & ikut join
+    device_code. Numeric SQLAlchemy balik sebagai Decimal, jadi di-cast float dulu.
     """
     since = datetime.now(timezone.utc) - timedelta(hours=history_hours)
     stmt = (
@@ -59,14 +56,15 @@ async def run_pipeline_for_device(
     bucket_minutes: int,
     forecast_steps: int,
 ) -> dict:
-    """Satu siklus klasifikasi + prediksi untuk satu device.
+    """Jalankan satu siklus klasifikasi + prediksi untuk satu device.
 
-    Exception (selain insufficient-data yang di-guard di sini) ditangkap di
-    pemanggil (scheduler job), bukan di sini — satu device gagal tidak boleh
-    menghentikan device lain di siklus yang sama.
+    Butuh >=1 bucket per parameter untuk klasifikasi dan >=2 untuk forecast; di
+    bawah itu siklus berhenti lebih awal (status dilaporkan lewat return value).
+    Exception lain sengaja dilempar ke pemanggil supaya device lain tetap jalan.
     """
-    readings = await _fetch_readings_as_dicts(db, device.id, history_hours)
+    readings = await _load_readings(db, device.id, history_hours)
 
+    # Reading mentah tidak selalu rapi intervalnya -> ratakan ke bucket per jam.
     ph_buckets = aggregate_by_time_bucket(readings, "ph", bucket_minutes)
     temp_buckets = aggregate_by_time_bucket(readings, "temperature_c", bucket_minutes)
     salinity_buckets = aggregate_by_time_bucket(readings, "salinity_ppt", bucket_minutes)
@@ -96,6 +94,7 @@ async def run_pipeline_for_device(
 
     now = datetime.now(timezone.utc)
 
+    # --- Klasifikasi kondisi sekarang ---
     classification_result = classify_water_quality(
         ph=last_ph, temperature_c=last_temp, salinity_ppt=last_salinity
     )
@@ -138,21 +137,30 @@ async def run_pipeline_for_device(
             "status": "classified_only",
             "n_buckets": n_buckets,
             "quality_category": classification_result["quality_category"],
-            "anomali_terdeteksi": [],
+            "anomaly_steps": [],
         }
 
-    ph_history = [v for _, v in ph_buckets]
-    temp_history = [v for _, v in temp_buckets]
-    salinity_history = [v for _, v in salinity_buckets]
-
-    ph_forecast = forecast_multi_step("ph", ph_history, forecast_steps)
-    temp_forecast = forecast_multi_step("suhu", temp_history, forecast_steps)
-    salinity_forecast = forecast_multi_step("salinitas", salinity_history, forecast_steps)
+    # --- Prediksi beberapa jam ke depan ---
+    # Waktu bucket ikut dilewatkan supaya FLR tidak dibentuk melintasi celah data
+    # (device mati/offline beberapa jam) — lihat ml/fuzzy/fts.py:_build_flrg.
+    ph_forecast = forecast_multi_step(
+        "ph", [v for _, v in ph_buckets], forecast_steps,
+        [t for t, _ in ph_buckets], bucket_minutes,
+    )
+    temp_forecast = forecast_multi_step(
+        "suhu", [v for _, v in temp_buckets], forecast_steps,
+        [t for t, _ in temp_buckets], bucket_minutes,
+    )
+    salinity_forecast = forecast_multi_step(
+        "salinitas", [v for _, v in salinity_buckets], forecast_steps,
+        [t for t, _ in salinity_buckets], bucket_minutes,
+    )
 
     predictions_in: list[FuzzyPredictionIn] = []
-    anomali_terdeteksi: list[int] = []
+    anomaly_steps: list[int] = []
     prediction_anomalies: list[dict] = []
 
+    # Tiap langkah: gabungkan 3 nilai ramalan jadi satu kategori lewat Mamdani.
     for h in range(1, forecast_steps + 1):
         result = classify_water_quality(
             ph=ph_forecast[h - 1],
@@ -174,7 +182,7 @@ async def run_pipeline_for_device(
         )
 
         if result["quality_category"] in ANOMALY_CATEGORIES:
-            anomali_terdeteksi.append(h)
+            anomaly_steps.append(h)
             prediction_anomalies.append(
                 {
                     "target_time": target_time,
@@ -188,21 +196,22 @@ async def run_pipeline_for_device(
         db, device, kolam, prediction_anomalies
     )
 
-    if anomali_terdeteksi:
+    if anomaly_steps:
         logger.warning(
             "[%s] Anomali terdeteksi pada jam ke+%s dari sekarang (kategori sedang/buruk).",
             device.device_code,
-            anomali_terdeteksi,
+            anomaly_steps,
         )
 
-    all_new = ([classification_notif] if classification_notif else []) + prediction_notifs
-    if all_new:
-        await notification_service.dispatch_push(db, all_new)
+    # Push cuma untuk notifikasi yang benar-benar baru dibuat siklus ini.
+    new_notifications = ([classification_notif] if classification_notif else []) + prediction_notifs
+    if new_notifications:
+        await notification_service.dispatch_push(db, new_notifications)
 
     return {
         "device_code": device.device_code,
         "status": "ok",
         "n_buckets": n_buckets,
         "quality_category": classification_result["quality_category"],
-        "anomali_terdeteksi": anomali_terdeteksi,
+        "anomaly_steps": anomaly_steps,
     }

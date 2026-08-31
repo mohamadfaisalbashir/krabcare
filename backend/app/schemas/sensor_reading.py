@@ -1,3 +1,5 @@
+"""Schema reading sensor: payload ingest gateway & response histori."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field
@@ -22,9 +24,8 @@ class SensorReadingBatchIn(BaseModel):
 class SkippedDuplicateOut(BaseModel):
     """Baris yang di-skip karena kunci uniknya sudah pernah masuk.
 
-    `horizon_minutes` cuma relevan untuk fuzzy_predictions (kunci uniknya
-    device_id+time+horizon_minutes, karena satu waktu forecast bisa punya banyak
-    horizon sekaligus) — None untuk sensor readings & fuzzy classifications.
+    `horizon_minutes` cuma terisi untuk fuzzy_predictions (kunci uniknya ikut
+    horizon); None untuk sensor readings & fuzzy classifications.
     """
 
     device_code: str
@@ -33,6 +34,8 @@ class SkippedDuplicateOut(BaseModel):
 
 
 class IngestResultOut(BaseModel):
+    """Ringkasan hasil ingest — gateway pakai ini untuk tahu apa yang tidak masuk."""
+
     received: int
     inserted: int
     unknown_device_codes: list[str]
@@ -40,6 +43,8 @@ class IngestResultOut(BaseModel):
 
 
 class SensorReadingOut(BaseModel):
+    """Satu baris histori, sudah ikut device_code hasil join."""
+
     device_id: int
     device_code: str
     time: datetime

@@ -47,6 +47,11 @@ firmware/**/build/
 firmware/**/sdkconfig
 firmware/**/sdkconfig.old
 
+# ── Dataset riil & hasil benchmark (besar, bukan sumber kode) ───
+# data/nerr/      : NOAA NERRS SWMP stasiun gndblwq 2020-2024 (~29 MB), diunduh manual
+# data/benchmark/ : output ml/scripts/benchmark_fts_rmse.py
+data/
+
 # ── ML artifacts ─────────────────────────────────────────
 ml/**/*.pkl
 ml/**/*.joblib
@@ -63,3 +68,5 @@ Thumbs.db
 .claude/
 
 docs
+# ── Backup database (D1) ────────────────────────────────
+backups/

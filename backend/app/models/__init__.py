@@ -1,3 +1,6 @@
+"""Re-export semua model ORM — satu pintu import (`from app.models import ...`)
+sekaligus memastikan seluruh tabel terdaftar di metadata Alembic."""
+
 from app.models.device import Device
 from app.models.fuzzy_classification import FuzzyClassification
 from app.models.fuzzy_prediction import FuzzyPrediction

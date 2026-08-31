@@ -1,4 +1,4 @@
-"""Query hasil klasifikasi (fuzzy logic) & prediksi (fuzzy time series) terbaru per device."""
+"""Query hasil klasifikasi & prediksi terbaru per device."""
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ async def _latest_per_device(
     device_id: int | None,
     allowed_device_ids: set[int] | None,
 ):
-    # DISTINCT ON (device_id) — spesifik PostgreSQL, mengambil satu baris terbaru per device.
+    """Satu baris terbaru per device lewat DISTINCT ON (khas PostgreSQL)."""
     stmt = select(model)
     if device_id is not None:
         stmt = stmt.where(model.device_id == device_id)
@@ -27,6 +27,7 @@ async def _latest_per_device(
 async def _device_by_id(
     db: AsyncSession, allowed_device_ids: set[int] | None
 ) -> dict[int, Device]:
+    """Peta id -> Device untuk mengisi device_code tanpa query per baris."""
     stmt = select(Device)
     if allowed_device_ids is not None:
         stmt = stmt.where(Device.id.in_(allowed_device_ids))
@@ -39,8 +40,10 @@ async def get_latest_quality(
     device_id: int | None = None,
     allowed_device_ids: set[int] | None = None,
 ) -> list[dict]:
-    """`allowed_device_ids=None` berarti tidak dibatasi (gateway/admin); kalau bukan
-    None, hasil dibatasi ke device tsb (bisa kosong)."""
+    """Status terkini per device: klasifikasi + prediksi terbaru digabung.
+
+    `allowed_device_ids=None` = tidak dibatasi (gateway/admin).
+    """
     classifications = await _latest_per_device(
         db, FuzzyClassification, device_id, allowed_device_ids
     )
@@ -63,7 +66,7 @@ async def get_latest_quality(
             }
         )
 
-    # Device yang sudah punya prediksi tapi belum punya hasil klasifikasi.
+    # Device yang sudah punya prediksi tapi belum sempat diklasifikasi.
     for pred_device_id, prediction in predictions_by_device.items():
         if pred_device_id in seen_device_ids:
             continue
@@ -80,17 +83,15 @@ async def get_latest_quality(
     return items
 
 
-async def get_latest_predictions_full(
+async def get_prediction_horizons(
     db: AsyncSession,
     device_id: int | None = None,
     allowed_device_ids: set[int] | None = None,
 ) -> list[dict]:
-    """Semua baris fuzzy_predictions dari run TERAKHIR (time terbaru) per device,
-    urut horizon_minutes ASC — beda dari get_latest_quality() yang cuma ambil satu
-    baris (dipakai buat "status sekarang", bukan grafik multi-jam). Perlu endpoint
-    terpisah karena satu siklus scheduler insert banyak baris (satu per horizon)
-    dengan `time` yang SAMA — DISTINCT ON (device_id) di get_latest_quality()
-    cuma mengembalikan satu baris ambigu dari semuanya, bukan horizon tertentu.
+    """Semua horizon dari run forecast TERAKHIR per device, urut horizon_minutes ASC.
+
+    Perlu query sendiri karena satu run menulis banyak baris dengan `time` sama —
+    DISTINCT ON di get_latest_quality() hanya memulangkan salah satunya.
     """
     latest_time_subq = (
         select(FuzzyPrediction.device_id, func.max(FuzzyPrediction.time).label("max_time"))

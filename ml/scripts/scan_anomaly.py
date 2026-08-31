@@ -1,21 +1,13 @@
 #!/usr/bin/env python3
-"""Deteksi dini anomali kualitas air lewat multi-step forecast (FTS) + scan kategori.
+"""Deteksi dini anomali: forecast beberapa jam ke depan lalu sapu kategorinya.
 
-1. Tarik reading mentah device dari GET /api/v1/readings (start_time = now - history_hours)
-2. Agregasi ke bucket per-jam (ml/fuzzy/aggregation.py) untuk ph, suhu, salinitas
-3. forecast_multi_step() tiap parameter -> prediksi jam+1 s.d. jam+max_steps
-4. Tiap langkah, gabungkan ketiga parameter lewat classify_water_quality() (Mamdani)
-   -> kategori kualitas air jam tersebut
-5. Sapu seluruh langkah, kumpulkan SEMUA jam berkategori sedang/buruk, cetak
-   ringkasan tiap jam + peringatan eksplisit jam mana saja yang anomali
-6. POST semua langkah sekaligus (satu request, list of predictions) ke
-   /api/v1/ingest/quality — endpoint & schema yang sama seperti prediksi
-   one-step-ahead, tidak ada jalur ingest baru.
+Alur: tarik reading -> agregasi per jam -> forecast_multi_step() tiap parameter ->
+tiap langkah digabung lewat Mamdani jadi satu kategori -> kumpulkan jam yang
+sedang/buruk -> POST semua langkah sekaligus ke /api/v1/ingest/quality.
 
-Standalone, tanpa dependency eksternal (urllib bawaan Python).
+Versi manual dari apa yang dikerjakan scheduler tiap siklus.
 
-Jalankan dari root project:
-    python ml/scripts/forecast_anomaly_scan.py --device-code SLV1
+    python ml/scripts/scan_anomaly.py --device-code SLV1
 """
 
 import argparse
@@ -31,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step
 from ml.fuzzy.mamdani import ANOMALY_CATEGORIES, classify_water_quality
-from ml.scripts._http import http_get, http_post
+from ml.scripts.api_client import api_get, api_post
 
 
 def main() -> None:
@@ -55,7 +47,7 @@ def main() -> None:
     query = urllib.parse.urlencode(
         {"device_code": args.device_code, "start_time": start_time.isoformat(), "limit": 1000}
     )
-    readings = http_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
+    readings = api_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
 
     if not readings:
         print(
@@ -86,9 +78,17 @@ def main() -> None:
     salinity_history = [v for _, v in salinity_buckets]
     last_bucket_time = max(ph_buckets[-1][0], temp_buckets[-1][0], salinity_buckets[-1][0])
 
-    ph_forecast = forecast_multi_step("ph", ph_history, args.max_steps)
-    temp_forecast = forecast_multi_step("suhu", temp_history, args.max_steps)
-    salinity_forecast = forecast_multi_step("salinitas", salinity_history, args.max_steps)
+    # Waktu bucket ikut dilewatkan: FLR tidak boleh dibentuk melintasi celah data.
+    ph_forecast = forecast_multi_step(
+        "ph", ph_history, args.max_steps, [t for t, _ in ph_buckets], args.bucket_minutes
+    )
+    temp_forecast = forecast_multi_step(
+        "suhu", temp_history, args.max_steps, [t for t, _ in temp_buckets], args.bucket_minutes
+    )
+    salinity_forecast = forecast_multi_step(
+        "salinitas", salinity_history, args.max_steps,
+        [t for t, _ in salinity_buckets], args.bucket_minutes,
+    )
 
     print(
         f"Histori teragregasi ({args.bucket_minutes} menit/bucket): "
@@ -139,7 +139,7 @@ def main() -> None:
     else:
         print(f"Tidak ada anomali terdeteksi dalam {args.max_steps} jam ke depan (semua kategori baik).")
 
-    response = http_post(
+    response = api_post(
         f"{args.base_url}/api/v1/ingest/quality",
         args.api_key,
         {"predictions": predictions_payload},

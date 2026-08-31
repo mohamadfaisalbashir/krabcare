@@ -1,4 +1,4 @@
-"""GET endpoint — hasil klasifikasi (fuzzy logic) & prediksi (fuzzy time series) kualitas air."""
+"""GET endpoint — hasil klasifikasi (Mamdani) & prediksi (FTS) kualitas air."""
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ async def latest_quality(
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[LatestQualityOut]:
+    """Status terkini per device: satu klasifikasi + satu prediksi terbaru."""
     items = await quality_service.get_latest_quality(db, device_id, scope.allowed_device_ids)
     return [
         LatestQualityOut(
@@ -43,12 +44,13 @@ async def latest_quality(
 
 
 @router.get("/predictions", response_model=list[DevicePredictionsOut])
-async def latest_predictions_full(
+async def list_prediction_horizons(
     device_id: int | None = None,
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[DevicePredictionsOut]:
-    items = await quality_service.get_latest_predictions_full(
+    """Seluruh horizon (jam+1..jam+N) dari run forecast terakhir — bahan grafik."""
+    items = await quality_service.get_prediction_horizons(
         db, device_id, scope.allowed_device_ids
     )
     return [

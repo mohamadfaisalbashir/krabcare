@@ -1,11 +1,7 @@
-"""Logika penyimpanan hasil fuzzy logic (klasifikasi) & fuzzy time series (prediksi).
+"""Simpan hasil ML: klasifikasi Mamdani & prediksi FTS.
 
-Mengikuti pola yang sama seperti ingest_service.py: device lookup by device_code,
-insert idempoten (ON CONFLICT DO NOTHING), dan pelaporan device_code yang belum
-terdaftar atau baris yang di-skip karena duplikat. Conflict target mengikuti PK
-masing-masing tabel: fuzzy_classifications (device_id, time), fuzzy_predictions
-(device_id, time, horizon_minutes) — prediksi butuh horizon_minutes karena satu
-waktu forecast bisa menghasilkan banyak horizon sekaligus (multi-step forecast).
+Pola sama dengan ingest_service.py (lookup device -> insert idempoten -> lapor
+yang di-skip). Bedanya cuma conflict target, mengikuti PK tabel masing-masing.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,13 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import FuzzyClassification, FuzzyPrediction
 from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
 from app.schemas.sensor_reading import SkippedDuplicateOut
-from app.services._ingest_common import get_device_map, idempotent_bulk_insert
+from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
 
 
 async def ingest_classifications(
     db: AsyncSession, classifications: list[FuzzyClassificationIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    device_map = await get_device_map(db, [c.device_code for c in classifications])
+    """Simpan batch klasifikasi; conflict target = PK (device_id, time)."""
+    device_map = await find_devices_by_code(db, [c.device_code for c in classifications])
     unknown = sorted({c.device_code for c in classifications if c.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -41,7 +38,7 @@ async def ingest_classifications(
     skipped_duplicates: list[SkippedDuplicateOut] = []
 
     if rows:
-        inserted, inserted_keys = await idempotent_bulk_insert(
+        inserted, skipped_rows = await insert_skip_duplicates(
             db,
             FuzzyClassification,
             rows,
@@ -50,8 +47,7 @@ async def ingest_classifications(
 
         skipped_duplicates = [
             SkippedDuplicateOut(device_code=device_code_by_id[row["device_id"]], time=row["time"])
-            for row in rows
-            if (row["device_id"], row["time"]) not in inserted_keys
+            for row in skipped_rows
         ]
 
         await db.commit()
@@ -62,7 +58,8 @@ async def ingest_classifications(
 async def ingest_predictions(
     db: AsyncSession, predictions: list[FuzzyPredictionIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    device_map = await get_device_map(db, [p.device_code for p in predictions])
+    """Simpan batch prediksi; conflict target ikut horizon_minutes (lihat catatan di bawah)."""
+    device_map = await find_devices_by_code(db, [p.device_code for p in predictions])
     unknown = sorted({p.device_code for p in predictions if p.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -84,10 +81,9 @@ async def ingest_predictions(
     skipped_duplicates: list[SkippedDuplicateOut] = []
 
     if rows:
-        # PK (device_id, time, horizon_minutes) — satu waktu forecast bisa punya
-        # banyak horizon sekaligus (multi-step forecast), jadi horizon_minutes
-        # WAJIB ikut jadi bagian conflict target, bukan cuma device_id+time.
-        inserted, inserted_keys = await idempotent_bulk_insert(
+        # Satu run forecast menghasilkan banyak horizon dengan `time` sama, jadi
+        # horizon_minutes WAJIB ikut conflict target — kalau tidak, cuma 1 yang masuk.
+        inserted, skipped_rows = await insert_skip_duplicates(
             db,
             FuzzyPrediction,
             rows,
@@ -100,8 +96,7 @@ async def ingest_predictions(
                 time=row["time"],
                 horizon_minutes=row["horizon_minutes"],
             )
-            for row in rows
-            if (row["device_id"], row["time"], row["horizon_minutes"]) not in inserted_keys
+            for row in skipped_rows
         ]
 
         await db.commit()

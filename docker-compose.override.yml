@@ -1,0 +1,14 @@
+# Override khusus DEVELOPMENT. Compose memuat file ini OTOMATIS saat menjalankan
+# `docker compose up` tanpa flag -f, dan TIDAK memuatnya saat kita menyebut
+# -f secara eksplisit untuk production
+# (docker compose -f docker-compose.yml -f docker-compose.prod.yml ...).
+#
+# Bind mount kode ada di sini, bukan di file base, karena Compose menggabung
+# (bukan menimpa) list `volumes` — entri di base tidak bisa dihapus dari file
+# override, sehingga prod akan selalu kebawa kode dari host kalau mount ini
+# ditaruh di base.
+services:
+  backend:
+    volumes:
+      - ./backend:/app
+      - ./ml:/app/ml:ro

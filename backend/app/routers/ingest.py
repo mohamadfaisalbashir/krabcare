@@ -1,4 +1,4 @@
-"""POST endpoint — ingest data sensor dari gateway (Raspberry Pi)."""
+"""POST endpoint gateway (Raspberry Pi). Semua endpoint di sini wajib X-API-Key."""
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +21,7 @@ async def ingest_readings(
     payload: SensorReadingBatchIn,
     db: AsyncSession = Depends(get_db),
 ) -> IngestResultOut:
+    """Simpan batch reading sensor mentah; duplikat & device asing dilaporkan balik."""
     inserted, unknown, skipped_duplicates = await ingest_service.ingest_readings(
         db, payload.readings
     )
@@ -37,6 +38,7 @@ async def ingest_quality(
     payload: QualityIngestIn,
     db: AsyncSession = Depends(get_db),
 ) -> QualityIngestResultOut:
+    """Simpan hasil klasifikasi dan/atau prediksi dari pipeline ML."""
     inserted_c, unknown_c, skipped_c = await quality_ingest_service.ingest_classifications(
         db, payload.classifications
     )

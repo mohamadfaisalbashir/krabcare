@@ -1,24 +1,14 @@
 #!/usr/bin/env python3
-"""Backtesting RMSE per-horizon fuzzy time series (metode Chen) — walk-forward validation.
+"""Backtest RMSE per-horizon FTS dengan walk-forward validation.
 
-Menjawab pertanyaan: sampai jam ke berapa ke depan forecast_multi_step() masih
-lebih akurat dibanding baseline naif (persistence: prediksi = nilai terakhir yang
-diketahui, diulang untuk tiap horizon)?
+Menjawab: sampai jam ke berapa forecast masih lebih akurat daripada baseline naif
+(persistence — prediksi = nilai terakhir yang diketahui, diulang tiap horizon)?
 
-Metodologi walk-forward validation, untuk tiap parameter (ph, suhu, salinitas):
-1. Tarik & agregasi histori per-jam device (sama seperti forecast_anomaly_scan.py)
-2. Untuk tiap indeks i pada deret hasil agregasi yang masih menyisakan minimal
-   max_horizon titik data setelahnya: forecast dari window [0..i], bandingkan ke
-   actual [i+1..i+max_horizon] dan ke baseline persistence (nilai di titik i).
-3. Hitung RMSE per horizon (pakai rmse() dari ml/fuzzy/fts.py) untuk FTS & baseline.
-4. Cetak tabel hasil + simpan ke CSV backtest_result_<device_code>_<parameter>.csv.
-5. Tentukan horizon reliable maksimum = horizon terakhir sebelum RMSE FTS >= RMSE
-   baseline.
+Untuk tiap parameter: agregasi histori per jam, geser window satu per satu,
+forecast dari tiap window, bandingkan ke nilai aktual & ke baseline, lalu hitung
+RMSE per horizon dan simpan ke CSV.
 
-Standalone, tanpa dependency eksternal (urllib & csv bawaan Python).
-
-Jalankan dari root project:
-    python ml/scripts/backtest_fts_horizon.py --device-code SLV1
+    python ml/scripts/backtest_fts.py --device-code SLV1
 """
 
 import argparse
@@ -33,62 +23,72 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step, rmse
-from ml.scripts._http import http_get
+from ml.scripts.api_client import api_get
 
-# Batas kasar jumlah titik data teragregasi supaya hasil backtest cukup bisa dipercaya.
-_MIN_POINTS_FOR_RELIABLE_BACKTEST = 20
-_RECOMMENDED_POINTS = 30
+# Ambang kasar jumlah titik teragregasi supaya hasil backtest layak dipercaya.
+_MIN_POINTS = 20
+_IDEAL_POINTS = 30
 
 
 def _fetch_history(
     base_url: str, api_key: str, device_code: str, history_hours: int, bucket_minutes: int
-) -> dict[str, list[float]]:
+) -> dict[str, list[tuple[datetime, float]]]:
+    """Tarik reading device lalu agregasi jadi tiga deret (waktu_bucket, nilai) per parameter."""
     now = datetime.now(timezone.utc)
     start_time = now - timedelta(hours=history_hours)
     query = urllib.parse.urlencode(
         {"device_code": device_code, "start_time": start_time.isoformat(), "limit": 1000}
     )
-    readings = http_get(f"{base_url}/api/v1/readings?{query}", api_key)
+    readings = api_get(f"{base_url}/api/v1/readings?{query}", api_key)
 
     return {
-        "ph": [v for _, v in aggregate_by_time_bucket(readings, "ph", bucket_minutes)],
-        "suhu": [v for _, v in aggregate_by_time_bucket(readings, "temperature_c", bucket_minutes)],
-        "salinitas": [
-            v for _, v in aggregate_by_time_bucket(readings, "salinity_ppt", bucket_minutes)
-        ],
+        "ph": aggregate_by_time_bucket(readings, "ph", bucket_minutes),
+        "suhu": aggregate_by_time_bucket(readings, "temperature_c", bucket_minutes),
+        "salinitas": aggregate_by_time_bucket(readings, "salinity_ppt", bucket_minutes),
     }
 
 
 def _walk_forward_predictions(
-    parameter: str, series: list[float], max_horizon: int
+    parameter: str,
+    series: list[tuple[datetime, float]],
+    max_horizon: int,
+    bucket_minutes: int,
 ) -> tuple[list[list[float]], list[list[float]], list[list[float]], int]:
-    """Kumpulkan actual & prediksi (FTS + baseline persistence) per horizon dari
-    seluruh window walk-forward.
+    """Kumpulkan nilai aktual, prediksi FTS, & baseline per horizon dari semua window.
 
-    Return (actuals_by_horizon, fts_predicted_by_horizon, baseline_predicted_by_horizon,
-    jumlah_window), tiap `_by_horizon` adalah list sepanjang max_horizon berisi list
-    nilai dari semua window.
+    Window dengan celah temporal di bagian "masa depan"-nya dilewati: kalau bucket
+    ke-(i+h) ternyata bukan h*bucket_minutes setelah bucket ke-i, membandingkannya
+    sebagai "horizon +h" itu salah — jaraknya bisa berhari-hari. FLR di dalam
+    forecast juga sudah gap-aware lewat argumen times/bucket_minutes.
+
+    Return (actual, fts, baseline, jumlah_window); tiga yang pertama masing-masing
+    berisi max_horizon list — satu list per horizon.
     """
     actuals_by_horizon: list[list[float]] = [[] for _ in range(max_horizon)]
     fts_by_horizon: list[list[float]] = [[] for _ in range(max_horizon)]
     baseline_by_horizon: list[list[float]] = [[] for _ in range(max_horizon)]
 
+    times = [t for t, _ in series]
+    values = [v for _, v in series]
+    step = timedelta(minutes=bucket_minutes)
+
     n = len(series)
     n_windows = 0
-    for i in range(1, n):  # history_window = series[0..i], minimal 2 titik (i>=1)
-        actual_future = series[i + 1 : i + 1 + max_horizon]
-        if len(actual_future) < max_horizon:
-            break  # tidak cukup titik aktual sesudahnya untuk semua horizon
+    for i in range(1, n):  # window = series[0..i]; FTS butuh minimal 2 titik (i>=1)
+        if i + max_horizon >= n:
+            break  # sisa data tidak cukup untuk mengecek semua horizon
+        if any(times[i + h] - times[i] != h * step for h in range(1, max_horizon + 1)):
+            continue  # ada celah di masa depan window ini — bukan horizon yang sebenarnya
 
-        history_window = series[: i + 1]
-        predicted_future = forecast_multi_step(parameter, history_window, steps=max_horizon)
-        baseline_future = [series[i]] * max_horizon
+        predicted_future = forecast_multi_step(
+            parameter, values[: i + 1], max_horizon, times[: i + 1], bucket_minutes
+        )
         n_windows += 1
 
         for h in range(max_horizon):
-            actuals_by_horizon[h].append(actual_future[h])
+            actuals_by_horizon[h].append(values[i + 1 + h])
             fts_by_horizon[h].append(predicted_future[h])
-            baseline_by_horizon[h].append(baseline_future[h])
+            baseline_by_horizon[h].append(values[i])
 
     return actuals_by_horizon, fts_by_horizon, baseline_by_horizon, n_windows
 
@@ -99,6 +99,7 @@ def _write_csv(
     rmse_fts_list: list[float],
     rmse_baseline_list: list[float],
 ) -> Path:
+    """Tulis tabel RMSE per horizon ke CSV di direktori kerja (untuk lampiran laporan)."""
     path = Path.cwd() / f"backtest_result_{device_code}_{parameter}.csv"
     with open(path, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
@@ -129,17 +130,16 @@ def main() -> None:
     for parameter, series in history.items():
         print(f"\n=== Backtest FTS — parameter: {parameter} ===")
 
-        if len(series) < _MIN_POINTS_FOR_RELIABLE_BACKTEST:
+        if len(series) < _MIN_POINTS:
             print(
                 f"PERINGATAN: cuma {len(series)} titik data teragregasi untuk '{parameter}' — "
-                f"idealnya minimal ~{_MIN_POINTS_FOR_RELIABLE_BACKTEST}-{_RECOMMENDED_POINTS} titik "
-                "supaya hasil backtest bisa dipercaya. Hasil di bawah tetap dihitung, tapi JANGAN "
-                "dijadikan kesimpulan final — perpanjang --history-hours atau kumpulkan data lebih "
-                "lama dulu."
+                f"idealnya minimal ~{_MIN_POINTS}-{_IDEAL_POINTS} titik supaya hasilnya bisa "
+                "dipercaya. Angka di bawah tetap dihitung, tapi JANGAN dijadikan kesimpulan "
+                "final — perpanjang --history-hours atau kumpulkan data lebih lama dulu."
             )
 
         actuals_by_h, fts_by_h, baseline_by_h, n_windows = _walk_forward_predictions(
-            parameter, series, args.max_horizon
+            parameter, series, args.max_horizon, args.bucket_minutes
         )
 
         if n_windows == 0:
@@ -168,10 +168,11 @@ def main() -> None:
         csv_path = _write_csv(args.device_code, parameter, rmse_fts_list, rmse_baseline_list)
         print(f"Hasil disimpan ke: {csv_path}")
 
+        # Horizon reliable = horizon terakhir sebelum RMSE FTS menyamai/melewati baseline.
         reliable_horizon = None
         for h in range(args.max_horizon):
             if rmse_fts_list[h] >= rmse_baseline_list[h]:
-                reliable_horizon = h  # horizon+1 (h+1 jam) mulai gagal -> terakhir baik = h jam
+                reliable_horizon = h
                 break
 
         if reliable_horizon is None:

@@ -1,7 +1,7 @@
-"""GET/POST kecil berbasis urllib, dipakai bersama oleh script-script ml/scripts/*.py
-untuk bicara ke API sismon_kepiting (X-API-Key gateway).
+"""Klien HTTP mini ke API sismon_kepiting, dipakai bersama script di folder ini.
 
-Standalone, tanpa dependency eksternal — konsisten dengan ml/scripts/*.py lain.
+Pakai urllib bawaan Python — script di ml/scripts/ sengaja berdiri sendiri,
+tanpa dependency eksternal.
 """
 
 import json
@@ -9,13 +9,15 @@ import urllib.error
 import urllib.request
 
 
-def http_get(url: str, api_key: str) -> list[dict]:
+def api_get(url: str, api_key: str) -> list[dict]:
+    """GET dengan header X-API-Key gateway, balas JSON yang sudah di-parse."""
     req = urllib.request.Request(url, headers={"X-API-Key": api_key})
     with urllib.request.urlopen(req) as resp:
         return json.load(resp)
 
 
-def http_post(url: str, api_key: str, payload: dict) -> dict:
+def api_post(url: str, api_key: str, payload: dict) -> dict:
+    """POST JSON. Body error dari server ikut dilempar supaya pesannya kelihatan."""
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         url,

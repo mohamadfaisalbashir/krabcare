@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Script uji end-to-end pipeline fuzzy logic (bisa dipanggil manual, belum jadi scheduler):
+"""Jalankan klasifikasi Mamdani manual atas reading terbaru tiap device.
 
-1. Tarik reading terbaru per device dari GET /api/v1/readings
-2. Jalankan inferensi fuzzy Mamdani (ml/fuzzy/mamdani.py)
-3. Push hasil klasifikasi via POST /api/v1/ingest/quality
+Alur: GET /api/v1/readings -> classify_water_quality() -> POST /api/v1/ingest/quality.
+Sama seperti yang dilakukan scheduler tiap siklus, tapi dipicu tangan — berguna
+untuk debugging tanpa menunggu interval scheduler.
 
-Standalone — hanya butuh backend sismon_kepiting yang jalan (mis. `docker compose up`),
-tidak bergantung pada hardware ESP32/Raspberry Pi. Tanpa dependency eksternal,
-pakai urllib bawaan Python.
+Cuma butuh backend jalan (`docker compose up`), tidak butuh hardware.
 
-Jalankan dari root project:
-    python ml/scripts/test_e2e_classification.py
+    python ml/scripts/run_classification.py
 """
 
 import argparse
@@ -23,7 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from ml.fuzzy.mamdani import classify_water_quality
-from ml.scripts._http import http_get, http_post
+from ml.scripts.api_client import api_get, api_post
 
 
 def main() -> None:
@@ -42,18 +39,19 @@ def main() -> None:
     if args.device_code:
         query += f"&device_code={args.device_code}"
 
-    readings = http_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
+    readings = api_get(f"{args.base_url}/api/v1/readings?{query}", args.api_key)
     if not readings:
         print("Tidak ada sensor_readings ditemukan. Ingest data dulu lewat POST /api/v1/ingest/readings.")
         return
 
-    # Ambil reading paling baru per device (readings sudah terurut time DESC dari API).
+    # API sudah mengurutkan time DESC, jadi yang pertama muncul = paling baru.
     latest_by_device: dict[str, dict] = {}
     for r in readings:
         latest_by_device.setdefault(r["device_code"], r)
 
     classifications = []
     for code, r in latest_by_device.items():
+        # Mamdani butuh ketiga parameter; reading tidak lengkap tidak bisa diklasifikasi.
         if r["ph"] is None or r["temperature_c"] is None or r["salinity_ppt"] is None:
             print(f"[skip] {code}: ada parameter kosong (ph/temperature_c/salinity_ppt)")
             continue
@@ -83,7 +81,7 @@ def main() -> None:
         print("Tidak ada klasifikasi yang bisa dikirim (semua reading punya parameter kosong).")
         return
 
-    response = http_post(
+    response = api_post(
         f"{args.base_url}/api/v1/ingest/quality",
         args.api_key,
         {"classifications": classifications},

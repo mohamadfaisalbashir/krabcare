@@ -20,6 +20,7 @@ async def list_notifications(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[NotificationOut]:
+    """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup."""
     items = await notification_service.list_notifications(db, current_user, unread_only, limit)
     device_ids = {n.device_id for n in items}
     devices_result = await db.execute(select(Device).where(Device.id.in_(device_ids)))
@@ -47,6 +48,7 @@ async def mark_notification_read(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    """Tandai satu notifikasi sudah dibaca."""
     ok = await notification_service.mark_read(db, current_user, notification_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notifikasi tidak ditemukan")
@@ -58,5 +60,6 @@ async def register_push_token(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    """Daftarkan/refresh token FCM perangkat mobile user ini."""
     await notification_service.register_push_token(db, current_user, payload.fcm_token, payload.platform)
     return {"detail": "Push token terdaftar."}

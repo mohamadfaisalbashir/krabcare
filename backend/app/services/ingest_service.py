@@ -1,4 +1,4 @@
-"""Logika penyimpanan data sensor yang masuk dari gateway."""
+"""Simpan data sensor mentah yang dikirim gateway."""
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,20 +6,19 @@ from sqlalchemy.sql import func
 
 from app.models import Device, SensorReading
 from app.schemas.sensor_reading import SensorReadingIn, SkippedDuplicateOut
-from app.services._ingest_common import get_device_map, idempotent_bulk_insert
+from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
 
 
 async def ingest_readings(
     db: AsyncSession, readings: list[SensorReadingIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    """Simpan batch pembacaan sensor.
+    """Simpan satu batch reading, lalu perbarui last_seen_at device terkait.
 
-    Device yang belum terdaftar dilewati (bukan auto-registrasi), dilaporkan di
-    `unknown_device_codes`. Insert idempoten (ON CONFLICT DO NOTHING pada PK
-    device_id+time) buat aman kalau gateway retry — baris yang sudah ada di-skip
-    dan dilaporkan lewat `skipped_duplicates`, bukan ditimpa diam-diam.
+    Device yang belum terdaftar dilewati (tidak auto-registrasi) dan dilaporkan.
+    Insert idempoten pada PK device_id+time supaya retry gateway tidak menimpa
+    data lama — yang duplikat dilaporkan, bukan ditulis ulang diam-diam.
     """
-    device_map = await get_device_map(db, [r.device_code for r in readings])
+    device_map = await find_devices_by_code(db, [r.device_code for r in readings])
     unknown = sorted({r.device_code for r in readings if r.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
 
@@ -39,7 +38,7 @@ async def ingest_readings(
     skipped_duplicates: list[SkippedDuplicateOut] = []
 
     if rows:
-        inserted, inserted_keys = await idempotent_bulk_insert(
+        inserted, skipped_rows = await insert_skip_duplicates(
             db, SensorReading, rows, [SensorReading.device_id, SensorReading.time]
         )
 
@@ -48,10 +47,10 @@ async def ingest_readings(
                 device_code=device_code_by_id[row["device_id"]],
                 time=row["time"],
             )
-            for row in rows
-            if (row["device_id"], row["time"]) not in inserted_keys
+            for row in skipped_rows
         ]
 
+        # Bukti device masih hidup — dipakai dashboard untuk status online/offline.
         device_ids = list({row["device_id"] for row in rows})
         await db.execute(
             update(Device).where(Device.id.in_(device_ids)).values(last_seen_at=func.now())

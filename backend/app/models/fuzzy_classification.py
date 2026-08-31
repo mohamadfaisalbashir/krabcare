@@ -11,7 +11,7 @@ from app.models.enums import WaterQualityCategory
 
 
 class FuzzyClassification(Base):
-    """Hasil klasifikasi fuzzy logic real-time atas sensor_readings terbaru. Hypertable, partisi kolom `time`."""
+    """Hasil klasifikasi fuzzy Mamdani atas reading terbaru. Hypertable, partisi kolom `time`."""
 
     __tablename__ = "fuzzy_classifications"
 
@@ -32,4 +32,6 @@ class FuzzyClassification(Base):
     )
     membership_degrees: Mapped[dict | None] = mapped_column(JSON().with_variant(JSONB, "postgresql"))
     model_version: Mapped[str] = mapped_column(Text, default="v1", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )

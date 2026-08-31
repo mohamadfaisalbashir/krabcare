@@ -1,3 +1,5 @@
+"""Schema kolam (unit budidaya / rak vertikal)."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field

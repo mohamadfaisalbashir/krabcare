@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import TIMESTAMP, ForeignKey, Numeric, Text
+from sqlalchemy import TIMESTAMP, ForeignKey, Index, Numeric, Text
+from sqlalchemy import text as sa_text
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -10,14 +11,18 @@ from app.models.enums import WaterQualityCategory
 
 
 class FuzzyPrediction(Base):
-    """Hasil prediksi tren kualitas air (fuzzy time series). Hypertable, partisi kolom `time` (waktu prediksi dibuat).
+    """Hasil prediksi FTS. Hypertable, partisi `time` (= kapan forecast dijalankan).
 
-    PK (device_id, time, horizon_minutes) — bukan cuma (device_id, time) — karena
-    satu waktu forecast (`time`) yang sama bisa menghasilkan banyak prediksi
-    sekaligus untuk horizon berbeda (mis. multi-step forecast jam+1 s.d. jam+6).
+    PK ikut horizon_minutes karena satu run forecast menghasilkan banyak baris
+    sekaligus (jam+1 s.d. jam+6) dengan `time` yang sama.
     """
 
     __tablename__ = "fuzzy_predictions"
+    # Lihat catatan index di device.py. Index *_time_idx sengaja TIDAK didaftarkan:
+    # itu bikinan create_hypertable(), disaring include_object di alembic/env.py.
+    __table_args__ = (
+        Index("idx_fuzzy_predictions_device_target", "device_id", sa_text("target_time DESC")),
+    )
 
     time: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), primary_key=True)
     device_id: Mapped[int] = mapped_column(
@@ -35,4 +40,6 @@ class FuzzyPrediction(Base):
         )
     )
     model_version: Mapped[str] = mapped_column(Text, default="v1", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
+    )

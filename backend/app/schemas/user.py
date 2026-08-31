@@ -1,9 +1,12 @@
+"""Schema auth & profil user."""
+
 from datetime import datetime
 
 from pydantic import BaseModel, Field
 
 from app.models.enums import UserRole
 
+# Validasi email seadanya (ada @ dan titik) — cukup, tanpa dependency validator baru.
 _EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 

@@ -1,3 +1,5 @@
+"""Re-export schema Pydantic — suffix In = request body, Out = response."""
+
 from app.schemas.device import DeviceOut
 from app.schemas.fuzzy import (
     DevicePredictionsOut,
