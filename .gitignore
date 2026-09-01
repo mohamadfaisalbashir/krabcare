@@ -25,6 +25,7 @@ pgdata/
 
 # ── Node / Next.js (web/) ───────────────────────────────
 web/node_modules/
+web/tsconfig.tsbuildinfo
 web/.next/
 web/out/
 web/.env*.local
@@ -40,6 +41,11 @@ mobile/.packages
 mobile/build/
 mobile/**/ios/Pods/
 mobile/**/*.g.dart
+mobile/**/*.iml
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/**/*.jks
+mobile/**/*.keystore
 
 # ── Firmware (PlatformIO / ESP-IDF) ─────────────────────
 firmware/**/.pio/
@@ -61,6 +67,7 @@ backtest_result_*.csv
 # ── Editor / OS ──────────────────────────────────────────
 .vscode/
 .idea/
+*.iml
 .DS_Store
 Thumbs.db
 
