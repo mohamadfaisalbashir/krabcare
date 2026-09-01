@@ -9,6 +9,9 @@
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
+    // Dibutuhkan src/lib/*.test.ts: `node --test` memakai resolusi ESM, yang
+    // mewajibkan ekstensi eksplisit pada import relatif. Aman karena noEmit.
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",

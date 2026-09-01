@@ -97,7 +97,12 @@ export default function KolamDetailPage() {
       }
     }
 
-    loadDeviceData(device.id);
+    const deviceId = device.id;
+    loadDeviceData(deviceId);
+    // Refresh senyap — loadDeviceData tidak menyentuh state `loading`, jadi
+    // kartu parameter & grafik ter-update tanpa halaman berkedip.
+    const id = setInterval(() => loadDeviceData(deviceId), 60_000);
+    return () => clearInterval(id);
   }, [device]);
 
   async function handleRenameRak(e: React.FormEvent) {

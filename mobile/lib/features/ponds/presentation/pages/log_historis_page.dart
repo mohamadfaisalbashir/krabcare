@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/log_entry.dart';
 import '../../domain/water_parameter.dart';
 import '../controllers/log_historis_controller.dart';
-import '../controllers/pond_detail_controller.dart';
 
 /// Halaman ini sengaja pakai tema gelap/monospace tersendiri, berbeda dari
 /// halaman lain di aplikasi (sesuai Gambar 3.24).
@@ -25,11 +25,16 @@ class LogHistorisPage extends ConsumerWidget {
     final query = (pondId: pondId, parameter: parameter);
     final logsAsync = ref.watch(logHistorisControllerProvider(query));
     final activeFilter = ref.watch(logHistorisFilterProvider);
-    // Ambil nama kolam dari cache Detail Kolam kalau sudah pernah dimuat,
-    // fallback ke pondId selama belum ada.
-    final pondName = ref
-        .watch(pondDetailControllerProvider(pondId))
-        .maybeWhen(data: (d) => d.pondName, orElse: () => pondId);
+    // Nama kolam diambil dari daftar kolam yang sudah di-cache seumur sesi.
+    // Sebelumnya halaman ini memantau pondDetailControllerProvider hanya demi
+    // satu string, yang pada pembukaan dingin memicu fetch readings + quality
+    // + predictions seukuran halaman Detail — semuanya dibuang.
+    final pondName = ref.watch(kolamListProvider).maybeWhen(
+          data: (rows) =>
+              rows.where((r) => r.id.toString() == pondId).firstOrNull?.nama ??
+              pondId,
+          orElse: () => pondId,
+        );
 
     return Scaffold(
       backgroundColor: AppColors.logBackground,

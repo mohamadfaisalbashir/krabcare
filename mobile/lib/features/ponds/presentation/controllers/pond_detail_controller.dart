@@ -1,13 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/water_thresholds.dart';
 import '../../domain/pond_detail.dart';
 import '../../domain/water_parameter.dart';
 
-/// TODO: ganti _fetchDetail() dengan panggilan ke PondRepository
-/// (GET /ponds/{id}, termasuk hasil fuzzy logic & fuzzy time series).
-/// Tambahkan polling berkala untuk soft real-time (ref. FR-01, interval 1
-/// menit) begitu endpoint sudah tersedia.
 class PondDetailController extends FamilyAsyncNotifier<PondDetail, String> {
   @override
   Future<PondDetail> build(String pondId) {
@@ -15,83 +12,119 @@ class PondDetailController extends FamilyAsyncNotifier<PondDetail, String> {
   }
 
   Future<PondDetail> _fetchDetail(String pondId) async {
-    // --- Data dummy sementara, ganti dengan API call asli ---
-    await Future.delayed(const Duration(milliseconds: 600));
+    final api = ref.watch(apiProvider);
+    final kolams = await ref.read(kolamListProvider.future);
+    final kolam = kolams.where((k) => k.id.toString() == pondId).firstOrNull;
 
-    final now = DateTime.now();
-    List<TrendPoint> genPoints(List<double> values) => [
-          for (var i = 0; i < values.length; i++)
-            TrendPoint(
-              time: now.subtract(
-                Duration(minutes: (values.length - i) * 10),
-              ),
-              value: values[i],
-            ),
-        ];
+    if (kolam == null) {
+      throw Exception('Kolam tidak ditemukan');
+    }
+
+    // Belum ada perangkat: tidak ada gunanya menembak /readings atau /quality.
+    final deviceId = kolam.deviceId;
+    if (deviceId == null) {
+      return PondDetail(
+        pondId: pondId,
+        pondName: kolam.nama,
+        iotId: null,
+        readings: const [],
+        predictions: const [],
+        trends: const [],
+      );
+    }
+
+    final results = await Future.wait([
+      api.readings(deviceId: deviceId, limit: 30),
+      api.predictions(deviceId: deviceId),
+    ]);
+    // Backend mengurutkan time DESC; grafik butuh menaik.
+    final rows = (results[0]).cast<Map<String, dynamic>>().reversed.toList();
+    final predictionGroups = (results[1]).cast<Map<String, dynamic>>();
+
+    final latest = rows.isEmpty ? null : rows.last;
+
+    double? valueOf(Map<String, dynamic>? row, WaterParameter p) =>
+        (row?[p.jsonKey] as num?)?.toDouble();
+
+    // --- Nilai terkini per parameter (FR-08) ---
+    final readings = <ParameterReading>[
+      for (final p in WaterParameter.values)
+        if (valueOf(latest, p) case final v?)
+          ParameterReading(
+            parameter: p,
+            value: v,
+            status: statusOf(p, v),
+          ),
+    ];
+
+    // --- Prediksi (FR-09) ---
+    // /quality/predictions memberi seluruh horizon dari satu run terakhir,
+    // urut horizon menaik. Ambil horizon terjauh yang masih dalam jendela.
+    final horizons = predictionGroups.isEmpty
+        ? const <Map<String, dynamic>>[]
+        : (predictionGroups.first['predictions'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .where((p) =>
+                (p['horizon_minutes'] as int) <=
+                kPredictionHorizonLimitMinutes)
+            .toList();
+    final target = horizons.isEmpty ? null : horizons.last;
+
+    final predictions = <ParameterPrediction>[
+      for (final p in WaterParameter.values)
+        ParameterPrediction(
+          parameter: p,
+          text: '${p.label}: '
+              '${trendSentence(p, valueOf(latest, p), (target?[p.predictedJsonKey] as num?)?.toDouble())}',
+        ),
+    ];
+
+    // --- Grafik tren ---
+    final trends = <TrendSeries>[
+      for (final p in WaterParameter.values)
+        if (_pointsFor(rows, p) case final points when points.isNotEmpty)
+          () {
+            final bounds = axisBoundsFor([for (final t in points) t.value]);
+            return TrendSeries(
+              parameter: p,
+              status: statusOf(p, points.last.value),
+              points: points,
+              minY: bounds.minY,
+              maxY: bounds.maxY,
+            );
+          }(),
+    ];
 
     return PondDetail(
       pondId: pondId,
-      pondName: pondId == '2' ? 'Kolam B' : 'Kolam A',
-      iotId: pondId == '2' ? 'IOT-KPT-002' : 'IOT-KPT-001',
-      readings: const [
-        ParameterReading(
-          parameter: WaterParameter.ph,
-          value: 8.0,
-          status: WaterStatus.aman,
-        ),
-        ParameterReading(
-          parameter: WaterParameter.suhu,
-          value: 30.5,
-          status: WaterStatus.waspada,
-        ),
-        ParameterReading(
-          parameter: WaterParameter.salinitas,
-          value: 25.0,
-          status: WaterStatus.aman,
-        ),
-      ],
-      predictions: const [
-        ParameterPrediction(
-          parameter: WaterParameter.ph,
-          text: 'pH Air: Cenderung stabil di kisaran 7.1 - 7.2 (Aman).',
-        ),
-        ParameterPrediction(
-          parameter: WaterParameter.suhu,
-          text: 'Suhu: Diprediksi terus naik mendekati 31.0°C (Waspada).',
-        ),
-        ParameterPrediction(
-          parameter: WaterParameter.salinitas,
-          text: 'Salinitas: Stabil di angka 25 ppt (Aman).',
-        ),
-      ],
-      trends: [
-        TrendSeries(
-          parameter: WaterParameter.suhu,
-          status: WaterStatus.waspada,
-          points: genPoints([28.1, 28.4, 28.8, 29.2, 29.5, 29.8, 30.1, 30.5]),
-          minY: 28,
-          maxY: 30,
-        ),
-        TrendSeries(
-          parameter: WaterParameter.ph,
-          status: WaterStatus.aman,
-          points: genPoints([8.0, 7.9, 8.1, 8.0, 7.9, 8.0, 8.1, 8.0]),
-          minY: 7.5,
-          maxY: 8.5,
-        ),
-        TrendSeries(
-          parameter: WaterParameter.salinitas,
-          status: WaterStatus.aman,
-          points: genPoints([24, 26, 23, 27, 25, 24, 26, 25]),
-          minY: 10,
-          maxY: 30,
-        ),
-      ],
+      pondName: kolam.nama,
+      iotId: kolam.deviceCode,
+      readings: readings,
+      predictions: predictions,
+      trends: trends,
     );
   }
 
+  /// Titik grafik satu parameter. Baris yang nilainya null dilewati — jangan
+  /// pernah dikarang jadi 0.0, itu akan tampil sebagai anjlok drastis.
+  List<TrendPoint> _pointsFor(
+    List<Map<String, dynamic>> rows,
+    WaterParameter p,
+  ) =>
+      [
+        for (final r in rows)
+          if ((r[p.jsonKey] as num?)?.toDouble() case final v?)
+            TrendPoint(
+              // Timestamp backend timezone-aware -> DateTime.parse menghasilkan
+              // UTC. Tanpa toLocal() seluruh jam meleset dari WIB.
+              time: DateTime.parse(r['time'] as String).toLocal(),
+              value: v,
+            ),
+      ];
+
   Future<void> refresh(String pondId) async {
     state = const AsyncLoading();
+    ref.invalidate(kolamListProvider);
     state = await AsyncValue.guard(() => _fetchDetail(pondId));
   }
 }

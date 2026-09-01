@@ -11,8 +11,14 @@ import clsx from "clsx";
 
 const SEVERITY: StatusLabel[] = ["Aman", "Waspada", "Bahaya"];
 
-/** Status satu reading = status TERBURUK dari ketiga parameternya.
- *  Ambangnya dipakai bersama halaman detail rak lewat lib/parameter.ts. */
+/** Status satu reading = status TERBURUK dari ketiga parameternya, dihitung dari
+ *  ambang Tabel 2.1 (lib/parameter.ts). Ini BUKAN hasil fuzzy Mamdani.
+ *
+ *  ponytail: klasifikasi Mamdani ditulis satu baris per device per siklus
+ *  scheduler (ML_BUCKET_MINUTES=60), sedangkan reading masuk tiap 1-15 menit —
+ *  jadi status fuzzy per-reading memang tidak ada datanya. Halaman ini sengaja
+ *  memakai cek ambang dan menamainya begitu. Ganti ke endpoint riwayat
+ *  klasifikasi kalau nanti cadence keduanya disamakan. */
 function readingStatus(reading: SensorReading): StatusLabel {
   let worst: StatusLabel = "Aman";
   for (const param of PARAM_KEYS) {
@@ -34,64 +40,80 @@ const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
 export default function LogHistorisPage() {
   const [readings, setReadings] = useState<SensorReading[]>([]);
   const [kolamList, setKolamList] = useState<Kolam[]>([]);
-  // Reading hanya membawa device_id/device_code, tidak membawa kolam_id — jadi
-  // pemetaan kolam → device dibuat sekali di sini supaya filternya benar.
-  const [deviceIdsByKolam, setDeviceIdsByKolam] = useState<Record<number, number[]>>({});
+  // Satu kolam = tepat satu device (backend menolak klaim kedua dengan 409),
+  // jadi peta ini cukup menyimpan satu id per kolam.
+  const [deviceIdByKolam, setDeviceIdByKolam] = useState<Record<number, number>>({});
   const [kolamFilter, setKolamFilter] = useState<string>("semua");
   const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Daftar kolam + peta device-nya: sekali saja, tidak ikut berubah saat filter diganti.
   useEffect(() => {
-    async function load() {
-      setLoading(true);
-      setError(null);
+    async function loadKolam() {
       try {
-        const [kolams, allReadings] = await Promise.all([
-          api.listKolam(),
-          api.getReadings({ limit: 500 }),
-        ]);
+        const kolams = await api.listKolam();
         setKolamList(kolams);
-        setReadings(allReadings);
-
         const pairs = await Promise.all(
           kolams.map(async (k) => {
             try {
               const devices = await api.getKolamDevices(k.id);
-              return [k.id, devices.map((d) => d.id)] as const;
+              return [k.id, devices[0]?.id] as const;
             } catch {
-              return [k.id, [] as number[]] as const;
+              return [k.id, undefined] as const;
             }
           })
         );
-        setDeviceIdsByKolam(Object.fromEntries(pairs));
+        setDeviceIdByKolam(
+          Object.fromEntries(pairs.filter((p): p is readonly [number, number] => p[1] != null))
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Gagal memuat daftar kolam.");
+      }
+    }
+    loadKolam();
+  }, []);
+
+  // Reading di-fetch ulang tiap filter kolam berubah, DENGAN device_id.
+  // Menyaring di klien tidak cukup: /readings memotong `limit` setelah
+  // mengurutkan time DESC lintas semua device, jadi sekali fetch global cuma
+  // memuat beberapa jam terakhir dan riwayat per kolam ikut terpotong.
+  useEffect(() => {
+    const deviceId = kolamFilter === "semua" ? undefined : deviceIdByKolam[Number(kolamFilter)];
+    // Kolam terpilih belum punya device → tidak ada yang bisa diminta.
+    if (kolamFilter !== "semua" && deviceId == null) {
+      setReadings([]);
+      setLoading(false);
+      return;
+    }
+
+    async function loadReadings() {
+      setLoading(true);
+      setError(null);
+      try {
+        setReadings(await api.getReadings({ device_id: deviceId, limit: 500 }));
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
       } finally {
         setLoading(false);
       }
     }
-    load();
-  }, []);
+    loadReadings();
+  }, [kolamFilter, deviceIdByKolam]);
 
   const filtered = useMemo(
     () =>
       readings
-        .filter((r) => {
-          if (kolamFilter === "semua") return true;
-          const ids = deviceIdsByKolam[Number(kolamFilter)] ?? [];
-          return ids.includes(r.device_id);
-        })
         .filter((r) => statusFilter === "Semua" || readingStatus(r) === statusFilter)
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
-    [readings, kolamFilter, statusFilter, deviceIdsByKolam]
+    [readings, statusFilter]
   );
 
   return (
     <>
       <Topbar
         title="Log Historis"
-        subtitle="Riwayat data sensor kualitas air per device"
+        subtitle="Riwayat data sensor — status dari ambang per parameter (Tabel 2.1)"
       />
 
       <div className="flex-1 space-y-5 p-5 sm:p-8">
@@ -133,6 +155,13 @@ export default function LogHistorisPage() {
             {error}
           </p>
         )}
+
+        <p className="text-xs leading-relaxed text-muted">
+          Badge di bawah menandai apakah tiap nilai masih di dalam ambang toleransi
+          parameternya. Status kualitas air hasil fuzzy Mamdani ada di halaman
+          Dashboard dan Detail Rak — keduanya memang bisa berbeda karena
+          klasifikasi fuzzy dihitung sekali per jam, bukan per reading.
+        </p>
 
         {/* Daftar reading */}
         <Card className="p-0">

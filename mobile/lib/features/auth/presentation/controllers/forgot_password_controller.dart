@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// TODO: ganti isi sendResetLink() dengan panggilan ke AuthRepository
-/// (endpoint forgot-password) begitu kontrak backend sudah di-share.
+import '../../../../core/api/api_client.dart';
+
 class ForgotPasswordController extends AsyncNotifier<void> {
   @override
   FutureOr<void> build() {
@@ -14,12 +14,12 @@ class ForgotPasswordController extends AsyncNotifier<void> {
     state = const AsyncLoading();
 
     state = await AsyncValue.guard(() async {
-      // --- Simulasi sementara, ganti dengan API call asli ---
-      await Future.delayed(const Duration(milliseconds: 800));
       if (email.isEmpty) {
         throw Exception('Alamat email wajib diisi');
       }
-      // TODO: panggil endpoint POST /auth/forgot-password
+      // Backend selalu membalas pesan yang sama, terdaftar atau tidak
+      // (anti-enumerasi), jadi tidak ada cabang sukses/gagal di sini.
+      await ref.read(apiProvider).forgotPassword(email.trim());
     });
 
     return !state.hasError;

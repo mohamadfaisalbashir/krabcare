@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../api/api_client.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
@@ -28,6 +29,18 @@ class AppRoutes {
 
 final appRouter = GoRouter(
   initialLocation: AppRoutes.login,
+  // sessionToken berubah saat login, logout, atau saat backend menolak token
+  // (401/403) — redirect di bawah ikut dievaluasi ulang setiap kali.
+  refreshListenable: sessionToken,
+  redirect: (context, state) {
+    final loggedIn = sessionToken.value != null;
+    final atAuthPage = state.matchedLocation == AppRoutes.login ||
+        state.matchedLocation == AppRoutes.forgotPassword;
+
+    if (!loggedIn && !atAuthPage) return AppRoutes.login;
+    if (loggedIn && atAuthPage) return AppRoutes.dashboard;
+    return null;
+  },
   routes: [
     GoRoute(
       path: AppRoutes.login,

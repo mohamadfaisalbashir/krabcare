@@ -1,7 +1,7 @@
 // Ambang & penyajian tiga parameter kualitas air. Dipakai kartu parameter,
 // panel prediksi, dan halaman log historis — dikumpulkan di sini supaya
 // angkanya tidak menyebar dan ikut berbeda antar halaman.
-import { StatusLabel } from "./types";
+import type { StatusLabel } from "./types";
 
 export type ParamKey = "ph" | "temperature_c" | "salinity_ppt";
 

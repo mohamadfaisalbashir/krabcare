@@ -6,8 +6,7 @@ import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { api } from "@/lib/api";
-import { confirmLogout } from "@/lib/logout";
+import { api, confirmLogout } from "@/lib/api";
 import { User } from "@/lib/types";
 
 type Message = { type: "ok" | "err"; text: string } | null;

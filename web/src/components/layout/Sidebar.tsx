@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import Logo from "./Logo";
-import { confirmLogout } from "@/lib/logout";
+import { confirmLogout } from "@/lib/api";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

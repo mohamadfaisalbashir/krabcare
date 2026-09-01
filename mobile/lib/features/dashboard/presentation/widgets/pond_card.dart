@@ -60,7 +60,9 @@ class PondCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              'ID: ${pond.iotId}',
+                              pond.iotId == null
+                                  ? 'Belum ada perangkat'
+                                  : 'ID: ${pond.iotId}',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.textSecondary,
@@ -86,7 +88,16 @@ class PondCard extends StatelessWidget {
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  StatusBadge(status: pond.overallStatus),
+                  if (pond.overallStatus == null)
+                    const Text(
+                      'Belum ada data',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textHint,
+                      ),
+                    )
+                  else
+                    StatusBadge(status: pond.overallStatus!),
                 ],
               ),
             ],

@@ -46,6 +46,11 @@ class PredictionBox extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (predictions.isEmpty)
+            const Text(
+              'Prediksi belum tersedia untuk kolam ini.',
+              style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+            ),
           for (final p in predictions) ...[
             _PredictionLine(prediction: p),
             if (p != predictions.last) const SizedBox(height: 8),

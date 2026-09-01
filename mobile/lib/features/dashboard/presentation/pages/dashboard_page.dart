@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../notifications/presentation/controllers/notifications_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/pond_card.dart';
 
@@ -23,14 +24,28 @@ class DashboardPage extends ConsumerWidget {
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                sliver: SliverToBoxAdapter(child: _buildHeader(context)),
+                sliver: SliverToBoxAdapter(child: _buildHeader(context, ref)),
               ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 sliver: pondsAsync.when(
                   data: (ponds) => ponds.isEmpty
                       ? const SliverFillRemaining(
-                          child: Center(child: Text('Belum ada kolam')),
+                          child: Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 32),
+                              child: Text(
+                                'Belum ada kolam.\n'
+                                'Tambahkan kolam lewat dashboard web '
+                                'terlebih dahulu.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  height: 1.5,
+                                ),
+                              ),
+                            ),
+                          ),
                         )
                       : SliverList.separated(
                           itemCount: ponds.length,
@@ -61,7 +76,7 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -90,7 +105,9 @@ class DashboardPage extends ConsumerWidget {
         ),
         _HeaderIconButton(
           icon: Icons.notifications_none_rounded,
-          showDot: true,
+          // Dulu hardcoded true — titiknya selalu menyala meski tidak ada
+          // notifikasi baru sama sekali.
+          showDot: ref.watch(unreadCountProvider) > 0,
           onTap: () => context.push(AppRoutes.notifications),
         ),
         const SizedBox(width: 10),

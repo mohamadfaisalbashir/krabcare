@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/api/water_thresholds.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/pond_detail.dart';
 
@@ -55,10 +56,12 @@ class _LineChartPainter extends CustomPainter {
       fontSize: 9,
       color: AppColors.textSecondary,
     );
-    _drawText(canvas, '${series.maxY.toStringAsFixed(0)}', 0, -4, textStyle);
+    // formatValue, bukan toStringAsFixed(0): grafik pH rentang 7.9-8.1 akan
+    // mencetak "8" dan "8" kalau desimalnya dibuang.
+    _drawText(canvas, formatValue(series.maxY), 0, -4, textStyle);
     _drawText(
       canvas,
-      '${series.minY.toStringAsFixed(0)}',
+      formatValue(series.minY),
       0,
       chartHeight - 8,
       textStyle,

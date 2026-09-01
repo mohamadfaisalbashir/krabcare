@@ -1,25 +1,33 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/app_notification.dart';
+import '../controllers/notifications_controller.dart';
 
-class NotificationCard extends StatelessWidget {
+class NotificationCard extends ConsumerWidget {
   const NotificationCard({super.key, required this.notification});
 
   final AppNotification notification;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final status = notification.status;
     final trigger = notification.trigger;
+    final isRead = notification.isRead;
 
-    return Container(
+    final card = Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: status.bgColor,
+        // Yang sudah dibaca ditampilkan lebih pudar supaya yang baru menonjol.
+        color: isRead ? AppColors.surface : status.bgColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: status.textColor.withValues(alpha: 0.25)),
+        border: Border.all(
+          color: isRead
+              ? AppColors.border
+              : status.textColor.withValues(alpha: 0.25),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,6 +54,17 @@ class NotificationCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
+                    if (!isRead) ...[
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: status.textColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                    ],
                     Text(
                       notification.relativeTimeLabel,
                       style: const TextStyle(
@@ -69,6 +88,15 @@ class NotificationCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (isRead) return card;
+    return InkWell(
+      onTap: () => ref
+          .read(notificationsControllerProvider.notifier)
+          .markRead(notification.id),
+      borderRadius: BorderRadius.circular(14),
+      child: card,
     );
   }
 

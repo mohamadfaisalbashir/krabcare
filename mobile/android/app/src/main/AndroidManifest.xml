@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Aplikasi membaca API backend lewat HTTP; tanpa ini build release tidak
+         punya jaringan sama sekali (manifest debug punya sendiri untuk hot reload). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="app_kepiting"
         android:name="${applicationName}"

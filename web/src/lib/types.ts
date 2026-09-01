@@ -17,20 +17,9 @@ const CATEGORY_TO_LABEL: Record<WaterQualityCategory, StatusLabel> = {
   buruk: "Bahaya",
 };
 
-const LABEL_TO_CATEGORY: Record<StatusLabel, WaterQualityCategory> = {
-  Aman: "baik",
-  Waspada: "sedang",
-  Bahaya: "buruk",
-};
-
 /** Konversi enum backend → label tampilan UI. */
 export function categoryToLabel(cat: WaterQualityCategory): StatusLabel {
   return CATEGORY_TO_LABEL[cat] ?? "Waspada";
-}
-
-/** Konversi label UI → enum backend (untuk filter/request). */
-export function labelToCategory(label: StatusLabel): WaterQualityCategory {
-  return LABEL_TO_CATEGORY[label] ?? "sedang";
 }
 
 // ── Auth (schemas/user.py) ──────────────────────────────────────────

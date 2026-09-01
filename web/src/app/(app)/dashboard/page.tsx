@@ -7,7 +7,13 @@ import PondCard from "@/components/dashboard/PondCard";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { Device, KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
+import {
+  Device,
+  KolamDashboard,
+  SensorReading,
+  StatusLabel,
+  categoryToLabel,
+} from "@/lib/types";
 import { api } from "@/lib/api";
 
 /**
@@ -33,17 +39,26 @@ export default function DashboardPage() {
 
   // Compose dashboard dari beberapa endpoint backend:
   // 1. GET /kolam → daftar kolam
-  // 2. GET /kolam/:id/devices → devices per kolam
-  // 3. GET /quality/latest → kualitas terbaru semua device
-  // 4. GET /readings?limit=... → reading terbaru semua device
-  async function loadDashboard() {
-    setLoading(true);
+  // 2. GET /quality/latest → kualitas terbaru semua device (DISTINCT ON per device)
+  // 3. GET /kolam/:id/devices → device milik kolam
+  // 4. GET /readings?device_id=&limit=1 → reading terbaru device itu
+  //
+  // Reading DIAMBIL PER DEVICE, bukan sekali untuk semua. Endpoint /readings
+  // mengurutkan time DESC lalu memotong `limit` secara global — sekali fetch
+  // membuat device yang jeda kirimnya lebih lama dari jendela itu tampak kosong
+  // padahal datanya ada.
+  //
+  // ponytail: N+1 request (1 devices + 1 readings per kolam). Wajar untuk
+  // belasan kolam; kalau jumlahnya tumbuh, minta endpoint batch ke backend.
+  // `silent` dipakai refresh berkala: tanpa itu daftar kolam berkedip jadi
+  // "Memuat data kolam..." tiap satu menit.
+  async function loadDashboard(silent = false) {
+    if (!silent) setLoading(true);
     setError(null);
     try {
-      const [kolamList, qualityList, readingsList] = await Promise.all([
+      const [kolamList, qualityList] = await Promise.all([
         api.listKolam(),
         api.getLatestQuality(),
-        api.getReadings({ limit: 100 }),
       ]);
 
       const dashboard: KolamDashboard[] = await Promise.all(
@@ -55,10 +70,20 @@ export default function DashboardPage() {
             devices = [];
           }
           const deviceIds = new Set(devices.map((d) => d.id));
-
           const quality = qualityList.find((q) => deviceIds.has(q.device_id)) ?? null;
-          const latestReading =
-            readingsList.find((r) => deviceIds.has(r.device_id)) ?? null;
+
+          let latestReading: SensorReading | null = null;
+          if (devices[0]) {
+            try {
+              const rows = await api.getReadings({
+                device_id: devices[0].id,
+                limit: 1,
+              });
+              latestReading = rows[0] ?? null;
+            } catch {
+              latestReading = null;
+            }
+          }
 
           return { kolam, devices, quality, latestReading };
         })
@@ -74,6 +99,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadDashboard();
+    // Sensor kirim jauh lebih sering daripada orang menekan reload.
+    const id = setInterval(() => loadDashboard(true), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   async function handleCreateKolam(e: React.FormEvent) {

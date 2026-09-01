@@ -38,7 +38,9 @@ class PondDetailPage extends ConsumerWidget {
                 ),
               ),
               Text(
-                'ID: ${detail.iotId}',
+                detail.iotId == null
+                    ? 'Belum ada perangkat'
+                    : 'ID: ${detail.iotId}',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.normal,
@@ -70,6 +72,20 @@ class PondDetailPage extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                if (detail.iotId == null)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 48, horizontal: 16),
+                    child: Text(
+                      'Belum ada perangkat terpasang di kolam ini.\n'
+                      'Klaim perangkat lewat dashboard web untuk mulai '
+                      'memantau.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
                 Row(
                   children: [
                     for (final reading in detail.readings) ...[

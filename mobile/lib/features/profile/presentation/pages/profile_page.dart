@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/router/app_router.dart';
+import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
@@ -346,11 +346,14 @@ class _LogoutButton extends ConsumerWidget {
       ),
     );
 
-    if (confirmed == true && context.mounted) {
-      // TODO: hapus JWT token dari secure storage & invalidate provider
-      // session lain di sini begitu AuthRepository tersedia.
-      ref.invalidate(profileControllerProvider);
-      GoRouter.of(context).go(AppRoutes.login);
+    if (confirmed == true) {
+      // Menghapus token membangun ulang apiProvider (data basi tiap controller
+      // ikut terbuang) dan memicu redirect router ke /login. Tidak perlu
+      // invalidate manual maupun navigasi eksplisit di sini.
+      //
+      // Backend tidak punya endpoint logout: JWT-nya tetap sah di sisi server
+      // sampai kedaluwarsa 24 jam. Tidak ada yang bisa dipanggil untuk itu.
+      await ref.read(authTokenProvider.notifier).clear();
     }
   }
 

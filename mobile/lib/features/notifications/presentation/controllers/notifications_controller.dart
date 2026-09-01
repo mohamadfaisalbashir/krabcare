@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/water_thresholds.dart';
 import '../../domain/app_notification.dart';
 
-/// TODO: ganti _fetchNotifications() dengan panggilan ke NotificationRepository
-/// (GET /notifications) begitu endpoint sudah tersedia. Untuk push notification
-/// real-time (FR-05), integrasikan Firebase Cloud Messaging terpisah dari
-/// controller ini (controller ini untuk riwayat/log notifikasi).
 class NotificationsController extends AsyncNotifier<List<AppNotification>> {
   @override
   Future<List<AppNotification>> build() {
@@ -14,44 +11,59 @@ class NotificationsController extends AsyncNotifier<List<AppNotification>> {
   }
 
   Future<List<AppNotification>> _fetchNotifications() async {
-    // --- Data dummy sementara, ganti dengan API call asli ---
-    await Future.delayed(const Duration(milliseconds: 500));
-    final now = DateTime.now();
+    final api = ref.watch(apiProvider);
+    final kolams = await ref.read(kolamListProvider.future);
+    // NotificationOut tidak membawa nama kolam, jadi dicocokkan dari daftar
+    // kolam yang sudah di-cache.
+    //
+    // device_code didahulukan daripada kolam_id: kolam_id disimpan
+    // terdenormalisasi saat notifikasi dibuat, sehingga memindahkan device ke
+    // kolam lain membuat notifikasi lama menunjuk kolam yang salah.
+    // device_code di-join hidup dari tabel devices, jadi selalu mutakhir dan
+    // konsisten dengan isi pesan notifikasinya sendiri.
+    final namaByDevice = {
+      for (final k in kolams)
+        if (k.deviceCode != null) k.deviceCode!: k.nama,
+    };
+    final namaByKolam = {for (final k in kolams) k.id: k.nama};
+
+    final rows = (await api.notifications(limit: 50))
+        .cast<Map<String, dynamic>>();
+
     return [
-      AppNotification(
-        id: '1',
-        pondName: 'Kolam A',
-        trigger: NotificationTrigger.prediksi,
-        status: WaterStatus.waspada,
-        message:
-            'Dalam 2 jam ke depan, Suhu Kolam Utama diprediksi mencapai 31°C (Waspada).',
-        time: now.subtract(const Duration(seconds: 30)),
-      ),
-      AppNotification(
-        id: '2',
-        pondName: 'Kolam A',
-        trigger: NotificationTrigger.aktual,
-        status: WaterStatus.waspada,
-        message: 'Suhu Kolam Utama saat ini 30.5°C (Waspada).',
-        time: now.subtract(const Duration(minutes: 5)),
-      ),
-      AppNotification(
-        id: '3',
-        pondName: 'Kolam B',
-        trigger: NotificationTrigger.aktual,
-        status: WaterStatus.bahaya,
-        message: 'Salinitas Kolam Pembesaran sempat drop ke 15 ppt.',
-        time: now.subtract(const Duration(hours: 2)),
-      ),
-      AppNotification(
-        id: '4',
-        pondName: 'Kolam B',
-        trigger: NotificationTrigger.pemulihan,
-        status: WaterStatus.aman,
-        message: 'Salinitas Kolam Pembesaran telah kembali stabil di 25 ppt.',
-        time: now.subtract(const Duration(hours: 2, minutes: 10)),
-      ),
+      for (final n in rows)
+        AppNotification(
+          id: n['id'] as int,
+          pondName: namaByDevice[n['device_code']] ??
+              namaByKolam[n['kolam_id'] as int] ??
+              (n['device_code'] as String?) ??
+              'Kolam #${n['kolam_id']}',
+          trigger: triggerFrom(
+            n['source'] as String,
+            n['quality_category'] as String,
+          ),
+          status: categoryToStatus(n['quality_category'] as String?),
+          message: n['message'] as String,
+          time: DateTime.parse(n['created_at'] as String).toLocal(),
+          isRead: n['is_read'] as bool,
+        ),
     ];
+  }
+
+  /// Tandai satu notifikasi sudah dibaca.
+  ///
+  /// ponytail: menunggu respons sebelum membalik state, tanpa optimistic update.
+  /// Backend berada di host yang sama (10.0.2.2), jadi jedanya tak terasa;
+  /// rollback baru sepadan kalau aplikasi dipakai lewat jaringan lapangan.
+  Future<void> markRead(int id) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    await ref.read(apiProvider).markNotificationRead(id);
+
+    state = AsyncData([
+      for (final n in current) n.id == id ? n.copyWithRead() : n,
+    ]);
   }
 
   Future<void> refresh() async {
@@ -64,3 +76,12 @@ final notificationsControllerProvider =
     AsyncNotifierProvider<NotificationsController, List<AppNotification>>(
   NotificationsController.new,
 );
+
+/// Jumlah notifikasi yang belum dibaca — dipakai titik merah di dashboard.
+/// Backend tidak menyediakan endpoint hitungan, jadi dihitung di klien.
+final unreadCountProvider = Provider<int>((ref) {
+  return ref.watch(notificationsControllerProvider).maybeWhen(
+        data: (list) => list.where((n) => !n.isRead).length,
+        orElse: () => 0,
+      );
+});

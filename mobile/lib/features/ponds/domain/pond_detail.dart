@@ -64,7 +64,10 @@ class PondDetail {
 
   final String pondId;
   final String pondName;
-  final String iotId;
+
+  /// Kode device yang diklaim; null = belum ada perangkat terpasang, sehingga
+  /// readings/predictions/trends pasti kosong.
+  final String? iotId;
   final List<ParameterReading> readings;
   final List<ParameterPrediction> predictions;
   final List<TrendSeries> trends;
