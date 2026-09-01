@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/skeleton_box.dart';
 import '../../../notifications/presentation/controllers/notifications_controller.dart';
 import '../controllers/dashboard_controller.dart';
 import '../widgets/pond_card.dart';
@@ -49,7 +50,7 @@ class DashboardPage extends ConsumerWidget {
                         )
                       : SliverList.separated(
                           itemCount: ponds.length,
-                          separatorBuilder: (_, __) =>
+                          separatorBuilder: (_, _) =>
                               const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final pond = ponds[index];
@@ -61,8 +62,10 @@ class DashboardPage extends ConsumerWidget {
                             );
                           },
                         ),
-                  loading: () => const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
+                  loading: () => SliverList.separated(
+                    itemCount: 4,
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (_, _) => const _PondCardSkeleton(),
                   ),
                   error: (error, _) => SliverFillRemaining(
                     child: Center(child: Text('Gagal memuat data: $error')),
@@ -163,6 +166,50 @@ class _HeaderIconButton extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tiruan PondCard supaya daftar tidak melompat saat data kolam masuk.
+class _PondCardSkeleton extends StatelessWidget {
+  const _PondCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const SkeletonBox(width: 44, height: 44, radius: 12),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SkeletonBox(width: 120, height: 14),
+                    SizedBox(height: 6),
+                    SkeletonBox(width: 90, height: 11),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Divider(height: 1, color: AppColors.border),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: const [
+                SkeletonBox(width: 70, height: 26),
+                SkeletonBox(width: 70, height: 26),
+                SkeletonBox(width: 70, height: 26),
+              ],
+            ),
           ],
         ),
       ),

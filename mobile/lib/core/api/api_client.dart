@@ -158,10 +158,25 @@ class Api {
       (await _request('GET', '/kolam/$kolamId/devices')) as List<dynamic>;
 
   // --- Data sensor & ML ---
-  Future<List<dynamic>> readings({int? deviceId, int limit = 100}) async =>
+  /// [param] + [status] menyaring di SQL (ambang Tabel 2.1 juga ada di
+  /// backend), jadi satu halaman [limit] baris tetap penuh setelah difilter.
+  Future<List<dynamic>> readings({
+    int? deviceId,
+    int limit = 100,
+    int offset = 0,
+    String? param,
+    String? status,
+    DateTime? startTime,
+    DateTime? endTime,
+  }) async =>
       (await _request('GET', '/readings', query: {
         if (deviceId != null) 'device_id': '$deviceId',
         'limit': '$limit',
+        if (offset > 0) 'offset': '$offset',
+        'param': ?param,
+        'status': ?status,
+        if (startTime != null) 'start_time': startTime.toUtc().toIso8601String(),
+        if (endTime != null) 'end_time': endTime.toUtc().toIso8601String(),
       })) as List<dynamic>;
 
   Future<List<dynamic>> latestQuality({int? deviceId}) async =>

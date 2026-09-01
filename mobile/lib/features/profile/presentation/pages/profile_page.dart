@@ -6,6 +6,7 @@ import '../../../../core/api/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../../core/widgets/skeleton_box.dart';
 import '../../domain/user_profile.dart';
 import '../controllers/profile_controller.dart';
 
@@ -38,7 +39,7 @@ class ProfilePage extends ConsumerWidget {
               const _LogoutButton(),
             ],
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const _ProfileSkeleton(),
           error: (error, _) =>
               Center(child: Text('Gagal memuat profil: $error')),
         ),
@@ -387,6 +388,43 @@ class _LogoutButton extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Kerangka profil: kartu identitas (avatar + nama + email) lalu kartu-kartu di bawahnya.
+class _ProfileSkeleton extends StatelessWidget {
+  const _ProfileSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const SkeletonBox(width: 56, height: 56, radius: 28),
+                const SizedBox(width: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    SkeletonBox(width: 140, height: 16),
+                    SizedBox(height: 8),
+                    SkeletonBox(width: 180, height: 12),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const SkeletonBox(height: 140, radius: 16),
+        const SizedBox(height: 12),
+        const SkeletonBox(height: 180, radius: 16),
+      ],
     );
   }
 }

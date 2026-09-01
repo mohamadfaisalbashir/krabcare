@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/router/app_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/skeleton_box.dart';
 import '../../domain/water_parameter.dart';
 import '../controllers/pond_detail_controller.dart';
 import '../widgets/parameter_card.dart';
@@ -131,8 +132,59 @@ class PondDetailPage extends ConsumerWidget {
               ],
             ),
           ),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const _DetailSkeleton(),
           error: (error, _) => Center(child: Text('Gagal memuat data: $error')),
+        ),
+      ),
+    );
+  }
+}
+
+/// Kerangka detail: tiga kartu parameter, kotak prediksi, satu grafik.
+class _DetailSkeleton extends StatelessWidget {
+  const _DetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Row(
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              const Expanded(child: _ParameterCardSkeleton()),
+              if (i < 2) const SizedBox(width: 10),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+        const SkeletonBox(height: 120, radius: 14),
+        const SizedBox(height: 20),
+        const SkeletonBox(width: 180, height: 14),
+        const SizedBox(height: 12),
+        const SkeletonBox(height: 200, radius: 14),
+      ],
+    );
+  }
+}
+
+class _ParameterCardSkeleton extends StatelessWidget {
+  const _ParameterCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            SkeletonBox(height: 12),
+            SizedBox(height: 10),
+            SkeletonBox(width: 60, height: 22),
+            SizedBox(height: 10),
+            SkeletonBox(width: 50, height: 20, radius: 10),
+          ],
         ),
       ),
     );
