@@ -45,7 +45,6 @@ export interface User {
 export interface Kolam {
   id: number;
   nama: string;
-  lokasi: string | null;
   is_active: boolean;
   created_at: string;
 }

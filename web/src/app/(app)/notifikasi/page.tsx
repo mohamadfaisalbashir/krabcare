@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
+import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
 import { Notification } from "@/lib/types";
 import { api } from "@/lib/api";
@@ -59,7 +60,7 @@ export default function NotifikasiPage() {
 
         <Card className="p-0">
           {loading ? (
-            <p className="p-6 text-center text-sm text-muted">Memuat notifikasi...</p>
+            <NotifikasiSkeleton />
           ) : notifications.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted">
               Belum ada notifikasi.
@@ -74,5 +75,23 @@ export default function NotifikasiPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+/** Tiruan NotificationItem: ikon bulat + dua baris teks, dibungkus divider yang sama. */
+function NotifikasiSkeleton() {
+  return (
+    <div className="divide-y divide-border">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="flex gap-4 px-5 py-4">
+          <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-4 w-44" />
+            <Skeleton className="mt-2.5 h-3 w-full max-w-md" />
+            <Skeleton className="mt-2 h-3 w-24" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

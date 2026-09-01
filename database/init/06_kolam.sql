@@ -8,7 +8,6 @@ CREATE TABLE IF NOT EXISTS kolam (
     id              SERIAL PRIMARY KEY,
     owner_user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nama            TEXT NOT NULL,
-    lokasi          TEXT,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()

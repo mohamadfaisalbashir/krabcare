@@ -69,7 +69,7 @@ async def update_kolam(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> KolamOut:
-    """Ubah nama/lokasi kolam sendiri."""
+    """Ubah nama kolam sendiri."""
     kolam = await kolam_service.get_owned_kolam(db, current_user, kolam_id)
     if kolam is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kolam tidak ditemukan")

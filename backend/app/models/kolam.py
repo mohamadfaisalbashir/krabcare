@@ -19,7 +19,6 @@ class Kolam(Base):
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     nama: Mapped[str] = mapped_column(Text, nullable=False)
-    lokasi: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False

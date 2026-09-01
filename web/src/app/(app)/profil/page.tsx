@@ -6,6 +6,7 @@ import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
 import { api, confirmLogout } from "@/lib/api";
 import { User } from "@/lib/types";
 
@@ -105,20 +106,31 @@ export default function ProfilPage() {
           {/* Kolom kiri: identitas, ubah nama, keluar akun */}
           <div className="space-y-6">
             <Card>
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-500 font-display text-xl font-semibold text-white">
-                  {user?.nama?.charAt(0).toUpperCase() ?? "?"}
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-500 font-display text-xl font-semibold text-white">
+                    {user.nama.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg font-semibold text-ink">
+                      {user.nama}
+                    </h3>
+                    <p className="text-sm text-muted">{user.email}</p>
+                    <p className="text-xs font-medium text-muted mt-1 uppercase tracking-wider">
+                      {user.role}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-display text-lg font-semibold text-ink">
-                    {user?.nama ?? "Memuat..."}
-                  </h3>
-                  <p className="text-sm text-muted">{user?.email ?? "—"}</p>
-                  <p className="text-xs font-medium text-muted mt-1 uppercase tracking-wider">
-                    {user?.role ?? "—"}
-                  </p>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+                  <div>
+                    <Skeleton className="h-6 w-40" />
+                    <Skeleton className="mt-2 h-4 w-52" />
+                    <Skeleton className="mt-2 h-3 w-20" />
+                  </div>
                 </div>
-              </div>
+              )}
             </Card>
 
             {/* Ubah nama profil (PUT /auth/me) */}

@@ -23,7 +23,7 @@ class DeviceAlreadyClaimedError(KolamError):
 
 async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) -> Kolam:
     """Kolam baru, langsung terikat ke pembuatnya."""
-    kolam = Kolam(owner_user_id=owner.id, nama=payload.nama, lokasi=payload.lokasi)
+    kolam = Kolam(owner_user_id=owner.id, nama=payload.nama)
     db.add(kolam)
     await db.commit()
     await db.refresh(kolam)
@@ -46,9 +46,8 @@ async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam
 
 
 async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -> Kolam:
-    """Perbarui nama & lokasi kolam."""
+    """Perbarui nama kolam."""
     kolam.nama = payload.nama
-    kolam.lokasi = payload.lokasi
     await db.commit()
     await db.refresh(kolam)
     return kolam

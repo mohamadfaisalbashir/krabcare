@@ -7,6 +7,7 @@ import PondCard from "@/components/dashboard/PondCard";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
 import {
   Device,
   KolamDashboard,
@@ -34,7 +35,6 @@ export default function DashboardPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [nama, setNama] = useState("");
-  const [lokasi, setLokasi] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Compose dashboard dari beberapa endpoint backend:
@@ -109,9 +109,8 @@ export default function DashboardPage() {
     setSaving(true);
     setError(null);
     try {
-      await api.createKolam(nama, lokasi);
+      await api.createKolam(nama);
       setNama("");
-      setLokasi("");
       setShowForm(false);
       await loadDashboard();
     } catch (err) {
@@ -159,12 +158,6 @@ export default function DashboardPage() {
                 onChange={(e) => setNama(e.target.value)}
                 required
               />
-              <Input
-                label="Lokasi (opsional)"
-                placeholder="Surabaya"
-                value={lokasi}
-                onChange={(e) => setLokasi(e.target.value)}
-              />
               <Button type="submit" disabled={saving}>
                 {saving ? "Menyimpan..." : "Simpan kolam"}
               </Button>
@@ -179,7 +172,7 @@ export default function DashboardPage() {
         )}
 
         {loading ? (
-          <p className="text-sm text-muted">Memuat data kolam...</p>
+          <KolamSkeleton />
         ) : items.length === 0 ? (
           <Card className="flex flex-col items-center gap-2 py-10 text-center">
             <Waves className="h-9 w-9 text-brand-300" strokeWidth={1.6} />
@@ -208,6 +201,22 @@ const TONE_BORDER: Record<"aman" | "waspada" | "bahaya", string> = {
   waspada: "border-t-status-waspada",
   bahaya: "border-t-status-bahaya",
 };
+
+/** Tiruan PondCard: grid & tinggi baris disamakan supaya tata letak tidak
+ *  melompat begitu data kolam masuk. */
+function KolamSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {[0, 1, 2, 3].map((i) => (
+        <div key={i} className="card border-l-4 border-l-border p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-3 h-4 w-56" />
+          <Skeleton className="mt-2.5 h-3 w-28" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function SummaryPill({
   label,

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Jaga agar aturan parameter di web (TypeScript) dan mobile (Dart) tidak melenceng.
+"""Jaga agar aturan parameter di web (TypeScript), mobile (Dart), dan backend
+(Python) tidak melenceng.
 
-Keduanya beda bahasa, jadi kodenya tidak bisa dibagi. Yang bisa dibagi adalah
-JAMINAN: skrip ini membaca kedua sumber, mengekstrak angkanya, dan gagal kalau
+Ketiganya beda bahasa, jadi kodenya tidak bisa dibagi. Yang bisa dibagi adalah
+JAMINAN: skrip ini membaca semua sumber, mengekstrak angkanya, dan gagal kalau
 ada yang berbeda. Ubah salah satu tanpa yang lain -> skrip ini merah.
 
 Pernah terjadi sungguhan: web diubah ke 1 desimal, mobile tertinggal di 2, dan
@@ -23,6 +24,9 @@ ROOT = Path(__file__).resolve().parent.parent
 WEB_PARAM = ROOT / "web/src/lib/parameter.ts"
 WEB_PRED = ROOT / "web/src/components/kolam/PredictionPanel.tsx"
 MOB_THRESH = ROOT / "mobile/lib/core/api/water_thresholds.dart"
+# Backend ikut menyimpan ambang sejak filter status Log Historis dipindah ke SQL
+# (paginasi LIMIT/OFFSET tidak bisa disaring lagi di klien).
+BE_THRESH = ROOT / "backend/app/core/water_thresholds.py"
 
 # Nama parameter berbeda di kedua sisi; ini kamusnya.
 WEB_TO_MOB = {"ph": "ph", "temperature_c": "suhu", "salinity_ppt": "salinitas"}
@@ -77,10 +81,28 @@ mob_range = wajib(
     3, "baris kParamRanges", MOB_THRESH,
 )
 
+be = baca(BE_THRESH)
+be_range = wajib(
+    {
+        m[1]: (float(m[2]), float(m[3]), float(m[4]), float(m[5]))
+        for m in re.finditer(
+            r"ParamKey\.(\w+):\s*\(\s*([\d.]+),\s*([\d.]+),\s*([\d.]+),\s*([\d.]+)\s*\)",
+            be,
+        )
+    },
+    3, "baris RANGE", BE_THRESH,
+)
+
 for wkey, mkey in WEB_TO_MOB.items():
     if web_range[wkey] != mob_range[mkey]:
         masalah.append(
             f"ambang {wkey}: web {web_range[wkey]} != mobile ({mkey}) {mob_range[mkey]}"
+        )
+    # Nama anggota enum backend = key web dalam huruf besar.
+    bkey = wkey.upper()
+    if web_range[wkey] != be_range[bkey]:
+        masalah.append(
+            f"ambang {wkey}: web {web_range[wkey]} != backend ({bkey}) {be_range[bkey]}"
         )
 
 # --- 2. Jumlah desimal tampilan -------------------------------------------
@@ -143,10 +165,13 @@ for label, akar, pola, kecuali, ext in [
 
 # --- Hasil -----------------------------------------------------------------
 if masalah:
-    print("MELENCENG - web dan mobile tidak sepakat:\n")
+    print("MELENCENG - web, mobile, dan backend tidak sepakat:\n")
     for m in masalah:
         print(f"  x {m}")
     print("\nSamakan keduanya, lalu jalankan ulang skrip ini.")
     sys.exit(1)
 
-print("SINKRON - ambang, desimal, ambang stabil, dan horizon prediksi cocok di web & mobile.")
+print(
+    "SINKRON - ambang cocok di web, mobile & backend; desimal, ambang stabil, "
+    "dan horizon prediksi cocok di web & mobile."
+)

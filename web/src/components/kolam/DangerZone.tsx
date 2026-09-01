@@ -9,9 +9,10 @@ import { api } from "@/lib/api";
 /**
  * Zona Berbahaya ala GitHub: menghapus rak butuh mengetik ulang namanya.
  *
- * Sengaja panel INLINE, bukan overlay. Modal buatan sendiri butuh focus trap,
- * penanganan Escape, dan portal untuk hasil yang sama — alasan yang sama yang
- * membuat confirmLogout memilih window.confirm (lib/api.ts). window.confirm
+ * Halaman detail rak menyembunyikan panel ini sampai tombol "Hapus rak" ditekan,
+ * tapi wujudnya tetap INLINE, bukan overlay. Modal buatan sendiri butuh focus
+ * trap, penanganan Escape, dan portal untuk hasil yang sama — alasan yang sama
+ * yang membuat confirmLogout memilih window.confirm (lib/api.ts). window.confirm
  * sendiri tak bisa dipakai di sini karena butuh kolom isian.
  */
 export default function DangerZone({
@@ -87,7 +88,7 @@ export default function DangerZone({
           type="button"
           onClick={handleHapus}
           disabled={!cocok || menghapus}
-          className="rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-2.5 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10 disabled:pointer-events-none disabled:opacity-50"
+          className="btn-danger"
         >
           {menghapus ? "Menghapus..." : "Hapus rak ini"}
         </button>

@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
+import Skeleton from "@/components/ui/Skeleton";
 import ExportPanel from "@/components/log/ExportPanel";
 import { SensorReading, Sensor, StatusLabel } from "@/lib/types";
 import { PARAM_KEYS, PARAM_UI, ParamKey, statusOf, formatValue } from "@/lib/parameter";
+import { dayRangeToIso } from "@/lib/export";
 import { api } from "@/lib/api";
 import clsx from "clsx";
 
@@ -17,6 +20,16 @@ const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Waspada",
   "Bahaya",
 ];
+
+/** Nilai query param `status` di backend (huruf kecil, seperti enum StatusFilter). */
+const STATUS_QUERY: Record<StatusLabel, "aman" | "waspada" | "bahaya"> = {
+  Aman: "aman",
+  Waspada: "waspada",
+  Bahaya: "bahaya",
+};
+
+/** Satu permintaan = 25 baris, diiris di database (LIMIT/OFFSET). */
+const PAGE = 25;
 
 function FilterPill({
   active,
@@ -50,9 +63,7 @@ export default function LogHistorisPage() {
         title="Log Historis"
         subtitle="Riwayat data sensor — status dari ambang per parameter (Tabel 2.1)"
       />
-      <Suspense
-        fallback={<p className="p-6 text-center text-sm text-muted">Memuat log...</p>}
-      >
+      <Suspense fallback={<LogRowsSkeleton />}>
         <LogHistorisView />
       </Suspense>
     </>
@@ -71,11 +82,16 @@ function LogHistorisView() {
     ? (rawParam as ParamKey)
     : "ph";
 
-  const [readings, setReadings] = useState<SensorReading[]>([]);
+  const [rows, setRows] = useState<SensorReading[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [sensorFilter, setSensorFilter] = useState<string>("semua");
   const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
+  // Kosong = semua waktu. Format <input type="date">: "yyyy-mm-dd".
+  const [dari, setDari] = useState("");
+  const [sampai, setSampai] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Daftar sensor: sekali saja, tidak ikut berubah saat filter diganti.
@@ -108,52 +124,69 @@ function LogHistorisView() {
     loadSensors();
   }, []);
 
-  // Selalu meminta per device_id, tidak pernah query global: /readings memotong
-  // `limit` SETELAH mengurutkan time DESC lintas semua device, jadi satu fetch
-  // global membuat sensor yang jarang lapor tenggelam oleh yang paling cerewet.
-  // "Semua sensor" = 200 terbaru PER sensor, bukan 600 terbaru global.
+  // Satu permintaan untuk seluruh halaman, bukan satu per sensor: parameter,
+  // status, dan rentang waktu semuanya disaring di SQL sebelum LIMIT/OFFSET,
+  // jadi 25 baris yang dikirim backend adalah 25 baris yang tampil.
+  //
+  // "Semua sensor" sengaja TIDAK mengirim device_id — scope backend sudah
+  // membatasi ke device milik user. Kekhawatiran lama (sensor cerewet
+  // menenggelamkan yang jarang lapor) berlaku untuk pengambilan "terbaru per
+  // device" seperti di dashboard; di sini urutannya memang kronologis dan
+  // riwayat yang lebih tua tinggal diminta halaman berikutnya.
+  const muatHalaman = useCallback(
+    (offset: number) =>
+      api.getReadings({
+        param,
+        limit: PAGE,
+        offset,
+        ...(sensorFilter !== "semua" ? { device_id: Number(sensorFilter) } : {}),
+        ...(statusFilter !== "Semua" ? { status: STATUS_QUERY[statusFilter] } : {}),
+        // dayRangeToIso dipakai per sisi: ia yang menangani jebakan
+        // tengah-malam-LOKAL vs UTC. Sisi yang kosong tidak dikirim sama sekali.
+        ...(dari ? { start_time: dayRangeToIso(dari, dari).start } : {}),
+        ...(sampai ? { end_time: dayRangeToIso(sampai, sampai).end } : {}),
+      }),
+    [param, sensorFilter, statusFilter, dari, sampai]
+  );
+
+  // Ganti parameter/sensor/status/rentang -> kembali ke halaman pertama.
   useEffect(() => {
-    if (sensors.length === 0) return;
-
-    const targets =
-      sensorFilter === "semua"
-        ? sensors
-        : sensors.filter((s) => String(s.deviceId) === sensorFilter);
-
-    async function loadReadings() {
-      setLoading(true);
-      setError(null);
-      try {
-        const lists = await Promise.all(
-          targets.map((s) =>
-            api.getReadings({
-              device_id: s.deviceId,
-              limit: targets.length > 1 ? 200 : 500,
-            })
-          )
-        );
-        setReadings(lists.flat());
-      } catch (err) {
+    let batal = false;
+    setLoading(true);
+    setError(null);
+    muatHalaman(0)
+      .then((page) => {
+        if (batal) return;
+        setRows(page);
+        setHasMore(page.length === PAGE);
+      })
+      .catch((err: unknown) => {
+        if (batal) return;
         setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
-      } finally {
-        setLoading(false);
-      }
+      })
+      .finally(() => {
+        if (!batal) setLoading(false);
+      });
+    return () => {
+      batal = true;
+    };
+  }, [muatHalaman]);
+
+  async function handleMuatLagi() {
+    setLoadingMore(true);
+    setError(null);
+    try {
+      const page = await muatHalaman(rows.length);
+      setRows((sebelumnya) => [...sebelumnya, ...page]);
+      setHasMore(page.length === PAGE);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
+    } finally {
+      setLoadingMore(false);
     }
-    loadReadings();
-  }, [sensorFilter, sensors]);
+  }
 
   const meta = PARAM_UI[param];
-
-  const rows = useMemo(
-    () =>
-      readings
-        .filter((r) => r[param] != null)
-        .filter(
-          (r) => statusFilter === "Semua" || statusOf(param, r[param]!) === statusFilter
-        )
-        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
-    [readings, param, statusFilter]
-  );
 
   return (
     <div className="flex-1 space-y-5 p-5 sm:p-8">
@@ -197,6 +230,41 @@ function LogHistorisView() {
           </div>
         </div>
 
+        {/* Rentang waktu: dua <input type="date"> bawaan browser (kalender,
+            keyboard, dan validasi min/max gratis). Kosong = semua waktu. */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
+          <span className="text-xs font-medium text-muted">Rentang</span>
+          <input
+            type="date"
+            value={dari}
+            max={sampai || undefined}
+            onChange={(e) => setDari(e.target.value)}
+            className="input-field w-auto py-1.5 text-xs"
+            aria-label="Tanggal mulai"
+          />
+          <span className="text-xs text-muted">s/d</span>
+          <input
+            type="date"
+            value={sampai}
+            min={dari || undefined}
+            onChange={(e) => setSampai(e.target.value)}
+            className="input-field w-auto py-1.5 text-xs"
+            aria-label="Tanggal akhir"
+          />
+          {(dari || sampai) && (
+            <button
+              type="button"
+              onClick={() => {
+                setDari("");
+                setSampai("");
+              }}
+              className="text-xs font-semibold text-brand-600 hover:underline"
+            >
+              Semua waktu
+            </button>
+          )}
+        </div>
+
         {/* Pemilih parameter hanya untuk layar sempit: di atas breakpoint sm,
             submenu sidebar sudah mengerjakan hal yang sama. Di bawah sm sidebar
             tidak dirender sama sekali dan bar bawah tidak punya submenu, jadi
@@ -214,15 +282,14 @@ function LogHistorisView() {
         </div>
 
         {/* Daftar reading — satu parameter saja, sama seperti aplikasi mobile.
-            Badge-nya memakai cek ambang, BUKAN fuzzy Mamdani.
+            Badge-nya memakai cek ambang yang sama dengan filter status di
+            backend (app/core/water_thresholds.py), BUKAN fuzzy Mamdani.
             ponytail: klasifikasi Mamdani ditulis satu baris per device per siklus
             scheduler (ML_BUCKET_MINUTES=60), sedangkan reading masuk tiap 1-15
             menit — jadi status fuzzy per-reading memang tidak ada datanya. Ganti
             ke endpoint riwayat klasifikasi kalau cadence keduanya disamakan. */}
         <div className="divide-y divide-border border-t border-border">
-          {loading && (
-            <p className="p-6 text-center text-sm text-muted">Memuat log...</p>
-          )}
+          {loading && <LogRowsSkeleton />}
           {!loading && rows.length === 0 && (
             <p className="p-6 text-center text-sm text-muted">
               Tidak ada data {meta.short} untuk filter yang dipilih.
@@ -256,8 +323,34 @@ function LogHistorisView() {
               </div>
             );
           })}
+
+          {hasMore && !loading && (
+            <div className="p-4 text-center">
+              <Button variant="ghost" onClick={handleMuatLagi} disabled={loadingMore}>
+                {loadingMore ? "Memuat..." : "Muat lebih banyak"}
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
+    </div>
+  );
+}
+
+/** Tiruan baris log: device + waktu di kiri, badge status di kanan. Dipakai juga
+ *  sebagai fallback Suspense, jadi kerangkanya sama sebelum & sesudah hydrate. */
+function LogRowsSkeleton() {
+  return (
+    <div className="divide-y divide-border">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="flex items-center justify-between gap-4 px-5 py-4">
+          <div>
+            <Skeleton className="h-4 w-52" />
+            <Skeleton className="mt-2 h-3 w-36" />
+          </div>
+          <Skeleton className="h-6 w-16 rounded-full" />
+        </div>
+      ))}
     </div>
   );
 }

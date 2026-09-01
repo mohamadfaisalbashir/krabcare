@@ -57,6 +57,15 @@
       hover:bg-brand-700 active:bg-brand-900 disabled:opacity-50 disabled:pointer-events-none;
   }
 
+  /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di dalam Zona Berbahaya —
+     satu kelas supaya gaya keduanya tidak bisa lepas sinkron. */
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border
+      border-status-bahaya/30 bg-status-bahayaBg px-4 py-2.5 text-sm font-semibold
+      text-status-bahaya transition hover:bg-status-bahaya/10
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border
       bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-brand-50;

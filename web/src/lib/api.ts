@@ -112,18 +112,17 @@ export const api = {
   // ── Kolam (routers/kolam.py) ──────────────────────────────────────
 
   /** POST /kolam → KolamOut */
-  createKolam: (nama: string, lokasi?: string) =>
+  createKolam: (nama: string) =>
     request<import("./types").Kolam>("/kolam", {
       method: "POST",
-      body: JSON.stringify({ nama, lokasi: lokasi || null }),
+      body: JSON.stringify({ nama }),
     }),
 
-  /** PUT /kolam/:id → KolamOut. Backend menimpa nama DAN lokasi (bukan partial),
-   *  jadi kirim keduanya walau yang diubah cuma namanya. */
-  updateKolam: (kolamId: number, nama: string, lokasi?: string) =>
+  /** PUT /kolam/:id → KolamOut. */
+  updateKolam: (kolamId: number, nama: string) =>
     request<import("./types").Kolam>(`/kolam/${kolamId}`, {
       method: "PUT",
-      body: JSON.stringify({ nama, lokasi: lokasi || null }),
+      body: JSON.stringify({ nama }),
     }),
 
   /** DELETE /kolam/:id → 204. PERMANEN.
@@ -151,13 +150,18 @@ export const api = {
 
   // ── Readings (routers/readings.py) ────────────────────────────────
 
-  /** GET /readings → SensorReadingOut[] */
+  /** GET /readings → SensorReadingOut[].
+   *  `param` + `status` menyaring di SQL (ambang Tabel 2.1 ada juga di backend),
+   *  jadi satu halaman `limit` baris tetap penuh setelah difilter. */
   getReadings: (params?: {
     device_id?: number;
     device_code?: string;
     start_time?: string;
     end_time?: string;
     limit?: number;
+    offset?: number;
+    param?: import("./parameter").ParamKey;
+    status?: "aman" | "waspada" | "bahaya";
   }) => {
     const qs = new URLSearchParams();
     if (params?.device_id) qs.set("device_id", String(params.device_id));
@@ -165,6 +169,10 @@ export const api = {
     if (params?.start_time) qs.set("start_time", params.start_time);
     if (params?.end_time) qs.set("end_time", params.end_time);
     if (params?.limit) qs.set("limit", String(params.limit));
+    // != null, bukan cek falsy: offset=0 itu halaman pertama, bukan "tidak diisi".
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    if (params?.param) qs.set("param", params.param);
+    if (params?.status) qs.set("status", params.status);
     const query = qs.toString();
     return request<import("./types").SensorReading[]>(
       `/readings${query ? `?${query}` : ""}`

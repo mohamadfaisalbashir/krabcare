@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PlugZap, Pencil } from "lucide-react";
+import { PlugZap, Pencil, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
 import StatusBadge from "@/components/ui/StatusBadge";
 import ParameterCard from "@/components/kolam/ParameterCard";
 import PredictionPanel from "@/components/kolam/PredictionPanel";
@@ -45,9 +46,10 @@ export default function KolamDetailPage() {
   const [claiming, setClaiming] = useState(false);
 
   const [namaRak, setNamaRak] = useState("");
-  const [lokasiRak, setLokasiRak] = useState("");
   const [savingRak, setSavingRak] = useState(false);
   const [rakMessage, setRakMessage] = useState<string | null>(null);
+  // Satu state, bukan dua boolean: membuka satu panel otomatis menutup yang lain.
+  const [panel, setPanel] = useState<"nama" | "hapus" | null>(null);
 
   const loadKolam = useCallback(async () => {
     setLoading(true);
@@ -59,7 +61,6 @@ export default function KolamDetailPage() {
       ]);
       setKolam(kolamData);
       setNamaRak(kolamData.nama);
-      setLokasiRak(kolamData.lokasi ?? "");
       setDevice(deviceList[0] ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kolam tidak ditemukan.");
@@ -113,9 +114,7 @@ export default function KolamDetailPage() {
     setRakMessage(null);
     setSavingRak(true);
     try {
-      // Backend menimpa nama DAN lokasi sekaligus, jadi keduanya ikut dikirim
-      // supaya lokasi tidak ikut terhapus saat cuma namanya yang diubah.
-      const updated = await api.updateKolam(kolamId, namaRak.trim(), lokasiRak.trim());
+      const updated = await api.updateKolam(kolamId, namaRak.trim());
       setKolam(updated);
       setRakMessage("Nama rak berhasil diperbarui.");
     } catch (err) {
@@ -148,7 +147,7 @@ export default function KolamDetailPage() {
     return (
       <>
         <Topbar title="Detail Rak" />
-        <p className="p-5 text-sm text-muted sm:p-8">Memuat data rak...</p>
+        <DetailSkeleton />
       </>
     );
   }
@@ -274,54 +273,87 @@ export default function KolamDetailPage() {
           </Card>
         )}
 
-        {/* Ubah identitas rak (PUT /kolam/:id) */}
-        <Card className="sm:max-w-2xl">
-          <div className="mb-3 flex items-center gap-2.5">
-            <Pencil className="h-5 w-5 text-brand-500" />
-            <h3 className="font-display text-base font-semibold text-ink">
-              Ubah nama rak
-            </h3>
-          </div>
-          <form
-            onSubmit={handleRenameRak}
-            className="flex flex-col gap-4 sm:flex-row sm:items-end"
+        {/* Ubah nama & hapus rak: keduanya di balik tombol, panelnya baru
+            terbuka saat tombolnya ditekan. */}
+        <div className="flex flex-wrap gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
           >
-            <div className="sm:w-64">
-              <Input
-                label="Nama rak"
-                value={namaRak}
-                onChange={(e) => setNamaRak(e.target.value)}
-                required
-              />
-            </div>
-            <div className="sm:w-64">
-              <Input
-                label="Lokasi (opsional)"
-                placeholder="Surabaya"
-                value={lokasiRak}
-                onChange={(e) => setLokasiRak(e.target.value)}
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={
-                savingRak ||
-                (namaRak === kolam.nama && lokasiRak === (kolam.lokasi ?? ""))
-              }
-            >
-              {savingRak ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </form>
-          {rakMessage && <p className="mt-3 text-sm text-muted">{rakMessage}</p>}
-        </Card>
+            <Pencil className="h-4 w-4" /> Ubah nama rak
+          </Button>
+          <button
+            type="button"
+            className="btn-danger"
+            onClick={() => setPanel((p) => (p === "hapus" ? null : "hapus"))}
+          >
+            <Trash2 className="h-4 w-4" /> Hapus rak
+          </button>
+        </div>
 
-        <DangerZone
-          kolamId={kolam.id}
-          nama={kolam.nama}
-          deviceCode={device?.device_code ?? null}
-          onDeleted={() => router.push("/dashboard")}
-        />
+        {/* Ubah identitas rak (PUT /kolam/:id) */}
+        {panel === "nama" && (
+          <Card className="sm:max-w-2xl">
+            <div className="mb-3 flex items-center gap-2.5">
+              <Pencil className="h-5 w-5 text-brand-500" />
+              <h3 className="font-display text-base font-semibold text-ink">
+                Ubah nama rak
+              </h3>
+            </div>
+            <form
+              onSubmit={handleRenameRak}
+              className="flex flex-col gap-4 sm:flex-row sm:items-end"
+            >
+              <div className="sm:w-64">
+                <Input
+                  label="Nama rak"
+                  value={namaRak}
+                  onChange={(e) => setNamaRak(e.target.value)}
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={savingRak || namaRak === kolam.nama}
+              >
+                {savingRak ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </form>
+            {rakMessage && <p className="mt-3 text-sm text-muted">{rakMessage}</p>}
+          </Card>
+        )}
+
+        {panel === "hapus" && (
+          <DangerZone
+            kolamId={kolam.id}
+            nama={kolam.nama}
+            deviceCode={device?.device_code ?? null}
+            onDeleted={() => router.push("/dashboard")}
+          />
+        )}
       </div>
     </>
+  );
+}
+
+/** Kerangka halaman detail: baris status, tiga kartu parameter, satu blok grafik. */
+function DetailSkeleton() {
+  return (
+    <div className="flex-1 space-y-6 p-5 sm:p-8">
+      <Skeleton className="h-6 w-56" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="card p-5">
+            <div className="mb-4 flex items-start justify-between gap-2">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="mt-2 h-8 w-28" />
+          </div>
+        ))}
+      </div>
+      <Skeleton className="h-64 w-full rounded-xl2" />
+    </div>
   );
 }
