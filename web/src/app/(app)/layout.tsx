@@ -26,7 +26,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-bg">
-      <Sidebar className="hidden w-64 shrink-0 sm:flex" />
+      {/* Lebar ditentukan Sidebar sendiri — ia yang memiliki state kuncupnya.
+          Kolom konten memakai flex-1, jadi otomatis melebar saat sidebar
+          menguncup tanpa kelas pengimbang apa pun di sini. */}
+      <Sidebar className="hidden shrink-0 sm:flex" />
       <div className="flex min-h-screen flex-1 flex-col pb-16 sm:pb-0">
         {children}
       </div>

@@ -10,11 +10,11 @@ import uuid
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import delete
+from sqlalchemy import delete, func, select
 
 from app.db.session import AsyncSessionLocal
 from app.main import app
-from app.models import Device, User
+from app.models import Device, SensorReading, User
 
 GATEWAY_API_KEY = "ai-dilarangbaca"  # cocokkan dengan .env / default docker-compose
 
@@ -116,4 +116,105 @@ async def test_kolam_isolation_between_users(client: AsyncClient, test_device_co
     finally:
         async with AsyncSessionLocal() as db:
             await db.execute(delete(User).where(User.email.in_([email_a, email_b])))
+            await db.commit()
+
+
+async def test_delete_kolam_hanya_pemilik(client: AsyncClient, test_device_code: str):
+    """User lain tidak boleh menghapus kolam kita — 404 seragam, dan kolamnya utuh."""
+    email_a = f"del-a-{uuid.uuid4().hex[:8]}@test.local"
+    email_b = f"del-b-{uuid.uuid4().hex[:8]}@test.local"
+
+    try:
+        token_a = await _register_and_login(client, email_a)
+        token_b = await _register_and_login(client, email_b)
+        head_a = {"Authorization": f"Bearer {token_a}"}
+        head_b = {"Authorization": f"Bearer {token_b}"}
+
+        resp = await client.post("/api/v1/kolam", json={"nama": "Rak Hapus"}, headers=head_a)
+        assert resp.status_code == 201, resp.text
+        kolam_id = resp.json()["id"]
+
+        # B mencoba menghapus milik A -> 404, bukan 403: keberadaan kolam orang
+        # lain tidak boleh bocor lewat beda status code.
+        resp = await client.delete(f"/api/v1/kolam/{kolam_id}", headers=head_b)
+        assert resp.status_code == 404, resp.text
+
+        # ...dan kolamnya masih ada buat A.
+        resp = await client.get(f"/api/v1/kolam/{kolam_id}", headers=head_a)
+        assert resp.status_code == 200, resp.text
+
+        # A menghapus miliknya sendiri -> 204, lalu benar-benar hilang.
+        resp = await client.delete(f"/api/v1/kolam/{kolam_id}", headers=head_a)
+        assert resp.status_code == 204, resp.text
+        resp = await client.get(f"/api/v1/kolam/{kolam_id}", headers=head_a)
+        assert resp.status_code == 404
+    finally:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(User).where(User.email.in_([email_a, email_b])))
+            await db.commit()
+
+
+async def test_delete_kolam_menyisakan_device_dan_riwayat(
+    client: AsyncClient, test_device_code: str
+):
+    """Membuktikan janji yang ditulis di panel peringatan UI.
+
+    Menghapus kolam TIDAK boleh ikut menghapus device maupun riwayat sensornya —
+    FK devices.kolam_id itu SET NULL, dan sensor_readings menempel di device,
+    bukan di kolam. Kalau assertion di bawah jatuh, teks peringatan di
+    DangerZone.tsx berbohong dan harus ikut diperbaiki.
+    """
+    email = f"del-keep-{uuid.uuid4().hex[:8]}@test.local"
+
+    try:
+        token = await _register_and_login(client, email)
+        head = {"Authorization": f"Bearer {token}"}
+
+        resp = await client.post("/api/v1/kolam", json={"nama": "Rak Riwayat"}, headers=head)
+        kolam_id = resp.json()["id"]
+        resp = await client.post(
+            f"/api/v1/kolam/{kolam_id}/devices/{test_device_code}", headers=head
+        )
+        assert resp.status_code == 204, resp.text
+
+        # Satu pembacaan lewat jalur gateway, supaya ada riwayat yang bisa hilang.
+        resp = await client.post(
+            "/api/v1/ingest/readings",
+            headers={"X-API-Key": GATEWAY_API_KEY},
+            json={
+                "readings": [
+                    {
+                        "device_code": test_device_code,
+                        "time": "2026-09-01T10:00:00+00:00",
+                        "ph": 7.5,
+                        "temperature_c": 29.0,
+                        "salinity_ppt": 20.0,
+                    }
+                ]
+            },
+        )
+        assert resp.status_code == 201, resp.text
+
+        await client.delete(f"/api/v1/kolam/{kolam_id}", headers=head)
+
+        async with AsyncSessionLocal() as db:
+            device = (
+                await db.execute(
+                    select(Device).where(Device.device_code == test_device_code)
+                )
+            ).scalar_one_or_none()
+            assert device is not None, "device ikut terhapus — FK bukan SET NULL"
+            assert device.kolam_id is None, "device masih terikat ke kolam yang sudah dihapus"
+
+            sisa = (
+                await db.execute(
+                    select(func.count())
+                    .select_from(SensorReading)
+                    .where(SensorReading.device_id == device.id)
+                )
+            ).scalar_one()
+            assert sisa == 1, f"riwayat sensor ikut terhapus (sisa {sisa}, harusnya 1)"
+    finally:
+        async with AsyncSessionLocal() as db:
+            await db.execute(delete(User).where(User.email == email))
             await db.commit()

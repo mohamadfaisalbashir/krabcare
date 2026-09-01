@@ -22,5 +22,8 @@ ENV NODE_ENV=production \
 # output: "standalone" menghasilkan server.js + node_modules minimal di sini.
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+# public/ TIDAK ikut terbundel ke .next/standalone — tanpa baris ini aset statis
+# (mis. foto latar halaman login) jalan di `next dev` tapi 404 di container.
+COPY --from=builder /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]

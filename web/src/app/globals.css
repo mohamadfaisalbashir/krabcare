@@ -13,7 +13,9 @@
     @apply font-display;
   }
   :focus-visible {
-    outline: 2px solid theme("colors.brand.500");
+    /* brand-600, bukan 500: outline fokus perlu 3:1 terhadap latar (WCAG 1.4.11)
+       dan brand-500 hanya 2.88:1 di atas putih. */
+    outline: 2px solid theme("colors.brand.600");
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -48,10 +50,11 @@
     @apply block text-sm font-medium text-ink/80 mb-1.5;
   }
 
+  /* bg-brand-600, bukan 500: teks putih di atas brand-500 hanya 2.88:1. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-500
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600
       px-4 py-2.5 text-sm font-semibold text-white transition
-      hover:bg-brand-600 active:bg-brand-700 disabled:opacity-50 disabled:pointer-events-none;
+      hover:bg-brand-700 active:bg-brand-900 disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .btn-ghost {

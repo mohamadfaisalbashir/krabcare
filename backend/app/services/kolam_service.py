@@ -54,6 +54,24 @@ async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -
     return kolam
 
 
+async def delete_kolam(db: AsyncSession, kolam: Kolam) -> None:
+    """Hapus kolam secara permanen.
+
+    Tidak ada relationship() di model Kolam, jadi ini mengeluarkan DELETE polos
+    dan aturan FK database yang bekerja:
+      - notifications.kolam_id  ON DELETE CASCADE  -> notifikasi kolam ini ikut hilang
+      - devices.kolam_id        ON DELETE SET NULL -> device SELAMAT, cuma jadi tak terklaim
+
+    sensor_readings / fuzzy_classifications / fuzzy_predictions tidak menunjuk
+    kolam sama sekali (semuanya menempel di devices), jadi seluruh riwayat
+    pengukuran bertahan. Ia hanya tak terlihat oleh bekas pemiliknya karena
+    get_allowed_device_ids menyaring lewat join Device -> Kolam; klaim ulang
+    device-nya mengembalikan akses.
+    """
+    await db.delete(kolam)
+    await db.commit()
+
+
 async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Device:
     """Klaim device (by device_code) ke `kolam`.
 

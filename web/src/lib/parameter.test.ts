@@ -34,9 +34,10 @@ test("setiap parameter punya optimal di dalam toleransi", () => {
   }
 });
 
-test("formatValue memangkas nol di belakang, maksimal 2 desimal", () => {
-  assert.equal(formatValue(8.75), "8.75");
+test("formatValue memangkas nol di belakang, maksimal 1 desimal", () => {
+  assert.equal(formatValue(8.75), "8.8"); // dibulatkan, bukan dipotong
+  assert.equal(formatValue(7.63), "7.6");
   assert.equal(formatValue(7.7), "7.7");
-  assert.equal(formatValue(25.0), "25");
-  assert.equal(formatValue(7.006), "7.01");
+  assert.equal(formatValue(25.0), "25"); // nol di belakang tetap dibuang
+  assert.equal(formatValue(7.006), "7");
 });

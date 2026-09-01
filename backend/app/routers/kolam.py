@@ -77,6 +77,24 @@ async def update_kolam(
     return KolamOut.model_validate(kolam)
 
 
+@router.delete("/{kolam_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_kolam(
+    kolam_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Hapus kolam sendiri, permanen.
+
+    Device yang terhubung tidak ikut terhapus — FK-nya SET NULL, jadi perangkat
+    itu hanya kembali jadi tak terklaim beserta seluruh riwayat sensornya.
+    Notifikasi kolam ini ikut terhapus (FK CASCADE).
+    """
+    kolam = await kolam_service.get_owned_kolam(db, current_user, kolam_id)
+    if kolam is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kolam tidak ditemukan")
+    await kolam_service.delete_kolam(db, kolam)
+
+
 @router.post("/{kolam_id}/devices/{device_code}", status_code=status.HTTP_204_NO_CONTENT)
 async def claim_device(
     kolam_id: int,

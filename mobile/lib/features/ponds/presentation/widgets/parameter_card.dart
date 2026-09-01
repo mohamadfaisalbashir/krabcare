@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/api/water_thresholds.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/status_badge.dart';
 import '../../domain/pond_detail.dart';
@@ -43,7 +44,10 @@ class ParameterCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              reading.value.toStringAsFixed(1),
+              // formatValue, bukan toStringAsFixed langsung: pemformatan harus
+              // lewat satu fungsi yang sama dengan web, kalau tidak 22.00
+              // tampil "22.0" di sini tapi "22" di web.
+              formatValue(reading.value),
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,

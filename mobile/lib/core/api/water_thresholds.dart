@@ -40,11 +40,14 @@ WaterStatus statusOf(WaterParameter parameter, double value) {
   return WaterStatus.aman;
 }
 
-/// Maksimal 2 desimal, nol di belakang dibuang: 8.75 -> "8.75", 7.70 -> "7.7",
-/// 25.00 -> "25". Nilai backend berasal dari kolom NUMERIC, jadi sering membawa
-/// nol yang tidak berarti.
+/// Maksimal 1 desimal, nol di belakang dibuang: 7.63 -> "7.6", 7.70 -> "7.7",
+/// 25.00 -> "25".
+///
+/// HARUS sama dengan formatValue() di web/src/lib/parameter.ts — pembacaan yang
+/// sama tidak boleh tampil "7.6" di web tapi "7.63" di sini. Dijaga oleh
+/// scripts/check_param_sync.py.
 String formatValue(double value) {
-  final fixed = double.parse(value.toStringAsFixed(2));
+  final fixed = double.parse(value.toStringAsFixed(1));
   return fixed == fixed.roundToDouble()
       ? fixed.toInt().toString()
       : fixed.toString();

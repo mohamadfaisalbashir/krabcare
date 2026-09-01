@@ -39,24 +39,38 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[1.1fr_1fr]">
-      {/* Panel kiri -- identitas & motif riak air (elemen signature) */}
-      <section className="relative hidden overflow-hidden bg-brand-700 lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div className="pointer-events-none absolute inset-0 bg-ripple [background-size:22px_22px] opacity-[0.15]" />
+    <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[2fr_1fr]">
+      {/* Panel kiri -- identitas, foto tambak sebagai latar */}
+      <section className="relative hidden overflow-hidden bg-hero-deep lg:flex lg:flex-col lg:justify-between lg:p-12">
+        {/* Fotonya panorama 1024x247 (rasio 4.15) sementara panel ini jauh lebih
+            tinggi daripada lebar, jadi bg-cover memangkas sekitar 70% lebarnya.
+            bg-left, BUKAN bg-center: kepiting dan akar bakaunya ada di ujung
+            kiri foto dan akan terpotong habis kalau dijangkarkan ke tengah.
+            Blur tipis menyamarkan pembesaran vertikal ~4x; scale-105 menutup
+            tepi menerawang akibat blur itu. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 scale-105 bg-[url('/kepiting.png')] bg-cover bg-left blur-[2px]"
+        />
+        {/* Peredam gelap: syarat keterbacaan, bukan gaya. Teks putih di atas
+            foto siang hari tanpa ini tidak lolos WCAG AA. Gradien, supaya sisi
+            kiri tempat teks berada paling pekat dan fotonya tetap terlihat di
+            sisi kanan. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-hero-deep/90 via-hero-deep/75 to-hero-deep/55"
+        />
         <Logo className="relative [&_span]:text-white [&_span_span]:text-brass-300" />
         <div className="relative max-w-md">
           <Waves className="mb-5 h-9 w-9 text-brass-300" strokeWidth={1.6} />
           <h2 className="font-display text-3xl font-semibold leading-snug text-white">
             Pantau kualitas air setiap kolam, tanpa harus turun ke tambak.
           </h2>
-          <p className="mt-4 text-sm leading-relaxed text-brand-100">
-            Suhu, pH, dan salinitas seluruh kolam dipantau otomatis setiap
-            menit, dengan peringatan dini sebelum kondisi memburuk.
+          <p className="mt-4 text-sm leading-relaxed text-hero-soft">
+            Suhu, pH, dan salinitas seluruh kolam terekam otomatis sepanjang
+            hari, dengan peringatan dini sebelum kondisi memburuk.
           </p>
         </div>
-        <p className="relative text-xs text-brand-100/80">
-          Supermarket Kepiting Surabaya &middot; Sistem Apartemen Multi-Kolam
-        </p>
       </section>
 
       {/* Panel kanan -- form login */}

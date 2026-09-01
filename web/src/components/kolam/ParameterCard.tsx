@@ -46,8 +46,10 @@ export default function ParameterCard({
         </p>
       </div>
 
+      {/* Bawa parameter kartunya, kalau tidak halaman log jatuh ke fallback
+          "ph" dan ketiga kartu bermuara ke tempat yang sama. */}
       <Link
-        href="/log-historis"
+        href={`/log-historis?param=${param}`}
         className="flex items-center justify-center gap-2 border-t border-border px-5 py-3 text-sm font-medium text-brand-600 transition hover:bg-brand-50"
       >
         <FileText className="h-4 w-4" /> Akses Log Historis

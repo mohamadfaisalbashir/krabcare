@@ -126,6 +126,12 @@ export const api = {
       body: JSON.stringify({ nama, lokasi: lokasi || null }),
     }),
 
+  /** DELETE /kolam/:id → 204. PERMANEN.
+   *  Device-nya tidak ikut terhapus (FK SET NULL) — ia cuma jadi tak terklaim,
+   *  beserta seluruh riwayat sensornya. Notifikasi kolam ini ikut hilang (CASCADE). */
+  deleteKolam: (kolamId: number) =>
+    request<void>(`/kolam/${kolamId}`, { method: "DELETE" }),
+
   /** POST /kolam/:id/devices/:code → 204 (klaim device ke kolam) */
   claimDevice: (kolamId: number, deviceCode: string) =>
     request<void>(`/kolam/${kolamId}/devices/${deviceCode}`, {

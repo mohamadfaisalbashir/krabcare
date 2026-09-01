@@ -47,11 +47,14 @@ void main() {
   });
 
   group('formatValue', () {
-    test('membuang nol di belakang, maksimal 2 desimal', () {
-      expect(formatValue(8.75), '8.75');
+    // Kasus yang sama persis dengan web/src/lib/parameter.test.ts — kalau
+    // salah satunya diubah tanpa yang lain, scripts/check_param_sync.py jatuh.
+    test('membuang nol di belakang, maksimal 1 desimal', () {
+      expect(formatValue(8.75), '8.8'); // dibulatkan, bukan dipotong
+      expect(formatValue(7.63), '7.6');
       expect(formatValue(7.70), '7.7');
       expect(formatValue(25.00), '25');
-      expect(formatValue(7.006), '7.01');
+      expect(formatValue(7.006), '7');
     });
   });
 

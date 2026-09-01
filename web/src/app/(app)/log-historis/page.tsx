@@ -1,34 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { SensorReading, Kolam, StatusLabel } from "@/lib/types";
-import { PARAM_KEYS, statusOf } from "@/lib/parameter";
+import ExportPanel from "@/components/log/ExportPanel";
+import { SensorReading, Sensor, StatusLabel } from "@/lib/types";
+import { PARAM_KEYS, PARAM_UI, ParamKey, statusOf, formatValue } from "@/lib/parameter";
 import { api } from "@/lib/api";
 import clsx from "clsx";
-
-const SEVERITY: StatusLabel[] = ["Aman", "Waspada", "Bahaya"];
-
-/** Status satu reading = status TERBURUK dari ketiga parameternya, dihitung dari
- *  ambang Tabel 2.1 (lib/parameter.ts). Ini BUKAN hasil fuzzy Mamdani.
- *
- *  ponytail: klasifikasi Mamdani ditulis satu baris per device per siklus
- *  scheduler (ML_BUCKET_MINUTES=60), sedangkan reading masuk tiap 1-15 menit —
- *  jadi status fuzzy per-reading memang tidak ada datanya. Halaman ini sengaja
- *  memakai cek ambang dan menamainya begitu. Ganti ke endpoint riwayat
- *  klasifikasi kalau nanti cadence keduanya disamakan. */
-function readingStatus(reading: SensorReading): StatusLabel {
-  let worst: StatusLabel = "Aman";
-  for (const param of PARAM_KEYS) {
-    const value = reading[param];
-    if (value == null) continue;
-    const status = statusOf(param, value);
-    if (SEVERITY.indexOf(status) > SEVERITY.indexOf(worst)) worst = status;
-  }
-  return worst;
-}
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Semua",
@@ -37,61 +18,121 @@ const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Bahaya",
 ];
 
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={clsx(
+        "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition",
+        active
+          ? "border-brand-500 bg-brand-50 text-brand-700"
+          : "border-border text-muted hover:bg-bg"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function LogHistorisPage() {
+  return (
+    <>
+      {/* Topbar di luar Suspense supaya fallback tidak berkedip tanpa header. */}
+      <Topbar
+        title="Log Historis"
+        subtitle="Riwayat data sensor — status dari ambang per parameter (Tabel 2.1)"
+      />
+      <Suspense
+        fallback={<p className="p-6 text-center text-sm text-muted">Memuat log...</p>}
+      >
+        <LogHistorisView />
+      </Suspense>
+    </>
+  );
+}
+
+function LogHistorisView() {
+  const router = useRouter();
+
+  // URL adalah satu-satunya sumber kebenaran untuk parameter aktif, supaya
+  // halamannya bisa di-bookmark dan tombol Back bekerja. Divalidasi karena ini
+  // input dari URL: key tak dikenal akan membuat statusOf mengindeks
+  // RANGE[undefined] dan melempar.
+  const rawParam = useSearchParams().get("param");
+  const param: ParamKey = PARAM_KEYS.includes(rawParam as ParamKey)
+    ? (rawParam as ParamKey)
+    : "ph";
+
   const [readings, setReadings] = useState<SensorReading[]>([]);
-  const [kolamList, setKolamList] = useState<Kolam[]>([]);
-  // Satu kolam = tepat satu device (backend menolak klaim kedua dengan 409),
-  // jadi peta ini cukup menyimpan satu id per kolam.
-  const [deviceIdByKolam, setDeviceIdByKolam] = useState<Record<number, number>>({});
-  const [kolamFilter, setKolamFilter] = useState<string>("semua");
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const [sensorFilter, setSensorFilter] = useState<string>("semua");
   const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Daftar kolam + peta device-nya: sekali saja, tidak ikut berubah saat filter diganti.
+  // Daftar sensor: sekali saja, tidak ikut berubah saat filter diganti.
+  // Satu kolam = tepat satu device (backend menolak klaim kedua dengan 409),
+  // tapi disimpan sebagai daftar datar supaya tetap benar kalau aturan itu berubah.
   useEffect(() => {
-    async function loadKolam() {
+    async function loadSensors() {
       try {
         const kolams = await api.listKolam();
-        setKolamList(kolams);
-        const pairs = await Promise.all(
+        const perKolam = await Promise.all(
           kolams.map(async (k) => {
             try {
               const devices = await api.getKolamDevices(k.id);
-              return [k.id, devices[0]?.id] as const;
+              return devices.map((d) => ({
+                deviceId: d.id,
+                deviceCode: d.device_code,
+                kolamNama: k.nama,
+              }));
             } catch {
-              return [k.id, undefined] as const;
+              // Satu kolam bermasalah tidak boleh mengosongkan seluruh daftar.
+              return [];
             }
           })
         );
-        setDeviceIdByKolam(
-          Object.fromEntries(pairs.filter((p): p is readonly [number, number] => p[1] != null))
-        );
+        setSensors(perKolam.flat());
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal memuat daftar kolam.");
+        setError(err instanceof Error ? err.message : "Gagal memuat daftar sensor.");
       }
     }
-    loadKolam();
+    loadSensors();
   }, []);
 
-  // Reading di-fetch ulang tiap filter kolam berubah, DENGAN device_id.
-  // Menyaring di klien tidak cukup: /readings memotong `limit` setelah
-  // mengurutkan time DESC lintas semua device, jadi sekali fetch global cuma
-  // memuat beberapa jam terakhir dan riwayat per kolam ikut terpotong.
+  // Selalu meminta per device_id, tidak pernah query global: /readings memotong
+  // `limit` SETELAH mengurutkan time DESC lintas semua device, jadi satu fetch
+  // global membuat sensor yang jarang lapor tenggelam oleh yang paling cerewet.
+  // "Semua sensor" = 200 terbaru PER sensor, bukan 600 terbaru global.
   useEffect(() => {
-    const deviceId = kolamFilter === "semua" ? undefined : deviceIdByKolam[Number(kolamFilter)];
-    // Kolam terpilih belum punya device → tidak ada yang bisa diminta.
-    if (kolamFilter !== "semua" && deviceId == null) {
-      setReadings([]);
-      setLoading(false);
-      return;
-    }
+    if (sensors.length === 0) return;
+
+    const targets =
+      sensorFilter === "semua"
+        ? sensors
+        : sensors.filter((s) => String(s.deviceId) === sensorFilter);
 
     async function loadReadings() {
       setLoading(true);
       setError(null);
       try {
-        setReadings(await api.getReadings({ device_id: deviceId, limit: 500 }));
+        const lists = await Promise.all(
+          targets.map((s) =>
+            api.getReadings({
+              device_id: s.deviceId,
+              limit: targets.length > 1 ? 200 : 500,
+            })
+          )
+        );
+        setReadings(lists.flat());
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
       } finally {
@@ -99,110 +140,124 @@ export default function LogHistorisPage() {
       }
     }
     loadReadings();
-  }, [kolamFilter, deviceIdByKolam]);
+  }, [sensorFilter, sensors]);
 
-  const filtered = useMemo(
+  const meta = PARAM_UI[param];
+
+  const rows = useMemo(
     () =>
       readings
-        .filter((r) => statusFilter === "Semua" || readingStatus(r) === statusFilter)
+        .filter((r) => r[param] != null)
+        .filter(
+          (r) => statusFilter === "Semua" || statusOf(param, r[param]!) === statusFilter
+        )
         .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()),
-    [readings, statusFilter]
+    [readings, param, statusFilter]
   );
 
   return (
-    <>
-      <Topbar
-        title="Log Historis"
-        subtitle="Riwayat data sensor — status dari ambang per parameter (Tabel 2.1)"
-      />
+    <div className="flex-1 space-y-5 p-5 sm:p-8">
+      <ExportPanel sensors={sensors} defaultDeviceId={sensorFilter} />
 
-      <div className="flex-1 space-y-5 p-5 sm:p-8">
-        {/* Filter */}
-        <Card className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+      {error && (
+        <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
+          {error}
+        </p>
+      )}
+
+      {/* Satu panel: area kontrol dan area data menyatu, dipisah garis tipis
+          alih-alih celah antar kartu. Tanpa overflow-hidden — di dalamnya ada
+          select dan tombol pil yang outline fokusnya akan terpotong. */}
+      <Card className="p-0">
+        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           <select
-            value={kolamFilter}
-            onChange={(e) => setKolamFilter(e.target.value)}
-            className="input-field sm:w-56"
+            value={sensorFilter}
+            onChange={(e) => setSensorFilter(e.target.value)}
+            className="input-field sm:w-64"
+            aria-label="Pilih sensor"
           >
-            <option value="semua">Semua kolam</option>
-            {kolamList.map((k) => (
-              <option key={k.id} value={k.id}>
-                {k.nama}
+            <option value="semua">Semua sensor</option>
+            {sensors.map((s) => (
+              <option key={s.deviceId} value={s.deviceId}>
+                {s.kolamNama} — {s.deviceCode}
               </option>
             ))}
           </select>
 
           <div className="flex flex-wrap gap-2">
             {STATUS_FILTERS.map((s) => (
-              <button
+              <FilterPill
                 key={s}
+                active={statusFilter === s}
                 onClick={() => setStatusFilter(s)}
-                className={clsx(
-                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition",
-                  statusFilter === s
-                    ? "border-brand-500 bg-brand-50 text-brand-700"
-                    : "border-border text-muted hover:bg-bg"
-                )}
               >
                 {s}
-              </button>
+              </FilterPill>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {error && (
-          <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
-            {error}
-          </p>
-        )}
+        {/* Pemilih parameter hanya untuk layar sempit: di atas breakpoint sm,
+            submenu sidebar sudah mengerjakan hal yang sama. Di bawah sm sidebar
+            tidak dirender sama sekali dan bar bawah tidak punya submenu, jadi
+            tanpa ini parameter terkunci di pH. */}
+        <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3 sm:hidden">
+          {PARAM_KEYS.map((p) => (
+            <FilterPill
+              key={p}
+              active={param === p}
+              onClick={() => router.replace(`?param=${p}`, { scroll: false })}
+            >
+              {PARAM_UI[p].short}
+            </FilterPill>
+          ))}
+        </div>
 
-        <p className="text-xs leading-relaxed text-muted">
-          Badge di bawah menandai apakah tiap nilai masih di dalam ambang toleransi
-          parameternya. Status kualitas air hasil fuzzy Mamdani ada di halaman
-          Dashboard dan Detail Rak — keduanya memang bisa berbeda karena
-          klasifikasi fuzzy dihitung sekali per jam, bukan per reading.
-        </p>
-
-        {/* Daftar reading */}
-        <Card className="p-0">
-          <div className="divide-y divide-border">
-            {loading && (
-              <p className="p-6 text-center text-sm text-muted">Memuat log...</p>
-            )}
-            {!loading && filtered.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted">
-                Tidak ada data log untuk filter yang dipilih.
-              </p>
-            )}
-            {filtered.map((r, i) => {
-              const status = readingStatus(r);
-              return (
-                <div
-                  key={`${r.device_code}-${r.time}-${i}`}
-                  className="flex items-center justify-between gap-4 px-5 py-4"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-ink">
-                      {r.device_code}{" "}
-                      <span className="text-muted">
-                        pH {r.ph ?? "—"} · {r.temperature_c ?? "—"}°C ·{" "}
-                        {r.salinity_ppt ?? "—"} ppt
-                      </span>
-                    </p>
-                    <p className="text-xs text-muted">
-                      {new Date(r.time).toLocaleString("id-ID", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                  </div>
-                  <StatusBadge status={status} size="sm" />
+        {/* Daftar reading — satu parameter saja, sama seperti aplikasi mobile.
+            Badge-nya memakai cek ambang, BUKAN fuzzy Mamdani.
+            ponytail: klasifikasi Mamdani ditulis satu baris per device per siklus
+            scheduler (ML_BUCKET_MINUTES=60), sedangkan reading masuk tiap 1-15
+            menit — jadi status fuzzy per-reading memang tidak ada datanya. Ganti
+            ke endpoint riwayat klasifikasi kalau cadence keduanya disamakan. */}
+        <div className="divide-y divide-border border-t border-border">
+          {loading && (
+            <p className="p-6 text-center text-sm text-muted">Memuat log...</p>
+          )}
+          {!loading && rows.length === 0 && (
+            <p className="p-6 text-center text-sm text-muted">
+              Tidak ada data {meta.short} untuk filter yang dipilih.
+            </p>
+          )}
+          {rows.map((r, i) => {
+            const value = r[param]!;
+            return (
+              <div
+                key={`${r.device_code}-${r.time}-${i}`}
+                className="flex items-center justify-between gap-4 px-5 py-4"
+              >
+                <div>
+                  <p className="text-sm font-medium text-ink">
+                    {r.device_code}{" "}
+                    <span className="text-muted">
+                      {meta.label} terukur {formatValue(value)}
+                      {/* PARAM_UI.ph.unit === "pH", jadi "8.1 pH" untuk pH saja
+                          sudah cukup — tanpa satuan yang mengulang. */}
+                      {param === "ph" ? "" : ` ${meta.unit}`}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted">
+                    {new Date(r.time).toLocaleString("id-ID", {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </p>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
-      </div>
-    </>
+                <StatusBadge status={statusOf(param, value)} size="sm" />
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+    </div>
   );
 }

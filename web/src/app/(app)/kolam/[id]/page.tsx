@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { PlugZap, Pencil } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
@@ -11,6 +11,8 @@ import StatusBadge from "@/components/ui/StatusBadge";
 import ParameterCard from "@/components/kolam/ParameterCard";
 import PredictionPanel from "@/components/kolam/PredictionPanel";
 import HistoryChart from "@/components/kolam/HistoryChart";
+import CombinedChart from "@/components/kolam/CombinedChart";
+import DangerZone from "@/components/kolam/DangerZone";
 import {
   Kolam,
   Device,
@@ -24,6 +26,7 @@ import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { api } from "@/lib/api";
 
 export default function KolamDetailPage() {
+  const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const kolamId = Number(id);
 
@@ -253,6 +256,24 @@ export default function KolamDetailPage() {
           </Card>
         )}
 
+        {/* Ketiga parameter sekaligus — untuk melihat apakah lonjakan satu
+            parameter berbarengan dengan yang lain. */}
+        {history.length > 0 && (
+          <Card>
+            <div className="mb-4">
+              <h3 className="font-display text-base font-semibold text-ink">
+                Grafik Gabungan
+              </h3>
+              <p className="mt-1 text-xs text-muted">
+                Suhu &amp; salinitas dibaca pada sumbu kiri, pH pada sumbu kanan
+                (rentangnya jauh lebih sempit). Bandingkan bentuk grafiknya,
+                bukan jarak antar garis.
+              </p>
+            </div>
+            <CombinedChart data={history} />
+          </Card>
+        )}
+
         {/* Ubah identitas rak (PUT /kolam/:id) */}
         <Card className="sm:max-w-2xl">
           <div className="mb-3 flex items-center gap-2.5">
@@ -293,6 +314,13 @@ export default function KolamDetailPage() {
           </form>
           {rakMessage && <p className="mt-3 text-sm text-muted">{rakMessage}</p>}
         </Card>
+
+        <DangerZone
+          kolamId={kolam.id}
+          nama={kolam.nama}
+          deviceCode={device?.device_code ?? null}
+          onDeleted={() => router.push("/dashboard")}
+        />
       </div>
     </>
   );

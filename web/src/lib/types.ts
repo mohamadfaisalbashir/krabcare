@@ -134,6 +134,13 @@ export interface Notification {
 
 // ── Tipe komposit khusus frontend ───────────────────────────────────
 
+/** Satu sensor terpasang beserta kolam yang mengklaimnya — dipakai Log Historis. */
+export interface Sensor {
+  deviceId: number;
+  deviceCode: string;
+  kolamNama: string;
+}
+
 /** Gabungan data kolam + device + kualitas + reading terbaru, untuk dashboard. */
 export interface KolamDashboard {
   kolam: Kolam;
