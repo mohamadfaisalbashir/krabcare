@@ -22,7 +22,10 @@ export default function Topbar({
   const initial = user?.nama.charAt(0).toUpperCase() ?? "…";
 
   return (
-    <header className="flex items-center justify-between border-b border-border bg-surface/80 px-5 py-4 backdrop-blur sm:px-8">
+    // Tanpa border-b & backdrop-blur: header ini bukan bar terpisah lagi, ia
+    // bagian atas panel konten yang sudah putih (dan tidak sticky, jadi blur
+    // tadi memang cuma dekoratif).
+    <header className="flex items-center justify-between px-5 pb-2 pt-5 sm:px-8 sm:pt-6">
       <div className="min-w-0">
         {/* Judul halaman detail adalah nama rak buatan pengguna — panjangnya
             tidak terbatas, jadi dipotong alih-alih mendorong avatar keluar. */}

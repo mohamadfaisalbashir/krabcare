@@ -22,54 +22,80 @@
 }
 
 @layer components {
-  /* Divider bergelombang ala riak air -- elemen signature halaman */
-  .ripple-rule {
-    height: 6px;
-    width: 100%;
-    background-image: radial-gradient(
-      circle at 6px 3px,
-      theme("colors.brand.300") 2px,
-      transparent 2.2px
-    );
-    background-size: 12px 6px;
-    background-repeat: repeat-x;
-    opacity: 0.6;
-  }
-
+  /* Radius 8px & bayangan tipis datang dari token (rounded-xl2, shadow-card).
+     Yang memisahkan kartu dari panel adalah GARIS 1px-nya, bukan bayangannya —
+     begitu cara WinUI 3 menyusun kedalaman. */
   .card {
     @apply bg-surface border border-border rounded-xl2 shadow-card;
   }
 
+  /* TextBox WinUI 3: garis bawah lebih tebal dan lebih gelap dari tiga sisi
+     lain, lalu berubah jadi aksen saat kolomnya difokus. Ini menggantikan ring
+     biru-muda yang lama. */
   .input-field {
     /* text-base di mobile bukan gaya: input < 16px membuat Safari iOS
        memperbesar viewport tiap kali kolomnya difokus. */
-    @apply w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-base sm:text-sm
-      text-ink placeholder:text-muted/70
-      focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition;
+    @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-base sm:text-sm
+      text-ink placeholder:text-muted/70 outline-none transition-colors;
+    border-bottom-width: 2px;
+    border-bottom-color: theme("colors.muted / 45%");
+  }
+  .input-field:focus {
+    border-bottom-color: theme("colors.brand.600");
+  }
+  /* Outline :focus-visible global sengaja TIDAK dimatikan untuk input: garis
+     bawah saja bukan penanda fokus keyboard yang memadai. */
+
+  /* Baris yang bisa digeser mendatar. Scrollbar-nya tipis ala WinUI tapi
+     SENGAJA tidak disembunyikan: itu satu-satunya tanda permanen bahwa masih
+     ada kartu di sebelah kanan. Tidak bisa ditulis dengan utility Tailwind. */
+  .rail {
+    scrollbar-width: thin;
+    scrollbar-color: theme("colors.border") transparent;
+  }
+  .rail::-webkit-scrollbar {
+    height: 8px;
+  }
+  .rail::-webkit-scrollbar-thumb {
+    background: theme("colors.border");
+    border-radius: 9999px;
+  }
+  .rail::-webkit-scrollbar-track {
+    background: transparent;
   }
 
   .label-field {
     @apply block text-sm font-medium text-ink/80 mb-1.5;
   }
 
-  /* bg-brand-600, bukan 500: teks putih di atas brand-500 hanya 2.88:1. */
+  /* Tinggi kontrol WinUI adalah 32px. Itu aman di desktop (>24px), tapi tombol
+     tidak boleh ikut menyusut di mobile — min-h yang lebih longgar di bawah
+     breakpoint sm menjaga target sentuhnya tetap nyaman. */
+  .btn-base {
+    @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-lg
+      px-4 text-sm font-semibold transition-colors
+      disabled:opacity-50 disabled:pointer-events-none sm:min-h-[32px];
+  }
+
+  /* AccentButton. bg-brand-600, bukan 500: teks putih di atas brand-500 hanya
+     2.88:1. Sorotan tipis di tepi atas — cara WinUI memberi kesan tombol timbul. */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600
-      px-4 py-2.5 text-sm font-semibold text-white transition
-      hover:bg-brand-700 active:bg-brand-900 disabled:opacity-50 disabled:pointer-events-none;
+    @apply btn-base bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-900;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.17);
+  }
+
+  /* Button standar WinUI: isian putih, garis bawah sedikit lebih gelap, dan
+     hover NETRAL — bukan bernuansa aksen seperti sebelumnya. */
+  .btn-ghost {
+    @apply btn-base border border-border bg-white text-ink hover:bg-bg;
+    border-bottom-color: theme("colors.muted / 35%");
   }
 
   /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di dalam Zona Berbahaya —
      satu kelas supaya gaya keduanya tidak bisa lepas sinkron. */
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border
-      border-status-bahaya/30 bg-status-bahayaBg px-4 py-2.5 text-sm font-semibold
-      text-status-bahaya transition hover:bg-status-bahaya/10
-      disabled:opacity-50 disabled:pointer-events-none;
-  }
-
-  .btn-ghost {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border
-      bg-white px-4 py-2.5 text-sm font-semibold text-ink transition hover:bg-brand-50;
+    @apply btn-base border border-status-bahaya/30 bg-status-bahayaBg
+      text-status-bahaya hover:bg-status-bahaya/10;
+    border-bottom-color: theme("colors.status.bahaya / 45%");
   }
 }

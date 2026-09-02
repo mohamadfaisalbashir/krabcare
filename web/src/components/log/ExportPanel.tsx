@@ -111,8 +111,7 @@ export default function ExportPanel({
       <div className="mb-3">
         <h3 className="font-display text-base font-semibold text-ink">Unduh Data Mentah</h3>
         <p className="mt-1 text-xs text-muted">
-          Berkas CSV berisi nilai apa adanya pada rentang tanggal yang dipilih —
-          filter status di bawah tidak ikut diterapkan.
+          Berkas CSV berisi nilai apa adanya pada rentang tanggal yang dipilih.
         </p>
       </div>
 

@@ -74,7 +74,9 @@ export default function Sidebar({ className }: { className?: string }) {
         // dokumen, sehingga tombol Keluar terdorong jauh di bawah lipatan pada
         // halaman panjang seperti Log Historis.
         "sticky top-0 flex h-screen flex-col justify-between overflow-y-auto",
-        "border-r border-border bg-surface py-6",
+        // bg-bg, bukan bg-surface: panel nav adalah lapisan LATAR dan panel
+        // konten yang putih, seperti NavigationView WinUI 3.
+        "border-r border-border bg-bg py-6",
         "transition-[width,padding] duration-200 ease-out motion-reduce:transition-none",
         collapsed ? "w-16 px-2" : "w-64 px-4",
         className
@@ -93,7 +95,7 @@ export default function Sidebar({ className }: { className?: string }) {
           {!collapsed && <Logo />}
         </div>
 
-        <div className="ripple-rule my-6" />
+        <div className="my-6 border-t border-border" />
 
         <nav className="space-y-1" aria-label="Navigasi utama">
           {NAV.map(({ href, label, icon: Icon, children }) => {

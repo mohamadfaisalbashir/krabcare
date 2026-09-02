@@ -1,19 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  weight: ["500", "600", "700"],
-  style: ["normal", "italic"],
-});
-
-const jakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-jakarta",
-  weight: ["400", "500", "600", "700"],
-});
 
 const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
@@ -41,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body
-        className={`${fraunces.variable} ${jakarta.variable} ${jetbrains.variable} font-sans`}
+        className={`${jetbrains.variable} font-sans`}
       >
         {children}
       </body>

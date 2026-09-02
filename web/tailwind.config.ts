@@ -50,16 +50,27 @@ const config: Config = {
           bahayaBg: "#FBE7E2",
         },
       },
+      // WinUI 3 memakai SATU keluarga huruf untuk seluruh UI — judul dan isi.
+      // Ini font bawaan sistem, bukan Google Font, jadi tidak ada yang diunduh:
+      // Segoe UI Variable di Windows, dan system-ui menutup OS lain.
       fontFamily: {
-        display: ["var(--font-fraunces)", "serif"],
-        sans: ["var(--font-jakarta)", "sans-serif"],
+        display: ['"Segoe UI Variable Display"', '"Segoe UI"', "system-ui", "sans-serif"],
+        sans: ['"Segoe UI Variable Text"', '"Segoe UI"', "system-ui", "sans-serif"],
+        // Nilai sensor tetap monospace. Pilihan monospace bukan ciri WinUI dan
+        // fontnya sudah dimuat, jadi tidak ada alasan menggantinya.
         mono: ["var(--font-jetbrains)", "monospace"],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(18,43,38,0.04), 0 4px 16px rgba(18,43,38,0.06)",
+        // WinUI menaruh kedalaman pada garis 1px, bukan pada bayangan yang
+        // menyebar. Bayangan tipis ini hanya untuk memisahkan kartu dari panel.
+        card: "0 1px 2px rgba(18,43,38,0.05)",
       },
       borderRadius: {
-        xl2: "1.25rem",
+        // Dua radius standar WinUI 3. `lg` SENGAJA menimpa bawaan Tailwind
+        // (0.5rem): 26 pemakaian rounded-lg — tombol, input, item nav, ubin
+        // ikon — ikut jadi 4px tanpa satu pun berkas TSX disentuh.
+        lg: "0.25rem",
+        xl2: "0.5rem",
       },
     },
   },
