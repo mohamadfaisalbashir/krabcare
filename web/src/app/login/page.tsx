@@ -127,7 +127,7 @@ export default function LoginPage() {
               <div className="mt-2 text-right">
                 <Link
                   href="/lupa-sandi"
-                  className="text-sm font-medium text-brand-600 hover:underline"
+                  className="inline-block py-1 text-sm font-medium text-brand-600 hover:underline"
                 >
                   Lupa sandi?
                 </Link>

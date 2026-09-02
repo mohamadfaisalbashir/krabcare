@@ -41,7 +41,7 @@ export default function LupaSandiPage() {
 
         <Link
           href="/login"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-muted hover:text-ink"
+          className="mb-6 inline-flex items-center gap-1.5 py-1 text-sm font-medium text-muted hover:text-ink"
         >
           <ArrowLeft className="h-4 w-4" /> Kembali ke halaman masuk
         </Link>

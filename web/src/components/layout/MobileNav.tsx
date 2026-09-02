@@ -18,7 +18,7 @@ export default function MobileNav() {
   const pathname = usePathname();
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigasi utama"
     >
       {NAV.map(({ href, label, icon: Icon }) => {

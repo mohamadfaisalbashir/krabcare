@@ -234,12 +234,15 @@ function LogHistorisView() {
             keyboard, dan validasi min/max gratis). Kosong = semua waktu. */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-3">
           <span className="text-xs font-medium text-muted">Rentang</span>
+          {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang sengaja
+              16px di mobile supaya Safari iOS tidak memperbesar viewport saat kolomnya
+              difokus. */}
           <input
             type="date"
             value={dari}
             max={sampai || undefined}
             onChange={(e) => setDari(e.target.value)}
-            className="input-field w-auto py-1.5 text-xs"
+            className="input-field w-auto py-1.5"
             aria-label="Tanggal mulai"
           />
           <span className="text-xs text-muted">s/d</span>
@@ -248,7 +251,7 @@ function LogHistorisView() {
             value={sampai}
             min={dari || undefined}
             onChange={(e) => setSampai(e.target.value)}
-            className="input-field w-auto py-1.5 text-xs"
+            className="input-field w-auto py-1.5"
             aria-label="Tanggal akhir"
           />
           {(dari || sampai) && (
@@ -258,18 +261,18 @@ function LogHistorisView() {
                 setDari("");
                 setSampai("");
               }}
-              className="text-xs font-semibold text-brand-600 hover:underline"
+              className="py-1.5 text-xs font-semibold text-brand-600 hover:underline"
             >
               Semua waktu
             </button>
           )}
         </div>
 
-        {/* Pemilih parameter hanya untuk layar sempit: di atas breakpoint sm,
-            submenu sidebar sudah mengerjakan hal yang sama. Di bawah sm sidebar
+        {/* Pemilih parameter hanya untuk layar sempit: di atas breakpoint lg,
+            submenu sidebar sudah mengerjakan hal yang sama. Di bawah lg sidebar
             tidak dirender sama sekali dan bar bawah tidak punya submenu, jadi
             tanpa ini parameter terkunci di pH. */}
-        <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3 sm:hidden">
+        <div className="flex flex-wrap gap-2 border-t border-border px-4 py-3 lg:hidden">
           {PARAM_KEYS.map((p) => (
             <FilterPill
               key={p}
@@ -302,7 +305,7 @@ function LogHistorisView() {
                 key={`${r.device_code}-${r.time}-${i}`}
                 className="flex items-center justify-between gap-4 px-5 py-4"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-ink">
                     {r.device_code}{" "}
                     <span className="text-muted">
@@ -319,7 +322,11 @@ function LogHistorisView() {
                     })}
                   </p>
                 </div>
-                <StatusBadge status={statusOf(param, value)} size="sm" />
+                {/* Dibungkus supaya bisa shrink-0 — StatusBadge tidak menerima
+                    className, dan tanpa ini badge-nya kegencet di layar 375px. */}
+                <div className="shrink-0">
+                  <StatusBadge status={statusOf(param, value)} size="sm" />
+                </div>
               </div>
             );
           })}
@@ -348,7 +355,7 @@ function LogRowsSkeleton() {
             <Skeleton className="h-4 w-52" />
             <Skeleton className="mt-2 h-3 w-36" />
           </div>
-          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-6 w-16 shrink-0 rounded-full" />
         </div>
       ))}
     </div>

@@ -23,13 +23,15 @@ export default function Topbar({
 
   return (
     <header className="flex items-center justify-between border-b border-border bg-surface/80 px-5 py-4 backdrop-blur sm:px-8">
-      <div>
-        <h1 className="font-display text-xl font-semibold text-ink sm:text-2xl">
+      <div className="min-w-0">
+        {/* Judul halaman detail adalah nama rak buatan pengguna — panjangnya
+            tidak terbatas, jadi dipotong alih-alih mendorong avatar keluar. */}
+        <h1 className="truncate font-display text-xl font-semibold text-ink sm:text-2xl">
           {title}
         </h1>
         {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <div className="hidden text-right sm:block">
           {user ? (
             <>

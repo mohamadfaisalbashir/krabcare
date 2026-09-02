@@ -70,7 +70,7 @@ export default function NotificationItem({
           {!item.is_read && onRead && (
             <button
               onClick={() => onRead(item.id)}
-              className="text-xs font-semibold text-brand-600 hover:underline"
+              className="py-1.5 text-xs font-semibold text-brand-600 hover:underline"
             >
               Tandai dibaca
             </button>

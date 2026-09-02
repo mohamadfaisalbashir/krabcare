@@ -29,8 +29,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Lebar ditentukan Sidebar sendiri — ia yang memiliki state kuncupnya.
           Kolom konten memakai flex-1, jadi otomatis melebar saat sidebar
           menguncup tanpa kelas pengimbang apa pun di sini. */}
-      <Sidebar className="hidden shrink-0 sm:flex" />
-      <div className="flex min-h-screen flex-1 flex-col pb-16 sm:pb-0">
+      <Sidebar className="hidden shrink-0 lg:flex" />
+      {/* Padding bawah = tinggi bar nav + safe area iPhone, jadi baris terakhir
+          tiap halaman tidak tertutup bar itu. */}
+      <div className="flex min-h-screen flex-1 flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         {children}
       </div>
       <MobileNav />

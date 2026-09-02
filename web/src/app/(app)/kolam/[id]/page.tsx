@@ -213,7 +213,10 @@ export default function KolamDetailPage() {
               Masukkan kode device yang terpasang pada rak ini (mis.{" "}
               <code>SLV1</code>). Satu rak terhubung ke satu device.
             </p>
-            <form onSubmit={handleClaim} className="flex items-end gap-2">
+            <form
+              onSubmit={handleClaim}
+              className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            >
               <Input
                 label="Kode device"
                 placeholder="SLV1"

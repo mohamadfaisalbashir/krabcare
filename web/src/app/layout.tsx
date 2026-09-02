@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -25,6 +25,14 @@ export const metadata: Metadata = {
   title: "sismon_kepiting · Monitoring Kualitas Air Budidaya Kepiting",
   description:
     "Sistem monitoring kualitas air pada budidaya kepiting sistem vertikal (apartemen), multi-kolam dan multi-pengguna.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  // Tanpa viewportFit "cover", env(safe-area-inset-*) selalu bernilai 0 di iOS
+  // dan bar navigasi bawah duduk tepat di bawah gesture bar.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

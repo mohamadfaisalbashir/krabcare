@@ -116,7 +116,9 @@ export default function ExportPanel({
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+      {/* flex-wrap wajib: keempat field punya lebar tetap yang totalnya 704px,
+          lebih lebar dari layar 640px kalau dipaksa satu baris. */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="sm:w-40">
           <Input
             label="Dari"
