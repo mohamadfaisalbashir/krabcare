@@ -22,6 +22,9 @@ services:
     image: caddy:2-alpine
     container_name: krabcare-caddy
     restart: unless-stopped
+    environment:                    
+      DOMAIN: ${DOMAIN}             
+      WEB_DOMAIN: ${WEB_DOMAIN}       
     ports:
       - "80:80"
       - "443:443"
