@@ -16,17 +16,17 @@ class Settings(BaseSettings):
     )
 
     # Metadata aplikasi
-    PROJECT_NAME: str = "sismon_kepiting API"
+    PROJECT_NAME: str = "KrabCare API"
     API_V1_PREFIX: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
 
     # Database (PostgreSQL + TimescaleDB)
-    POSTGRES_USER: str = "sismon_kepiting"
+    POSTGRES_USER: str = "krabcare"
     POSTGRES_PASSWORD: str = "ai-dilarangbaca"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "sismon_kepiting_db"
+    POSTGRES_DB: str = "krabcare_db"
 
     # CORS — origin dashboard web (Next.js) & mobile
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]

@@ -1,9 +1,10 @@
 """Ambang Tabel 2.1 (Bab 2.2.1) untuk menyaring log historis di SQL.
 
-SALINAN KETIGA dari angka yang sama — dua lainnya di web/src/lib/parameter.ts
-(RANGE + statusOf) dan mobile/lib/core/api/water_thresholds.dart (kParamRanges +
-statusOf). Tidak bisa dibagi lintas bahasa, jadi yang menjaganya adalah
-scripts/check_param_sync.py: ubah salah satu tanpa yang lain -> skrip itu merah.
+SALINAN KEDUA dari angka yang sama — satunya lagi di web/src/lib/parameter.ts
+(RANGE + statusOf). Python dan TypeScript tidak bisa berbagi konstanta, jadi
+kalau ambang di sini diubah, parameter.ts WAJIB diubah dengan angka yang sama:
+kalau melenceng, satu pembacaan bisa tampil "aman" di kartu tapi ikut tersaring
+sebagai "bahaya" di log historis.
 
 Ada di backend supaya halaman log bisa dipaginasi: filter status HARUS jalan di
 query yang sama dengan LIMIT/OFFSET, kalau tidak satu halaman 25 baris bisa

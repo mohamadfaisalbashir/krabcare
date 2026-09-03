@@ -23,8 +23,3 @@ firebase-admin==7.5.0
 
 # Utility
 python-dotenv==1.0.1
-
-# Testing
-pytest==8.3.4
-pytest-asyncio==0.25.0
-httpx==0.28.1

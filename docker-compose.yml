@@ -1,12 +1,14 @@
+name: krabcare
+
 services:
   db:
     image: timescale/timescaledb:latest-pg16
-    container_name: sismon_kepiting-db
+    container_name: krabcare-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-sismon_kepiting}
+      POSTGRES_USER: ${POSTGRES_USER:-krabcare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
-      POSTGRES_DB: ${POSTGRES_DB:-sismon_kepiting_db}
+      POSTGRES_DB: ${POSTGRES_DB:-krabcare_db}
     ports:
       # Bind ke localhost saja: di laptop tidak ada bedanya (pytest dari host tetap
       # konek), tapi di VPS ini yang mencegah database terekspos ke internet.
@@ -18,7 +20,7 @@ services:
       # Script di sini dijalankan otomatis, berurutan sesuai nama file, hanya saat volume pgdata masih kosong.
       - ./database/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sismon_kepiting} -d ${POSTGRES_DB:-sismon_kepiting_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-krabcare} -d ${POSTGRES_DB:-krabcare_db}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,20 +32,20 @@ services:
 
   backend:
     build: ./backend
-    container_name: sismon_kepiting-backend
+    container_name: krabcare-backend
     restart: unless-stopped
     environment:
-      PROJECT_NAME: ${PROJECT_NAME:-sismon_kepiting API}
+      PROJECT_NAME: ${PROJECT_NAME:-KrabCare API}
       ENVIRONMENT: development
       DEBUG: "true"
       # Bertipe list[str] di pydantic-settings — nilainya WAJIB format JSON
       # (kurung siku + kutip ganda), bukan dipisah koma.
       CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'
-      POSTGRES_USER: ${POSTGRES_USER:-sismon_kepiting}
+      POSTGRES_USER: ${POSTGRES_USER:-krabcare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      POSTGRES_DB: ${POSTGRES_DB:-sismon_kepiting_db}
+      POSTGRES_DB: ${POSTGRES_DB:-krabcare_db}
       GATEWAY_API_KEY: ${GATEWAY_API_KEY:-ai-dilarangbaca}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-ai-dilarangbaca}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-1440}
@@ -93,7 +95,7 @@ services:
         # Docker. Next meng-inline nilai ini ke bundel saat build, bukan runtime,
         # makanya lewat build args dan bukan environment.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
-    container_name: sismon_kepiting-web
+    container_name: krabcare-web
     restart: unless-stopped
     depends_on:
       backend:

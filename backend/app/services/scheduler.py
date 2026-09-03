@@ -1,7 +1,8 @@
 """Scheduler APScheduler yang menjalankan pipeline ML secara berkala.
 
-Jalur sementara di sisi backend/cloud, menggantikan run manual script di
-ml/scripts/ untuk operasi rutin. Script-nya tetap ada untuk debugging manual.
+Satu-satunya pemicu pipeline ML di produksi: klasifikasi Mamdani + forecast FTS
+dijalankan otomatis tiap ML_SCHEDULER_INTERVAL_MINUTES, siklus pertama langsung
+saat backend startup.
 """
 
 import logging

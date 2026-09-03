@@ -11,8 +11,8 @@ cd "$(dirname "$0")/.."
 
 # Baca .env kalau ada, kalau tidak pakai default yang sama dengan docker-compose.
 [ -f .env ] && set -a && . ./.env && set +a
-DB_USER="${POSTGRES_USER:-sismon_kepiting}"
-DB_NAME="${POSTGRES_DB:-sismon_kepiting_db}"
+DB_USER="${POSTGRES_USER:-krabcare}"
+DB_NAME="${POSTGRES_DB:-krabcare_db}"
 
 mkdir -p backups
 OUT="backups/${DB_NAME}_$(date +%Y%m%d_%H%M%S).sql.gz"

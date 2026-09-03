@@ -1,4 +1,4 @@
-"""Entry point aplikasi FastAPI — sismon_kepiting Backend."""
+"""Entry point aplikasi FastAPI — KrabCare Backend."""
 
 import logging
 from contextlib import asynccontextmanager

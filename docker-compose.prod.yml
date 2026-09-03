@@ -20,7 +20,7 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    container_name: sismon_kepiting-caddy
+    container_name: krabcare-caddy
     restart: unless-stopped
     ports:
       - "80:80"

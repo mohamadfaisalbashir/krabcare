@@ -67,9 +67,8 @@ CATEGORY_TO_DB = {"aman": "baik", "waspada": "sedang", "bahaya": "buruk"}
 
 _SEVERITY_ORDER = {"baik": 0, "sedang": 1, "buruk": 2}
 
-# Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali — dipakai backend
-# (ml_pipeline_service, notification_service) & script ml/scripts/scan_anomaly.py
-# untuk memicu notifikasi/peringatan.
+# Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali — dipakai
+# ml_pipeline_service & notification_service untuk memicu notifikasi/peringatan.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
 

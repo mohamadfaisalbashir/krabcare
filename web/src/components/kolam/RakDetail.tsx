@@ -271,8 +271,9 @@ export default function RakDetail({
               note="Satu rak terhubung ke satu device"
             >
               <p className="mb-3 text-sm text-muted">
-                Masukkan kode device yang terpasang pada rak ini (mis.{" "}
-                <code>SLV1</code>).
+                Masukkan kode device yang terpasang pada rak ini — MAC address ESP32
+                tanpa pemisah, huruf besar (mis.{" "}
+                <code>54D660E9BFB4</code>).
               </p>
               <form
                 onSubmit={handleClaim}
@@ -280,7 +281,7 @@ export default function RakDetail({
               >
                 <Input
                   label="Kode device"
-                  placeholder="SLV1"
+                  placeholder="54D660E9BFB4"
                   value={deviceCode}
                   onChange={(e) => setDeviceCode(e.target.value)}
                   required

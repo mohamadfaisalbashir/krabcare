@@ -1,14 +1,13 @@
 {
-  "name": "sismon_kepiting-web",
+  "name": "krabcare-web",
   "version": "0.1.0",
   "private": true,
-  "description": "Frontend web - Sistem Monitoring Kualitas Air Budidaya Kepiting Sistem Vertikal",
+  "description": "KrabCare - frontend web sistem monitoring kualitas air budidaya kepiting sistem vertikal",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "test": "node --experimental-strip-types --test src/lib/*.test.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "next": "14.2.35",

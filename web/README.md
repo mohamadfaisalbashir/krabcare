@@ -1,4 +1,4 @@
-# sismon_kepiting — Frontend Web
+# KrabCare — Frontend Web
 
 Frontend web untuk **Sistem Monitoring Kualitas Air pada Budidaya Kepiting Sistem
 Vertikal** (lihat dokumen `CD_GAB` Bab 3.3.5). Dibangun dengan **Next.js 14 (App
@@ -55,7 +55,7 @@ Buka `http://localhost:3000` — akan diarahkan otomatis ke `/login`.
 ## Menyambungkan ke backend
 
 Semua pemanggilan API dikumpulkan di satu tempat: `src/lib/api.ts`. Saat
-backend FastAPI (repo `Kepiting-Zaman-Purba`) sudah punya rute pasti,
+backend FastAPI (repo `krabcare`) sudah punya rute pasti,
 sesuaikan:
 
 1. `NEXT_PUBLIC_API_BASE_URL` pada `.env.local`.

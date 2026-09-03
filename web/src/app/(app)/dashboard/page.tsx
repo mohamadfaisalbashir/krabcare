@@ -391,7 +391,7 @@ export default function DashboardPage() {
             </h2>
             <p className="max-w-sm text-sm text-muted">
               Buat kolam dulu lewat ubin <strong className="text-ink">+</strong> di
-              atas, lalu klaim device (mis. <code>SLV1</code>) di panel detail rak
+              atas, lalu klaim device (mis. <code>54D660E9BFB4</code>) di panel detail rak
               supaya data sensornya mulai masuk.
             </p>
           </Card>

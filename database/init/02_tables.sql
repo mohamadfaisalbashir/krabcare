@@ -1,5 +1,5 @@
 -- ============================================================
--- Skema tabel sismon_kepiting
+-- Skema tabel KrabCare
 -- Parameter kualitas air yang dipantau: pH, suhu (°C), salinitas (ppt)
 -- ============================================================
 
@@ -14,7 +14,7 @@ CREATE TYPE water_quality_category AS ENUM ('baik', 'sedang', 'buruk');
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS devices (
     id                SERIAL PRIMARY KEY,
-    device_code       TEXT NOT NULL UNIQUE,              -- kode unik, mis. "SLV1"
+    device_code       TEXT NOT NULL UNIQUE,              -- MAC ESP32 tanpa pemisah, mis. "54D660E9BFB4"
     device_type       TEXT NOT NULL DEFAULT 'slave_node'
                           CHECK (device_type IN ('slave_node', 'master_node', 'gateway')),
     level_number      SMALLINT,                          -- tingkat pada rak vertikal (khusus slave_node)
