@@ -9,7 +9,7 @@ import type { ParamKey } from "./parameter";
  * import di bawah `node --test`. Menyeret lucide-react ke sana akan memaksa
  * test runner me-resolve React tanpa alasan.
  *
- * Nilainya menyalin pemetaan yang sudah dipakai ParameterCard, PredictionPanel,
+ * Nilainya menyalin pemetaan yang sudah dipakai ParameterStrip, PredictionPanel,
  * dan PondCard — ketiganya sudah sepakat, ini hanya memberi mereka satu rumah.
  */
 export const PARAM_ICON: Record<ParamKey, LucideIcon> = {

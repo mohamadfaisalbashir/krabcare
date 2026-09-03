@@ -6,9 +6,8 @@
  */
 export function isNavActive(pathname: string | null, href: string): boolean {
   if (!pathname) return false;
-  // Detail rak (/kolam/3) selalu dibuka dari Dashboard lewat PondCard, dan
-  // tidak punya entri NAV sendiri. Tanpa pemetaan ini seluruh item mati di
-  // halaman itu, dan navigasinya terlihat seperti rusak.
-  if (pathname.startsWith("/kolam")) return href === "/dashboard";
+  // Detail rak tidak punya rute sendiri lagi — ia terbuka inline di dashboard
+  // (components/kolam/RakDetail.tsx), jadi pathname-nya tetap /dashboard dan
+  // tidak ada pemetaan khusus yang perlu ditulis di sini.
   return pathname.startsWith(href);
 }

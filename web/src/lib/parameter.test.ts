@@ -2,7 +2,14 @@
 // Yang diuji cuma batas-batasnya — di situ logikanya bisa salah tanpa ketahuan.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { statusOf, formatValue, RANGE } from "./parameter.ts";
+import {
+  statusOf,
+  formatValue,
+  rangePercent,
+  optimalBand,
+  RANGE,
+  PARAM_KEYS,
+} from "./parameter.ts";
 
 test("statusOf pH: di luar toleransi = Bahaya", () => {
   assert.equal(statusOf("ph", 6.4), "Bahaya");
@@ -40,4 +47,23 @@ test("formatValue memangkas nol di belakang, maksimal 1 desimal", () => {
   assert.equal(formatValue(7.7), "7.7");
   assert.equal(formatValue(25.0), "25"); // nol di belakang tetap dibuang
   assert.equal(formatValue(7.006), "7");
+});
+
+test("rangePercent memetakan toleransi ke 0-100 dan menjepit di luar itu", () => {
+  assert.equal(rangePercent("ph", 6.5), 0); // tepat di min
+  assert.equal(rangePercent("ph", 9.0), 100); // tepat di max
+  assert.equal(rangePercent("ph", 7.75), 50); // tepat di tengah
+  assert.equal(rangePercent("ph", 5), 0); // di bawah toleransi -> dijepit
+  assert.equal(rangePercent("ph", 14), 100); // di atas toleransi -> dijepit
+});
+
+test("optimalBand sejajar dengan rangePercent, bukan skala sendiri", () => {
+  for (const param of PARAM_KEYS) {
+    const [start, width] = optimalBand(param);
+    const [lo, hi] = RANGE[param].optimal;
+    assert.equal(start, rangePercent(param, lo));
+    assert.equal(start + width, rangePercent(param, hi));
+    assert.ok(width > 0, `${param}: pita optimal tidak boleh selebar nol`);
+    assert.ok(start + width <= 100, `${param}: pita optimal keluar dari track`);
+  }
 });

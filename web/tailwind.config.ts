@@ -64,6 +64,30 @@ const config: Config = {
         // WinUI menaruh kedalaman pada garis 1px, bukan pada bayangan yang
         // menyebar. Bayangan tipis ini hanya untuk memisahkan kartu dari panel.
         card: "0 1px 2px rgba(18,43,38,0.05)",
+        // Satu tingkat di atas `card`, untuk elemen yang memang MELAYANG di atas
+        // sesuatu: kartu rak di atas foto banner dan kartu grafik di halaman
+        // detail. Nilainya disalin dari bayangan kustom yang sebelumnya ditulis
+        // langsung di PondCard, supaya keduanya tidak lepas sinkron lagi.
+        float: "0 2px 12px rgba(18,43,38,0.10)",
+        floatHover: "0 6px 20px rgba(18,43,38,0.14)",
+      },
+      // SATU kurva untuk semua gerakan yang mengubah tata letak (lebar sidebar,
+      // label yang menyusut, submenu yang membuka, indikator segmented control).
+      // Sebelumnya tiap elemen memakai durasi & kurva sendiri — itu yang membuat
+      // buka/tutup sidebar terbaca patah-patah, bukan durasinya yang kurang.
+      transitionTimingFunction: {
+        smooth: "cubic-bezier(0.32, 0.72, 0, 1)",
+      },
+      keyframes: {
+        rise: {
+          "0%": { opacity: "0", transform: "translateY(6px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        // `both` supaya elemen ber-delay tidak berkedip terlihat penuh dulu
+        // sebelum gilirannya tiba.
+        rise: "rise 420ms cubic-bezier(0.32, 0.72, 0, 1) both",
       },
       borderRadius: {
         // Dua radius standar WinUI 3. `lg` SENGAJA menimpa bawaan Tailwind

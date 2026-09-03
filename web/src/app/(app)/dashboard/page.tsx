@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Waves } from "lucide-react";
+import clsx from "clsx";
 import AccountChip from "@/components/layout/AccountChip";
 import PondCard, { PONDCARD_WIDTH } from "@/components/dashboard/PondCard";
+import Rail from "@/components/dashboard/Rail";
+import RakDetail from "@/components/kolam/RakDetail";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -16,6 +19,10 @@ import {
   categoryToLabel,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+
+/** id panel detail. Konstanta, bukan string yang diketik dua kali: PondCard
+ *  menunjuk ke sini lewat aria-controls dan panelnya memakai id yang sama. */
+const PANEL_ID = "detail-rak";
 
 /**
  * Label status UI dari klasifikasi fuzzy terbaru.
@@ -37,6 +44,15 @@ export default function DashboardPage() {
   const [nama, setNama] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Rak yang detailnya sedang terbuka di bawah kartu. null = belum ada yang
+  // dipilih, dan kartu tersusun grid 2 kolom.
+  //
+  // Disimpan di komponen, BUKAN di URL: yang diminta justru "tidak ganti
+  // window", dan panelnya punya tombol Tutup sendiri. Menaruhnya di ?rak= cuma
+  // menambah useSearchParams + router.replace untuk perilaku yang tidak dipakai.
+  const [selected, setSelected] = useState<number | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
   // Compose dashboard dari beberapa endpoint backend:
   // 1. GET /kolam → daftar kolam
   // 2. GET /quality/latest → kualitas terbaru semua device (DISTINCT ON per device)
@@ -52,7 +68,7 @@ export default function DashboardPage() {
   // belasan kolam; kalau jumlahnya tumbuh, minta endpoint batch ke backend.
   // `silent` dipakai refresh berkala: tanpa itu daftar kolam berkedip jadi
   // "Memuat data kolam..." tiap satu menit.
-  async function loadDashboard(silent = false) {
+  const loadDashboard = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     setError(null);
     try {
@@ -95,14 +111,50 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     loadDashboard();
     // Sensor kirim jauh lebih sering daripada orang menekan reload.
     const id = setInterval(() => loadDashboard(true), 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [loadDashboard]);
+
+  const selectedItem = useMemo(
+    () => items.find((i) => i.kolam.id === selected) ?? null,
+    [items, selected]
+  );
+
+  // Rak yang dipilih bisa lenyap dari daftar (dihapus, lalu refresh 60 detik
+  // memuat ulang). Tanpa ini panelnya tetap terbuka menampilkan rak yang sudah
+  // tidak ada.
+  useEffect(() => {
+    if (selected !== null && !loading && !selectedItem) setSelected(null);
+  }, [selected, loading, selectedItem]);
+
+  // Panel digulir ke layar HANYA saat baru dibuka, tidak tiap kali berpindah
+  // rak: menyentak halaman setiap kali orang membandingkan dua rak justru
+  // melawan tujuan "satu jendela". `justOpened` dihitung dari ref, bukan state,
+  // supaya membaca nilai sebelumnya tidak ikut memicu render.
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    const open = selected !== null;
+    const justOpened = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!open) return;
+
+    if (justOpened) {
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    // Kartu terpilih: `nearest` + TANPA smooth, dan itu disengaja. `center`
+    // yang beranimasi berarti selalu ada gulir rail yang masih berjalan setelah
+    // kartu ditekan, dan gulir itu terus menimpa scrollLeft yang sedang
+    // diseret pengguna — persis keluhan "berat digeser". `nearest` tidak
+    // bergerak sama sekali kalau kartunya memang sudah terlihat.
+    document
+      .querySelector(`[data-pondcard="${selected}"]`)
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [selected]);
 
   async function handleCreateKolam(e: React.FormEvent) {
     e.preventDefault();
@@ -129,8 +181,61 @@ export default function DashboardPage() {
     [items]
   );
 
+  const variant = selected === null ? "grid" : "rail";
+
+  // Dirakit sekali, dipakai dua tata letak — kalau tidak, daftar kartunya
+  // ditulis dua kali dan yang satu pasti ketinggalan saat kartunya berubah.
+  const cards = loading ? (
+    <KolamSkeleton variant={variant} />
+  ) : (
+    items.map((item) => (
+      <PondCard
+        key={item.kolam.id}
+        item={item}
+        variant={variant}
+        selected={item.kolam.id === selected}
+        panelId={PANEL_ID}
+        // Menekan kartu yang sama = menutup. Chevron-nya sudah menunjuk ke
+        // atas, jadi itu yang diharapkan.
+        onSelect={(id) => setSelected((prev) => (prev === id ? null : id))}
+      />
+    ))
+  );
+
   return (
-    <div className="flex-1">
+    // isolate: lapisan wallpaper di bawah punya z-index sendiri dan tidak boleh
+    // bocor ke luar halaman (sidebar & bar nav bawah ada di luar sini).
+    <div className="relative isolate flex-1 lg:rounded-tl-xl2">
+      {/* WALLPAPER — dasar "Mica" halaman ini. Semua kartu di atasnya adalah
+          kaca (.glass), dan tanpa sesuatu yang berwarna di belakangnya, kaca
+          cuma terlihat seperti kartu putih pucat.
+
+          Cakupannya SENGAJA hanya halaman ini: sidebar dan halaman lain tetap
+          solid seperti semula. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden lg:rounded-tl-xl2"
+      >
+        {/* Foto SENGAJA berbeda dari banner: banner memakai /kepiting.png,
+            wallpaper memakai /kepiting_belakang.png. Dua foto yang sama di satu
+            layar terbaca seperti aset yang lupa diganti.
+
+            TANPA bg-fixed. `background-attachment: fixed` memang membuat foto
+            diam seperti wallpaper jendela, tapi ia memaksa repaint seluruh
+            latar di setiap frame gulir — itu penyebab baris kartu terasa berat
+            diseret saat panel detail terbuka. Efek diamnya tidak sepadan. */}
+        <div className="absolute inset-0 bg-[url('/kepiting_belakang.png')] bg-cover bg-center" />
+        {/* Peredam putih. 0.80 BUKAN angka selera: kartu kaca di atasnya
+            bg-white/55, jadi latar efektif kartu ≈ 91% putih — text-ink ≈ 14:1
+            dan text-muted ≈ 4.9:1 (lolos AA). Menurunkannya menembus ambang
+            itu. Jangan diubah tanpa mengukur ulang. */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.80)_45%,rgba(255,255,255,0.84)_100%)]" />
+        {/* Dua bulatan warna merek — sumber warna yang merembes lewat kaca.
+            Ini yang membuat efeknya terbaca "cair", bukan sekadar tembus. */}
+        <div className="absolute -left-24 top-1/3 h-80 w-80 rounded-full bg-brand-300/25 blur-3xl" />
+        <div className="absolute -right-20 top-2/3 h-72 w-72 rounded-full bg-brass-300/20 blur-3xl" />
+      </div>
+
       {/* BANNER — mentok ke atas dan ke sidebar: pembungkusnya sengaja tanpa
           padding, dan sudut kiri-atasnya mengikuti lekuk panel konten di
           (app)/layout.tsx. Judul halaman ada di sini, jadi halaman ini TIDAK
@@ -169,16 +274,17 @@ export default function DashboardPage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(10,38,32,0.90)_0%,rgba(10,38,32,0.86)_42%,rgba(10,38,32,0.38)_70%,rgba(10,38,32,0)_100%)]"
         />
-        {/* 4. Dasar banner meleleh jadi warna panel. Inilah yang membuat kartu
-               rak bisa menindih tepi bawah: kartunya muncul dari daerah terang,
-               bukan menabrak blok gelap. Berhenti di 55% supaya tidak menerangi
-               zona teks di atasnya. */}
+        {/* 4. Dasar banner meleleh ke wallpaper di baliknya. Dulu lapisan ini
+               putih PEKAT (#FFFFFF) supaya kartu muncul dari daerah terang;
+               sekarang halamannya berkaca, dan putih pekat justru menutup
+               wallpaper tepat di tempat kartu duduk. Cukup separuh transparan —
+               zona teks di atas tetap aman karena gradiennya berhenti di 55%. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,#FFFFFF_0%,rgba(255,255,255,0.75)_22%,rgba(255,255,255,0)_55%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(255,255,255,0.55)_0%,rgba(255,255,255,0.35)_22%,rgba(255,255,255,0)_55%)]"
         />
 
-        {/* pb di sini BERPASANGAN dengan -mt pada baris rak di bawah: selisih
+        {/* pb di sini BERPASANGAN dengan -mt pada daftar rak di bawah: selisih
             keduanya yang menentukan seberapa dalam kartu menindih banner.
             Ubah berdua, atau tindihannya bergeser. */}
         <div className="relative px-5 pb-32 pt-6 sm:px-8 sm:pb-36 sm:pt-8">
@@ -210,29 +316,30 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* BARIS RAK — diangkat sampai menindih banner. relative + z-10 supaya ia
-          tergambar di atas lapisan gradien, bukan di baliknya. */}
-      <div className="relative z-10 -mt-20 sm:-mt-24">
-        {/* overflow-x-auto menahan geseran DI DALAM wadah ini; halaman sendiri
-            tidak boleh ikut bisa digeser.
-            py-2 wajib: begitu overflow-x bukan visible, sumbu Y ikut jadi auto
-            dan bayangan kartu akan terpotong.
-            px ada DI DALAM scroller, bukan di pembungkusnya — kartu pertama jadi
-            sejajar konten lain, sementara kartu terakhir tetap boleh terpotong
-            tepi panel seperti pada rujukan. */}
-        <div className="rail flex snap-x gap-4 overflow-x-auto px-5 py-2 sm:px-8">
-          {loading ? (
-            <KolamSkeleton />
-          ) : (
-            items.map((item) => <PondCard key={item.kolam.id} item={item} />)
-          )}
-          <TambahKolamTile onClick={() => setShowForm((v) => !v)} />
+      {/* KARTU RAK — dua tata letak, satu daftar.
+          Belum ada rak dipilih: grid 2 kolom yang mengisi halaman, supaya
+          bagian bawah tidak menganga kosong.
+          Ada yang dipilih: menyusut jadi satu baris yang bisa digeser, dan
+          ruang di bawahnya jadi milik panel detail. */}
+      {variant === "grid" ? (
+        <div className="relative z-10 -mt-20 px-5 sm:-mt-24 sm:px-8">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {cards}
+            <TambahKolamTile variant="grid" onClick={() => setShowForm((v) => !v)} />
+          </div>
         </div>
-      </div>
+      ) : (
+        // Rail memiliki penempatan (-mt yang menindih banner), geseran (seret +
+        // wheel, tanpa scrollbar), dan gradien tepinya sendiri.
+        <Rail>
+          {cards}
+          <TambahKolamTile variant="rail" onClick={() => setShowForm((v) => !v)} />
+        </Rail>
+      )}
 
-      <div className="px-5 pb-5 pt-6 sm:px-8 sm:pb-8">
+      <div className="relative space-y-6 px-5 pb-5 pt-6 sm:px-8 sm:pb-8">
         {showForm && (
-          <Card className="mb-6 sm:max-w-md">
+          <Card className="sm:max-w-md">
             <form onSubmit={handleCreateKolam} className="space-y-4">
               <Input
                 label="Nama kolam"
@@ -249,10 +356,25 @@ export default function DashboardPage() {
         )}
 
         {error && (
-          <p className="mb-4 rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
+          <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
             {error}
           </p>
         )}
+
+        {/* DETAIL RAK — dulu halaman /kolam/[id], sekarang terbuka di sini,
+            di bawah kartunya, tanpa pindah halaman. Di-key pada id rak supaya
+            berganti rak me-reset seluruh state panel (grafik, form, panel
+            pengaturan) alih-alih membawa sisa rak sebelumnya. */}
+        <div ref={panelRef} id={PANEL_ID}>
+          {selectedItem && (
+            <RakDetail
+              key={selectedItem.kolam.id}
+              kolam={selectedItem.kolam}
+              onClose={() => setSelected(null)}
+              onChanged={() => loadDashboard(true)}
+            />
+          )}
+        </div>
 
         {!loading && items.length === 0 && (
           <Card className="flex flex-col items-center gap-2 py-10 text-center">
@@ -262,8 +384,8 @@ export default function DashboardPage() {
             </h2>
             <p className="max-w-sm text-sm text-muted">
               Buat kolam dulu lewat ubin <strong className="text-ink">+</strong> di
-              atas, lalu klaim device (mis. <code>SLV1</code>) di halaman detail
-              kolam supaya data sensornya mulai masuk.
+              atas, lalu klaim device (mis. <code>SLV1</code>) di panel detail rak
+              supaya data sensornya mulai masuk.
             </p>
           </Card>
         )}
@@ -272,16 +394,25 @@ export default function DashboardPage() {
   );
 }
 
-/** Ubin terakhir di baris rak. Bergaris putus-putus supaya terbaca sebagai
+/** Ubin terakhir di daftar rak. Bergaris putus-putus supaya terbaca sebagai
  *  tempat kosong yang bisa diisi, bukan rak yang datanya belum masuk. */
-function TambahKolamTile({ onClick }: { onClick: () => void }) {
+function TambahKolamTile({
+  variant,
+  onClick,
+}: {
+  variant: "grid" | "rail";
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`${PONDCARD_WIDTH} group flex shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-border bg-surface/70 py-8 text-sm font-semibold text-muted transition-colors hover:border-brand-300 hover:bg-surface hover:text-brand-700`}
+      className={clsx(
+        "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-white/70 bg-white/30 py-8 text-sm font-semibold text-muted backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-white/55 hover:text-brand-700",
+        variant === "rail" ? `${PONDCARD_WIDTH} shrink-0 snap-start` : "w-full"
+      )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-bg text-brand-600 transition-colors group-hover:bg-brand-50">
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/60 text-brand-600 transition-colors group-hover:bg-brand-50">
         <Plus className="h-5 w-5" strokeWidth={2.4} />
       </span>
       Tambah Kolam
@@ -289,13 +420,19 @@ function TambahKolamTile({ onClick }: { onClick: () => void }) {
   );
 }
 
-/** Tiruan baris rak: tiga kartu selebar aslinya di dalam flex yang sama, jadi
- *  tata letaknya tidak melompat begitu data kolam masuk. */
-function KolamSkeleton() {
+/** Tiruan daftar rak: tiga kartu seukuran aslinya di dalam wadah yang sama,
+ *  jadi tata letaknya tidak melompat begitu data kolam masuk. */
+function KolamSkeleton({ variant }: { variant: "grid" | "rail" }) {
   return (
     <>
       {[0, 1, 2].map((i) => (
-        <div key={i} className={`${PONDCARD_WIDTH} card shrink-0 p-4`}>
+        <div
+          key={i}
+          className={clsx(
+            "glass p-4",
+            variant === "rail" ? `${PONDCARD_WIDTH} shrink-0` : "w-full"
+          )}
+        >
           <Skeleton className="h-10 w-10 rounded-lg" />
           <Skeleton className="mt-3 h-4 w-36" />
           <Skeleton className="mt-2 h-3 w-24" />

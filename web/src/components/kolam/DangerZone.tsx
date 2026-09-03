@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { AlertOctagon } from "lucide-react";
-import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import { api } from "@/lib/api";
 
@@ -45,8 +44,11 @@ export default function DangerZone({
     }
   }
 
+  // Tanpa `.glass` sendiri: blok ini sudah duduk di dalam lembar kaca
+  // RakDetail, dan backdrop-filter bersarang cuma menambah biaya cat tanpa
+  // menambah tampilan. Tint merah + garis 1px sudah cukup memisahkannya.
   return (
-    <Card className="border-status-bahaya/30 sm:max-w-2xl">
+    <div className="rounded-lg border border-status-bahaya/30 bg-status-bahayaBg/60 p-5 sm:max-w-2xl">
       <div className="mb-3 flex items-center gap-2.5">
         <AlertOctagon className="h-5 w-5 text-status-bahaya" />
         <h3 className="font-display text-base font-semibold text-status-bahaya">
@@ -99,6 +101,6 @@ export default function DangerZone({
           {error}
         </p>
       )}
-    </Card>
+    </div>
   );
 }

@@ -46,22 +46,46 @@
   /* Outline :focus-visible global sengaja TIDAK dimatikan untuk input: garis
      bawah saja bukan penanda fokus keyboard yang memadai. */
 
-  /* Baris yang bisa digeser mendatar. Scrollbar-nya tipis ala WinUI tapi
-     SENGAJA tidak disembunyikan: itu satu-satunya tanda permanen bahwa masih
-     ada kartu di sebelah kanan. Tidak bisa ditulis dengan utility Tailwind. */
+  /* Baris yang bisa digeser mendatar. Scrollbar-nya DISEMBUNYIKAN — barisnya
+     digeser dengan seret (klik-tahan) atau wheel, lihat components/dashboard/
+     Rail.tsx. Yang menggantikan scrollbar sebagai tanda "masih ada kartu di
+     sebelah sana" ada dua dan keduanya wajib ikut: gradien tepi yang dikelola
+     Rail.tsx, dan kartu berikutnya yang selalu mengintip karena PONDCARD_WIDTH
+     lebih sempit dari layar tersempit. Elemennya TETAP overflow-x-auto, jadi
+     keyboard (Tab ke kartu di luar layar) dan sentuhan tetap bisa menggeser.
+     Tidak bisa ditulis dengan utility Tailwind. */
   .rail {
-    scrollbar-width: thin;
-    scrollbar-color: theme("colors.border") transparent;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
   .rail::-webkit-scrollbar {
-    height: 8px;
+    display: none;
   }
-  .rail::-webkit-scrollbar-thumb {
-    background: theme("colors.border");
-    border-radius: 9999px;
+
+  /* KACA (Acrylic WinUI 3) — hanya dipakai halaman /dashboard, yang punya
+     lapisan foto sendiri di belakangnya. Jangan dipakai di halaman lain: tanpa
+     latar bergambar, kaca cuma terlihat seperti kartu putih yang lebih pucat.
+
+     Radiusnya tetap xl2 (8px), bukan sudut besar ala poster glassmorphism —
+     yang diminta rasa kacanya, dengan disiplin WinUI-nya tetap dipegang.
+
+     box-shadow ditulis manual karena isinya DUA lapis dan yang pertama `inset`:
+     sorotan 1px di tepi atas (itu yang membuatnya terbaca sebagai lempeng kaca,
+     bukan sekadar kotak transparan) lalu bayangan tipis di luar. Tailwind tidak
+     bisa menyusun kombinasi ini lewat utility. */
+  .glass {
+    @apply rounded-xl2 border border-white/60 bg-white/55 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+      0 2px 12px rgba(18, 43, 38, 0.1);
   }
-  .rail::-webkit-scrollbar-track {
-    background: transparent;
+
+  /* backdrop-filter tidak ada di semua browser, dan sebagian mematikannya demi
+     baterai. Tanpa cadangan ini kartu jadi putih 55% di atas foto TAJAM dan
+     teksnya tidak terbaca. Yang gugur cuma blurnya, bukan keterbacaannya. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass {
+      @apply bg-white/90;
+    }
   }
 
   .label-field {

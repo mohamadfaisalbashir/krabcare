@@ -72,3 +72,29 @@ export function statusOf(param: ParamKey, value: number): StatusLabel {
 export function formatValue(value: number): string {
   return String(Number(value.toFixed(1)));
 }
+
+/**
+ * Posisi sebuah nilai di dalam rentang toleransi, dinyatakan 0-100 persen.
+ *
+ * Dipakai kartu parameter untuk menggambar penanda di atas track rentang.
+ * DIJEPIT di kedua ujung: nilai di luar toleransi (yang memang mungkin —
+ * itulah status "Bahaya") kalau tidak dijepit akan menaruh penandanya di luar
+ * batang dan terlihat seperti bug, bukan seperti peringatan.
+ */
+export function rangePercent(param: ParamKey, value: number): number {
+  const { min, max } = RANGE[param];
+  return Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
+}
+
+/**
+ * Pita optimal di atas track yang sama, sebagai [mulai%, lebar%].
+ *
+ * Satu sumber dengan rangePercent supaya penanda nilai dan pita hijau tidak
+ * bisa memakai skala yang berbeda — kalau itu terjadi, kartunya akan
+ * menunjukkan penanda di luar pita untuk nilai yang statusnya "Aman".
+ */
+export function optimalBand(param: ParamKey): [number, number] {
+  const [lo, hi] = RANGE[param].optimal;
+  const start = rangePercent(param, lo);
+  return [start, rangePercent(param, hi) - start];
+}
