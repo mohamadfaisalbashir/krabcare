@@ -60,7 +60,7 @@ export default function LogHistorisPage() {
     <>
       {/* Topbar di luar Suspense supaya fallback tidak berkedip tanpa header. */}
       <Topbar
-        title="Log Historis"
+        title="Log historis"
         subtitle="Riwayat data sensor status dari per parameter"
       />
       <Suspense fallback={<LogRowsSkeleton />}>

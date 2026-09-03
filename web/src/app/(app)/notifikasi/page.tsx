@@ -43,7 +43,7 @@ export default function NotifikasiPage() {
   return (
     <>
       <Topbar
-        title="Notifikasi & Prediksi"
+        title="Notifikasi & prediksi"
         subtitle={
           unread > 0
             ? `${unread} notifikasi belum dibaca`

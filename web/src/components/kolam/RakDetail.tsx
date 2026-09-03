@@ -25,6 +25,28 @@ import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { api } from "@/lib/api";
 
 /**
+ * Judul & catatan tiap bagian, ditulis SEKALI.
+ *
+ * Kerangka (DetailSkeleton) memakai `Section` dengan judul yang sama persis
+ * dengan versi termuatnya — itu yang membuat tinggi kepala tiap bagian cocok
+ * tanpa disetel tangan, dan itu pula yang menahan tinggi panel saat berganti
+ * rak. Kalau teksnya ditulis dua kali, salah satunya pasti ketinggalan dan
+ * kerangkanya pelan-pelan lepas dari tata letak yang ditirunya.
+ */
+const SECTION = {
+  prediksi: { title: "Prediksi 3 jam ke depan", note: "Fuzzy Time Series Chen" },
+  pemantauan: {
+    title: "Grafik pemantauan",
+    note: "Pita hijau = rentang optimal dan garis merah putus-putus = batas toleransi",
+  },
+  gabungan: {
+    title: "Grafik gabungan",
+    note: "Bandingkan bentuknya, bukan jarak antar area.",
+  },
+  pengaturan: { title: "Pengaturan rak" },
+} as const;
+
+/**
  * Detail satu rak, terbuka INLINE di bawah kartu raknya di dashboard.
  *
  * Dulu ini halaman sendiri (/kolam/[id]). Rutenya dihapus: pindah halaman untuk
@@ -61,6 +83,11 @@ export default function RakDetail({
   const [predictions, setPredictions] = useState<FuzzyPrediction[]>([]);
   const [activeParam, setActiveParam] = useState<ParamKey>("ph");
   const [loading, setLoading] = useState(true);
+  // Terpisah dari `loading`, yang cuma menutup pengambilan device. Ini yang
+  // membedakan "bacaan belum sampai" dari "rak ini memang belum punya bacaan" —
+  // tanpa itu bagian grafik tidak bisa memesan tempat setinggi grafiknya, dan
+  // panel tumbuh sekali lagi saat data akhirnya masuk.
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [deviceCode, setDeviceCode] = useState("");
@@ -101,8 +128,11 @@ export default function RakDetail({
       setReading(null);
       setHistory([]);
       setPredictions([]);
+      setDataLoading(false);
       return;
     }
+
+    setDataLoading(true);
 
     async function loadDeviceData(deviceId: number) {
       try {
@@ -119,6 +149,11 @@ export default function RakDetail({
         setPredictions(predictionList[0]?.predictions ?? []);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat data sensor.");
+      } finally {
+        // Refresh senyap tiap 60 detik ikut lewat sini, tapi tidak apa-apa:
+        // efek di atas yang menyetel `true` hanya berjalan saat device berganti,
+        // jadi yang dilakukan panggilan berkala cuma menyetel `false` lagi.
+        setDataLoading(false);
       }
     }
 
@@ -173,14 +208,17 @@ export default function RakDetail({
     : null;
 
   return (
-    <div className="glass animate-rise overflow-hidden motion-reduce:animate-none">
+    // TANPA animate-rise di sini. Node ini di-remount tiap ganti rak (`key` di
+    // dashboard), jadi animasi yang menempel padanya diputar ulang setiap kali:
+    // panel setinggi layar berkedip dari opacity 0 walau tingginya sudah stabil.
+    // Animasi bukanya dipindah ke pembungkus di dashboard, yang mount sekali
+    // saat panel dibuka dan bertahan selama berpindah-pindah rak.
+    <div className="glass overflow-hidden">
       {/* KEPALA. Sengaja TANPA foto: dashboard di atasnya sudah punya banner
           berfoto, dan hero kedua akan jadi dua foto bertumpuk di satu layar. */}
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700">
-            Detail Rak
-          </p>
+          <p className="text-xs font-semibold text-brand-700">Detail rak</p>
           {/* Nama rak buatan pengguna — panjangnya tidak terbatas, jadi dipotong
               alih-alih mendorong tombol Tutup keluar. */}
           <h2 className="mt-0.5 truncate font-display text-xl font-semibold text-ink">
@@ -218,10 +256,10 @@ export default function RakDetail({
 
           {/* Pembacaan terkini — satu baris, bukan tiga kartu. */}
           <Section>
-            <ParameterStrip reading={reading} history={history} />
+            <ParameterStrip reading={reading} />
           </Section>
 
-          <Section title="Prediksi 3 jam ke depan" note="Fuzzy Time Series Chen">
+          <Section {...SECTION.prediksi}>
             <PredictionPanel predictions={predictions} />
           </Section>
 
@@ -254,31 +292,44 @@ export default function RakDetail({
             </Section>
           )}
 
-          {history.length > 0 && (
-            <Section
-              title="Grafik Pemantauan"
-              note="Pita hijau = rentang optimal dan garis merah putus-putus = batas toleransi"
-              aside={<ParamSwitch value={activeParam} onChange={setActiveParam} />}
-            >
-              <HistoryChart data={history} parameter={activeParam} />
-            </Section>
-          )}
+          {/* Digerbang `device`, BUKAN `history.length` — dan itu yang menahan
+              tinggi panel. Digerbang panjang riwayat, kedua bagian ini absen
+              selama bacaan belum sampai, lalu muncul serentak setinggi 2×256px
+              dan mendorong seluruh isi halaman ke bawah. Sekarang tempatnya
+              sudah dipesan sejak awal; yang berganti cuma isinya. */}
+          {device && (
+            <>
+              <Section
+                {...SECTION.pemantauan}
+                aside={<ParamSwitch value={activeParam} onChange={setActiveParam} />}
+              >
+                {dataLoading ? (
+                  <Skeleton className="h-64 w-full rounded-lg" />
+                ) : history.length > 0 ? (
+                  <HistoryChart data={history} parameter={activeParam} />
+                ) : (
+                  <ChartEmpty />
+                )}
+              </Section>
 
-          {/* Ketiga parameter sekaligus — untuk melihat apakah lonjakan satu
-              parameter berbarengan dengan yang lain. */}
-          {history.length > 0 && (
-            <Section
-              title="Grafik Gabungan"
-              note="Bandingkan bentuknya, bukan jarak antar area."
-            >
-              <CombinedChart data={history} />
-            </Section>
+              {/* Ketiga parameter sekaligus — untuk melihat apakah lonjakan satu
+                  parameter berbarengan dengan yang lain. */}
+              <Section {...SECTION.gabungan}>
+                {dataLoading ? (
+                  <Skeleton className="h-64 w-full rounded-lg" />
+                ) : history.length > 0 ? (
+                  <CombinedChart data={history} />
+                ) : (
+                  <ChartEmpty />
+                )}
+              </Section>
+            </>
           )}
 
           {/* Tindakan yang mengubah/menghapus dikumpulkan paling bawah, terpisah
               dari data. Kalau sejajar dengan grafik, tombol destruktif bersaing
               perhatian dengan angka yang justru jadi alasan panel ini dibuka. */}
-          <Section title="Pengaturan rak">
+          <Section {...SECTION.pengaturan}>
             <div className="flex flex-wrap gap-3">
               <Button
                 variant="ghost"
@@ -362,11 +413,9 @@ function Section({
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title && (
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted">
-                {title}
-              </h3>
+              <h3 className="text-sm font-semibold text-ink">{title}</h3>
             )}
-            {note && <p className="mt-1 max-w-2xl text-xs text-muted/90">{note}</p>}
+            {note && <p className="mt-1 max-w-2xl text-xs text-muted">{note}</p>}
           </div>
           {aside}
         </div>
@@ -384,7 +433,7 @@ function DetailPill({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-medium text-ink/70 ring-1 ring-inset ring-white/70">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-medium text-ink ring-1 ring-inset ring-white/70">
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
       {children}
     </span>
@@ -450,28 +499,76 @@ function ParamSwitch({
   );
 }
 
-/** Kerangka lembar: baris parameter, bagian prediksi, satu blok grafik.
- *  Bentuknya mengikuti tata letak asli — kalau tidak, lembarnya melompat begitu
- *  data masuk. */
+/** Kotak setinggi grafik untuk rak yang device-nya belum pernah mengirim apa
+ *  pun. Tingginya sengaja sama dengan h-64 milik grafik: panel tidak boleh
+ *  berubah tinggi hanya karena satu rak kebetulan masih kosong. */
+function ChartEmpty() {
+  return (
+    <div className="flex h-64 items-center justify-center rounded-lg bg-white/40 text-sm text-muted">
+      Belum ada pembacaan tersimpan untuk rak ini.
+    </div>
+  );
+}
+
+/**
+ * Kerangka lembar.
+ *
+ * Menirukan SELURUH tata letak, bukan cuma dua bloknya seperti dulu, dan
+ * memakai `Section` yang sama persis — bukan div dengan padding yang disalin.
+ * Alasannya bukan kerapian: berganti rak me-remount panel ini lewat `key` di
+ * dashboard, jadi tinggi kerangka adalah tinggi panel selama data rak baru
+ * dijemput. Kerangka lama ~700px sementara isinya ~1400px, sehingga tiap
+ * perpindahan rak meruntuhkan panel lalu menumbuhkannya lagi — itu yang
+ * terbaca patah. Dengan `Section` dan judul yang sama, keduanya cocok dengan
+ * sendirinya dan tetap cocok walau bagiannya nanti bertambah.
+ *
+ * Judulnya ditulis apa adanya, bukan sebagai Skeleton: teks itu statis, tidak
+ * sedang dimuat, dan memakainya langsung justru yang menyamakan tinggi kepala
+ * tiap bagian.
+ */
 function DetailSkeleton() {
   return (
     <>
-      <div className="grid grid-cols-1 gap-4 border-t border-white/60 px-5 py-5 sm:grid-cols-3 sm:px-6">
-        {[0, 1, 2].map((i) => (
-          <div key={i}>
-            <Skeleton className="h-3 w-24" />
-            <div className="mt-2 flex items-end justify-between gap-3">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-9 w-20" />
+      <Section>
+        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-3 h-8 w-24" />
+              <Skeleton className="mt-4 h-1.5 w-full rounded-full" />
+              <Skeleton className="mt-1 h-2.5 w-full" />
             </div>
-            <Skeleton className="mt-3 h-1.5 w-full rounded-full" />
-          </div>
-        ))}
-      </div>
-      <div className="space-y-5 border-t border-white/60 px-5 py-5 sm:px-6">
-        <Skeleton className="h-32 w-full rounded-lg" />
+          ))}
+        </div>
+      </Section>
+
+      <Section {...SECTION.prediksi}>
+        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-3 h-0.5 w-full rounded-full" />
+              <Skeleton className="mt-3 h-3 w-full" />
+              <Skeleton className="mt-1.5 h-3 w-2/3" />
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section {...SECTION.pemantauan} aside={<Skeleton className="h-8 w-40 rounded-lg" />}>
         <Skeleton className="h-64 w-full rounded-lg" />
-      </div>
+      </Section>
+
+      <Section {...SECTION.gabungan}>
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </Section>
+
+      <Section {...SECTION.pengaturan}>
+        <div className="flex flex-wrap gap-3">
+          <Skeleton className="h-[38px] w-36 rounded-lg" />
+          <Skeleton className="h-[38px] w-28 rounded-lg" />
+        </div>
+      </Section>
     </>
   );
 }

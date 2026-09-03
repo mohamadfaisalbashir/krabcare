@@ -12,8 +12,24 @@ import {
   ReferenceLine,
 } from "recharts";
 import { SensorReading } from "@/lib/types";
-import { ParamKey, PARAM_UI, RANGE, chartTickLabel } from "@/lib/parameter";
+import {
+  ParamKey,
+  PARAM_UI,
+  RANGE,
+  chartTickLabel,
+  chartValueLabel,
+} from "@/lib/parameter";
 import ChartTooltip from "./ChartTooltip";
+
+/** Pembulatan domain sumbu Y ke 1 desimal.
+ *
+ *  Bukan kosmetik. `(40 - 5) * 0.08` = 2.8000000000000003, jadi `min - pad`
+ *  salinitas = 2.1999999999999997. Recharts memakai ujung domain APA ADANYA
+ *  sebagai tick pertama, dan label 18 karakter itu tidak muat di sumbu selebar
+ *  44px — itulah grafik salinitas yang terlihat terpotong. pH (6.3) dan suhu
+ *  (18.8) kebetulan lolos karena pad-nya bulat, jadi cuma satu dari tiga
+ *  parameter yang kelihatan salah. */
+const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /**
  * Riwayat satu parameter, digambar DI ATAS pita ambangnya.
@@ -53,8 +69,8 @@ export default function HistoryChart({
     .filter((v): v is number => typeof v === "number");
   // Kalau data memang keluar jauh dari toleransi, ikut lebarkan — memotong
   // pembacaan ekstrem justru menyembunyikan keadaan yang paling perlu dilihat.
-  const lo = Math.min(min - pad, ...values);
-  const hi = Math.max(max + pad, ...values);
+  const lo = round1(Math.min(min - pad, ...values));
+  const hi = round1(Math.max(max + pad, ...values));
 
   return (
     <div className="h-64 w-full">
@@ -65,13 +81,14 @@ export default function HistoryChart({
         {/* data dipakai apa adanya — nama field SensorReading sudah jadi dataKey */}
         {/* left: 0 — margin negatif menggeser area plot dan memotong label
             sumbu Y. Ruangnya diatur lewat prop `width` di YAxis. */}
-        {/* syncId: menggerakkan kursor di grafik ini ikut menyorot titik waktu
-            yang sama di Grafik Gabungan, dan sebaliknya. */}
-        <AreaChart
-          data={data}
-          syncId="rak"
-          margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-        >
+        {/* TANPA syncId. Dulu grafik ini dan Grafik gabungan berbagi
+            syncId="rak" supaya kursor di satu grafik menyorot titik waktu yang
+            sama di grafik satunya. Yang ikut tersinkron ternyata bukan cuma
+            garis kursornya: recharts menyamakan activeTooltipIndex, jadi grafik
+            yang TIDAK disentuh ikut membuka kotak tooltip dan terbaca seolah
+            melaporkan datanya sendiri. Angka hanya boleh muncul di grafik yang
+            benar-benar ada di bawah kursor. */}
+        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={`grad-${parameter}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={cfg.color} stopOpacity={0.28} />
@@ -107,8 +124,12 @@ export default function HistoryChart({
             axisLine={false}
             tickLine={false}
           />
+          {/* tickFormatter: penjaga kedua setelah round1 di atas — recharts
+              membagi domain sendiri, jadi tick di tengah pun bisa lahir dengan
+              ekor float walau kedua ujungnya sudah bulat. */}
           <YAxis
             domain={[lo, hi]}
+            tickFormatter={chartValueLabel}
             tick={{ fontSize: 11, fill: "#5C7A72" }}
             axisLine={false}
             tickLine={false}

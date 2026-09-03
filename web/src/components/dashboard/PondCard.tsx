@@ -69,7 +69,7 @@ export default function PondCard({
         variant === "rail"
           ? // shrink-0 wajib: tanpa ini flex akan memampatkan kartu agar muat,
             // bukan membiarkannya meluber untuk digeser.
-            `${PONDCARD_WIDTH} shrink-0 snap-start`
+            `${PONDCARD_WIDTH} shrink-0`
           : "w-full",
         selected
           ? "bg-white/75 ring-2 ring-brand-500/60"

@@ -23,7 +23,7 @@ export default function ChartTooltip({
 
   return (
     <div className="card min-w-[11rem] px-3 py-2.5 shadow-float">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted">
+      <p className="mb-2 text-xs font-semibold text-muted">
         {typeof label === "string"
           ? new Date(label).toLocaleString("id-ID", {
               dateStyle: "medium",

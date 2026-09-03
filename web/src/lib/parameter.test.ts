@@ -7,6 +7,7 @@ import {
   formatValue,
   rangePercent,
   optimalBand,
+  trendSentence,
   RANGE,
   PARAM_KEYS,
 } from "./parameter.ts";
@@ -65,5 +66,39 @@ test("optimalBand sejajar dengan rangePercent, bukan skala sendiri", () => {
     assert.equal(start + width, rangePercent(param, hi));
     assert.ok(width > 0, `${param}: pita optimal tidak boleh selebar nol`);
     assert.ok(start + width <= 100, `${param}: pita optimal keluar dari track`);
+  }
+});
+
+test("trendSentence: deret rata -> berkisar di satu angka", () => {
+  const { text, status } = trendSentence("salinity_ppt", [25, 25, 25]);
+  assert.equal(text, "Salinitas berkisar di angka 25 ppt.");
+  assert.equal(status, "Aman");
+});
+
+test("trendSentence: riak di bawah ambang -> berkisar di rentang", () => {
+  // selisih ujung 0.2 ppt, di bawah ambang salinitas 0.5
+  const { text } = trendSentence("salinity_ppt", [25, 25.4, 25.2]);
+  assert.equal(text, "Salinitas berkisar di angka 25 – 25.4 ppt.");
+});
+
+test("trendSentence: melewati ambang -> naik/turun mendekati nilai akhir", () => {
+  assert.equal(
+    trendSentence("temperature_c", [28, 29, 31]).text,
+    "Suhu diprediksi naik mendekati 31 °C."
+  );
+  assert.equal(
+    trendSentence("temperature_c", [31, 29, 28]).text,
+    "Suhu diprediksi turun mendekati 28 °C."
+  );
+});
+
+test("trendSentence: satuan pH tidak diulang, dan statusnya TIDAK masuk kalimat", () => {
+  // unit pH sama dengan nama pendeknya -> "pH berkisar di angka 7.8 pH" salah.
+  assert.equal(trendSentence("ph", [7.8, 7.8]).text, "pH berkisar di angka 7.8.");
+  // Status hidup di pojok kolom, bukan di ekor kalimat.
+  for (const param of PARAM_KEYS) {
+    const { text } = trendSentence(param, [RANGE[param].min - 1, RANGE[param].min - 1]);
+    assert.ok(!text.includes("("), `${param}: status bocor ke dalam kalimat`);
+    assert.ok(!/bertahan/i.test(text), `${param}: kata "bertahan" muncul lagi`);
   }
 });

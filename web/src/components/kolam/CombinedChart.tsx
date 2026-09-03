@@ -16,6 +16,7 @@ import {
   PARAM_UI,
   RANGE,
   chartTickLabel,
+  chartValueLabel,
   formatValue,
 } from "@/lib/parameter";
 import ChartTooltip from "./ChartTooltip";
@@ -65,13 +66,10 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
               hanya punya satu sumbu berangka pendek; di sini ia menggeser area
               plot ke kiri sehingga label sumbu kiri terpotong tepi wadah. Ruang
               sumbu diatur lewat prop `width` di YAxis, bukan lewat margin. */}
-          {/* syncId sama dengan HistoryChart: hover di satu grafik menyorot
-              titik waktu yang sama di grafik satunya. */}
-          <AreaChart
-            data={data}
-            syncId="rak"
-            margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
-          >
+          {/* TANPA syncId — lihat alasannya di HistoryChart.tsx. Singkatnya:
+              menyinkronkan kedua grafik ikut menyinkronkan tooltip, jadi grafik
+              yang tidak disentuh kursor pun membuka kotak angkanya sendiri. */}
+          <AreaChart data={data} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
             <defs>
               {PARAM_KEYS.map((param) => (
                 <linearGradient
@@ -101,7 +99,7 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
             {/* Kiri: suhu (20-35) & salinitas (5-40) — rentangnya berdekatan. */}
             {/* width 44: sumbu kiri memuat suhu & salinitas, yang tick otomatisnya
                 bisa berbentuk "22.5" — 36px terlalu sempit untuk itu. */}
-            <YAxis yAxisId="left" tick={axisTick} axisLine={false} tickLine={false} width={44} />
+            <YAxis yAxisId="left" tickFormatter={chartValueLabel} tick={axisTick} axisLine={false} tickLine={false} width={44} />
             {/* Kanan: pH, dipatok ke rentang toleransi supaya skalanya stabil. */}
             <YAxis
               yAxisId="right"

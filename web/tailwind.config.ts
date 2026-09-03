@@ -9,7 +9,19 @@ const config: Config = {
         bg: "#F2F6F2",
         surface: "#FFFFFF",
         ink: "#122B26",
-        muted: "#5C7A72",
+        // Namanya masih "muted", warnanya TIDAK lagi abu-abu. #5C7A72 yang lama
+        // hanya 4,69:1 di atas putih — lolos AA di atas kertas, tapi 52 tempat
+        // memakainya dan sebagian besar duduk di atas kartu `.glass` (putih 55%
+        // di atas foto), sehingga kontras efektifnya turun lagi dan teksnya
+        // terbaca pudar. #1E332D = 13,4:1, praktis hitam, dan tetap sehelai
+        // lebih terang dari `ink` (15,0:1) supaya angka & judul tetap yang
+        // paling pekat di layar.
+        //
+        // Hirarki sekarang dibawa UKURAN dan TEBAL huruf, bukan kepudaran.
+        // Jangan mengembalikannya jadi abu-abu untuk "menenangkan" tampilan.
+        // Tiga pemakaian non-teks di globals.css (placeholder & dua garis bawah)
+        // sudah diturunkan alpha-nya supaya tampilannya tidak ikut menggelap.
+        muted: "#1E332D",
         border: "#DCE5DD",
         // Warna dominan aplikasi: #19A8B2 (brand-500).
         //

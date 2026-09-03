@@ -48,7 +48,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   {
     href: "/log-historis",
-    label: "Log Historis",
+    label: "Log historis",
     icon: History,
     // Anak-anaknya menaut ke tampilan per-parameter yang sudah ada. `param`
     // adalah nama field mentah backend (ph / temperature_c / salinity_ppt),
@@ -131,7 +131,7 @@ export default function Sidebar({ className }: { className?: string }) {
         // sticky + h-screen: panel setinggi layar penuh yang tetap di tempat
         // saat konten digulir. Tanpa ini ia ikut memanjang mengikuti tinggi
         // dokumen, sehingga tombol Keluar terdorong jauh di bawah lipatan pada
-        // halaman panjang seperti Log Historis.
+        // halaman panjang seperti Log historis.
         "sticky top-0 flex h-screen flex-col justify-between overflow-y-auto",
         // overflow-x-hidden WAJIB dan bukan kosmetik: overflow-y-auto memaksa
         // sumbu X ikut jadi `auto`, dan label yang kini tetap ter-render (bukan
@@ -155,7 +155,7 @@ export default function Sidebar({ className }: { className?: string }) {
             aria-expanded={!collapsed}
             className={clsx(
               ICON_BOX,
-              "rounded-lg text-ink/70 transition-colors duration-150 hover:bg-border/60 hover:text-ink"
+              "rounded-lg text-ink transition-colors duration-150 hover:bg-border/60 hover:text-ink"
             )}
           >
             <Menu className="h-[18px] w-[18px]" strokeWidth={2.2} />
@@ -190,7 +190,7 @@ export default function Sidebar({ className }: { className?: string }) {
         onClick={confirmLogout}
         title={collapsed ? "Keluar" : undefined}
         className={clsx(
-          "flex items-center rounded-lg text-sm font-medium text-ink/60",
+          "flex items-center rounded-lg text-sm font-medium text-ink",
           "transition-colors duration-150 hover:bg-border/60 hover:text-status-bahaya"
         )}
       >
@@ -264,7 +264,7 @@ function NavGroup({
           className={clsx(
             "flex min-w-0 flex-1 items-center rounded-lg text-sm font-medium",
             "transition-colors duration-150",
-            active ? "text-brand-700" : "text-ink/70"
+            active ? "text-brand-700" : "text-ink"
           )}
         >
           <span className={ICON_BOX}>
@@ -280,7 +280,7 @@ function NavGroup({
             aria-expanded={open}
             // Tanpa latar hover sendiri: baris sudah menyediakannya, dua lapis
             // akan terbaca sebagai kotak di dalam kotak.
-            className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink/50 transition-colors duration-150 hover:text-ink"
+            className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink transition-colors duration-150 hover:text-ink"
           >
             <ChevronDown
               className={clsx(
@@ -332,7 +332,7 @@ function NavGroup({
                       "transition-colors duration-150 focus-visible:rounded-lg",
                       childActive
                         ? "bg-brand-50 font-medium text-brand-700"
-                        : "text-ink/60 hover:bg-border/60 hover:text-ink"
+                        : "text-ink hover:bg-border/60 hover:text-ink"
                     )}
                   >
                     <span

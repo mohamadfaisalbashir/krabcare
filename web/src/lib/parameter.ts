@@ -37,10 +37,25 @@ export const PARAM_UI: Record<
   ParamKey,
   { label: string; short: string; unit: string; color: string }
 > = {
-  ph: { label: "Konsentrasi pH Air", short: "pH", unit: "pH", color: "#0E6E5C" },
-  temperature_c: { label: "Suhu Kolam", short: "Suhu", unit: "°C", color: "#C1873A" },
-  salinity_ppt: { label: "Tingkat Salinitas", short: "Salinitas", unit: "ppt", color: "#1B7FAE" },
+  ph: { label: "Konsentrasi pH air", short: "pH", unit: "pH", color: "#0E6E5C" },
+  temperature_c: { label: "Suhu kolam", short: "Suhu", unit: "°C", color: "#C1873A" },
+  salinity_ppt: { label: "Tingkat salinitas", short: "Salinitas", unit: "ppt", color: "#1B7FAE" },
 };
+
+/**
+ * Sumbu Y kedua grafik.
+ *
+ * Sengaja BUKAN formatValue. Tick sumbu bukan pembacaan sensor, ia hasil bagi
+ * domain dan bisa jatuh di 7.05; dibulatkan ke 1 desimal angka itu tercetak "7"
+ * padahal garisnya ada di 7.05. Dua desimal jujur dan tetap ≤5 karakter, jadi
+ * masih muat di sumbu selebar 44px.
+ *
+ * toFixed lalu Number itulah yang memangkas ekor float recharts
+ * (2.1999999999999997 → "2.2") — penyebab sumbu salinitas terlihat terpotong.
+ */
+export function chartValueLabel(value: number): string {
+  return String(Number(value.toFixed(2)));
+}
 
 /** Sumbu X kedua grafik: rentang 100 pembacaan ≈ 25 jam, jadi jam saja berulang. */
 export function chartTickLabel(iso: string): string {
@@ -97,4 +112,52 @@ export function optimalBand(param: ParamKey): [number, number] {
   const [lo, hi] = RANGE[param].optimal;
   const start = rangePercent(param, lo);
   return [start, rangePercent(param, hi) - start];
+}
+
+// ponytail: ambang "berkisar" per parameter — angka kasar dari rentang gerak
+// data, bukan turunan dari proposal. Naikkan kalau pada data hardware asli
+// kalimatnya terlalu sering berbunyi "naik/turun" untuk riak yang tidak berarti.
+const STABLE_THRESHOLD: Record<ParamKey, number> = {
+  ph: 0.1,
+  temperature_c: 0.3,
+  salinity_ppt: 0.5,
+};
+
+/**
+ * Kalimat tren dari deret ramalan satu parameter, beserta statusnya.
+ *
+ * Tinggal di sini, bukan di PredictionPanel: isinya cuma PARAM_UI, formatValue,
+ * dan statusOf yang ketiganya sudah ada di berkas ini, tidak menyentuh React,
+ * dan dengan begitu ikut terjaring `npm test` (parameter.test.ts).
+ *
+ * Status dikembalikan TERPISAH, tidak disisipkan ke kalimat. Panel menaruhnya
+ * di pojok kanan atas kolom; menulisnya lagi di ujung kalimat cuma mengulang
+ * hal yang sama dua kali di satu kolom selebar ~12rem.
+ */
+export function trendSentence(
+  param: ParamKey,
+  values: number[]
+): { text: string; status: StatusLabel } {
+  const { short, unit } = PARAM_UI[param];
+  const first = values[0];
+  const last = values[values.length - 1];
+  const status = statusOf(param, last);
+  // Satuan pH KEBETULAN sama dengan nama pendeknya, dan "pH berkisar di angka
+  // 7.8 pH" menyebut hal yang sama dua kali dalam satu kalimat.
+  const satuan = unit === short ? "" : ` ${unit}`;
+
+  if (Math.abs(last - first) < STABLE_THRESHOLD[param]) {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const angka =
+      min === max ? formatValue(max) : `${formatValue(min)} – ${formatValue(max)}`;
+    return { text: `${short} berkisar di angka ${angka}${satuan}.`, status };
+  }
+
+  return {
+    text: `${short} diprediksi ${
+      last > first ? "naik" : "turun"
+    } mendekati ${formatValue(last)}${satuan}.`,
+    status,
+  };
 }

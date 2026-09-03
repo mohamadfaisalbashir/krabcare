@@ -36,9 +36,13 @@
     /* text-base di mobile bukan gaya: input < 16px membuat Safari iOS
        memperbesar viewport tiap kali kolomnya difokus. */
     @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-base sm:text-sm
-      text-ink placeholder:text-muted/70 outline-none transition-colors;
+      text-ink placeholder:text-muted/50 outline-none transition-colors;
     border-bottom-width: 2px;
-    border-bottom-color: theme("colors.muted / 45%");
+    /* Alpha di dua baris ini turun (70%→50%, 45%→30%) hanya untuk MEMPERTAHANKAN
+       tampilan: `muted` sudah digelapkan jadi hampir hitam, jadi persentase lama
+       akan membuat placeholder terbaca seperti nilai yang sudah diketik dan
+       garis bawahnya jadi jauh lebih berat dari garis WinUI yang ditiru. */
+    border-bottom-color: theme("colors.muted / 30%");
   }
   .input-field:focus {
     border-bottom-color: theme("colors.brand.600");
@@ -89,7 +93,7 @@
   }
 
   .label-field {
-    @apply block text-sm font-medium text-ink/80 mb-1.5;
+    @apply block text-sm font-medium text-ink mb-1.5;
   }
 
   /* Tinggi kontrol WinUI adalah 32px. Itu aman di desktop (>24px), tapi tombol
@@ -112,7 +116,8 @@
      hover NETRAL — bukan bernuansa aksen seperti sebelumnya. */
   .btn-ghost {
     @apply btn-base border border-border bg-white text-ink hover:bg-bg;
-    border-bottom-color: theme("colors.muted / 35%");
+    /* 35%→22%, alasan sama dengan .input-field di atas. */
+    border-bottom-color: theme("colors.muted / 22%");
   }
 
   /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di dalam Zona Berbahaya —

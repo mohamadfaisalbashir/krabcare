@@ -101,7 +101,7 @@ export default function LoginPage() {
             <div>
               <div className="relative">
                 <Input
-                  label="Kata Sandi"
+                  label="Kata sandi"
                   type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={password}

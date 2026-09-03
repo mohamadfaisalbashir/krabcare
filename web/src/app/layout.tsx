@@ -9,7 +9,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "sismon_kepiting · Monitoring Kualitas Air Budidaya Kepiting",
+  title: "sismon_kepiting · Monitoring kualitas air budidaya kepiting",
   description:
     "Sistem monitoring kualitas air pada budidaya kepiting sistem vertikal (apartemen), multi-kolam dan multi-pengguna.",
 };

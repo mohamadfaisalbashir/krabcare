@@ -290,8 +290,8 @@ export default function DashboardPage() {
         <div className="relative px-5 pb-32 pt-6 sm:px-8 sm:pb-36 sm:pt-8">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-wider text-brass-300">
-                Monitoring Kualitas Air
+              <p className="text-xs font-semibold text-brass-300">
+                Monitoring kualitas air
               </p>
               <h1 className="mt-1.5 truncate font-display text-2xl font-semibold text-white sm:text-3xl">
                 Dashboard
@@ -367,12 +367,19 @@ export default function DashboardPage() {
             pengaturan) alih-alih membawa sisa rak sebelumnya. */}
         <div ref={panelRef} id={PANEL_ID}>
           {selectedItem && (
-            <RakDetail
-              key={selectedItem.kolam.id}
-              kolam={selectedItem.kolam}
-              onClose={() => setSelected(null)}
-              onChanged={() => loadDashboard(true)}
-            />
+            // Pembungkus animasi, SENGAJA tanpa `key`: ia mount sekali saat
+            // panel dibuka dan bertahan saat pengguna melompat dari satu rak ke
+            // rak lain. Kalau animasinya menempel pada RakDetail — yang memang
+            // di-remount tiap ganti rak — panel setinggi layar berkedip dari
+            // opacity 0 di setiap perpindahan.
+            <div className="animate-rise motion-reduce:animate-none">
+              <RakDetail
+                key={selectedItem.kolam.id}
+                kolam={selectedItem.kolam}
+                onClose={() => setSelected(null)}
+                onChanged={() => loadDashboard(true)}
+              />
+            </div>
           )}
         </div>
 
@@ -409,13 +416,13 @@ function TambahKolamTile({
       onClick={onClick}
       className={clsx(
         "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-white/70 bg-white/30 py-8 text-sm font-semibold text-muted backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-white/55 hover:text-brand-700",
-        variant === "rail" ? `${PONDCARD_WIDTH} shrink-0 snap-start` : "w-full"
+        variant === "rail" ? `${PONDCARD_WIDTH} shrink-0` : "w-full"
       )}
     >
       <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/60 text-brand-600 transition-colors group-hover:bg-brand-50">
         <Plus className="h-5 w-5" strokeWidth={2.4} />
       </span>
-      Tambah Kolam
+      Tambah kolam
     </button>
   );
 }

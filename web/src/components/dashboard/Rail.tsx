@@ -8,6 +8,48 @@ import clsx from "clsx";
  *  dan pada ambang 0 setiap klik kartu akan ditelan sebagai seretan. */
 const DRAG_SLOP = 5;
 
+/** Laju maksimum peluncur, px per frame. Tanpa jepit ini satu sentakan cepat
+ *  melempar baris dari ujung ke ujung dalam tiga-empat frame. */
+const MAX_V = 60;
+
+/** Sisa laju tiap frame. 0.94 ≈ berhenti dalam ~0,7 detik dari laju penuh —
+ *  cukup panjang untuk terbaca sebagai luncuran, cukup pendek untuk baris tidak
+ *  terasa lepas kendali. Ini knob-nya kalau luncurannya terasa terlalu jauh. */
+const FRICTION = 0.94;
+
+/**
+ * Laju bersama seretan & wheel.
+ *
+ * Fungsinya ditaruh DI LUAR komponen supaya identitasnya tidak berganti tiap
+ * render: rAF yang sedang berjalan memegang fungsi ini, dan fungsi yang dirakit
+ * ulang tiap render akan meninggalkan closure lama yang menunjuk elemen basi.
+ */
+type Glide = { v: number; raf: number };
+
+function glideStep(el: HTMLDivElement, g: Glide) {
+  g.raf = 0;
+  if (Math.abs(g.v) < 0.5) return;
+  const before = el.scrollLeft;
+  el.scrollLeft = before + g.v;
+  // Sudah mentok di ujung: meneruskan berarti rAF berputar tanpa gerakan.
+  if (el.scrollLeft === before) return;
+  g.v *= FRICTION;
+  g.raf = requestAnimationFrame(() => glideStep(el, g));
+}
+
+function pushGlide(el: HTMLDivElement, g: Glide, v: number) {
+  const clamped = Math.max(-MAX_V, Math.min(MAX_V, v));
+  // Gerakan dimatikan pengguna → geser sekali, tanpa sisa luncuran.
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.scrollLeft += clamped;
+    return;
+  }
+  g.v = clamped;
+  if (!g.raf && Math.abs(clamped) >= 0.5) {
+    g.raf = requestAnimationFrame(() => glideStep(el, g));
+  }
+}
+
 /**
  * Container utama baris kartu rak: menempatkan, menggeser, dan memberi petunjuk
  * arah — semuanya di satu tempat.
@@ -19,6 +61,16 @@ const DRAG_SLOP = 5;
  * keyboard — browser menggulir container sendiri ketika Tab memindahkan fokus
  * ke kartu yang berada di luar layar. Karena itu jangan menambahkan tabIndex,
  * overflow-hidden, atau transform pada scroller ini.
+ *
+ * Seretan mouse dan wheel bermuara ke SATU peluncur rAF (`glide`). Sebelumnya
+ * keduanya menulis scrollLeft langsung: baris berhenti mendadak begitu tombol
+ * dilepas, dan melompat sekali per notch wheel — itu yang terbaca kaku.
+ * Sentuhan sengaja TIDAK lewat sini; iOS/Android sudah punya momentumnya
+ * sendiri dan dua momentum yang bertumpuk terasa licin.
+ *
+ * Scroll-snap sengaja TIDAK dipakai. `snap-x` proximity menyentak baris ke
+ * batas kartu terdekat tepat saat luncuran melambat — persis membatalkan
+ * momentum yang baru saja dibangun.
  */
 export default function Rail({ children }: { children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -29,7 +81,16 @@ export default function Rail({ children }: { children: React.ReactNode }) {
 
   // Nilai seretan ditaruh di ref, bukan state: dipakai puluhan kali per detik
   // saat pointer bergerak dan tidak satu pun perlu memicu render.
-  const drag = useRef({ active: false, startX: 0, startLeft: 0, moved: false });
+  const drag = useRef({
+    active: false,
+    startX: 0,
+    startLeft: 0,
+    moved: false,
+    lastX: 0,
+    lastT: 0,
+    v: 0,
+  });
+  const glide = useRef<Glide>({ v: 0, raf: 0 });
 
   const measure = useCallback(() => {
     const el = ref.current;
@@ -49,6 +110,15 @@ export default function Rail({ children }: { children: React.ReactNode }) {
   // itu mengubah scrollWidth tanpa mengubah ukuran satu elemen pun — jadi tidak
   // ada ResizeObserver yang bisa menangkapnya. Aman berkat bail-out di atas.
   useEffect(measure);
+
+  // Luncuran yang masih berjalan saat komponen dilepas akan terus menyentuh
+  // elemen yang sudah tidak ada di dokumen.
+  useEffect(
+    () => () => {
+      if (glide.current.raf) cancelAnimationFrame(glide.current.raf);
+    },
+    []
+  );
 
   useEffect(() => {
     const el = ref.current;
@@ -75,7 +145,10 @@ export default function Rail({ children }: { children: React.ReactNode }) {
       if (!room) return;
 
       e.preventDefault();
-      node.scrollLeft += e.deltaY;
+      // DITAMBAHKAN ke laju yang sedang berjalan, bukan menimpanya: memutar
+      // wheel beberapa notch beruntun jadi membangun kecepatan, alih-alih
+      // menyetel ulang luncurannya tiap notch.
+      pushGlide(node, glide.current, glide.current.v + e.deltaY * 0.25);
     }
 
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -91,6 +164,12 @@ export default function Rail({ children }: { children: React.ReactNode }) {
   }, [measure]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Sentuhan baru selalu menang atas luncuran lama — termasuk sentuhan jari,
+    // yang punya momentum native sendiri dan tidak boleh bertumpuk dengan milik
+    // kita. Karena itu penghentian ini di ATAS penyaringan pointerType.
+    if (glide.current.raf) cancelAnimationFrame(glide.current.raf);
+    glide.current = { v: 0, raf: 0 };
+
     // Sentuhan & pena punya geseran native yang lebih baik (momentum,
     // overscroll) — jangan diambil alih.
     if (e.pointerType !== "mouse" || e.button !== 0) return;
@@ -101,6 +180,9 @@ export default function Rail({ children }: { children: React.ReactNode }) {
       startX: e.clientX,
       startLeft: el.scrollLeft,
       moved: false,
+      lastX: e.clientX,
+      lastT: performance.now(),
+      v: 0,
     };
     // TIDAK setPointerCapture di sini. Pointer capture ikut mengalihkan
     // compatibility mouse event, jadi `click` akan dilepas di scroller ini —
@@ -126,6 +208,19 @@ export default function Rail({ children }: { children: React.ReactNode }) {
     }
 
     el.scrollLeft = drag.current.startLeft - dx;
+
+    // Laju untuk luncuran setelah dilepas. Tandanya sengaja `lastX - clientX`:
+    // scrollLeft bergerak berlawanan arah kursor. Diratakan dengan laju
+    // sebelumnya supaya satu frame yang tersendat tepat sebelum tombol dilepas
+    // tidak menentukan seluruh luncuran.
+    const now = performance.now();
+    const dt = now - drag.current.lastT;
+    if (dt > 0) {
+      const v = ((drag.current.lastX - e.clientX) / dt) * 16;
+      drag.current.v = drag.current.v * 0.7 + v * 0.3;
+    }
+    drag.current.lastX = e.clientX;
+    drag.current.lastT = now;
   }
 
   function endDrag(e: React.PointerEvent<HTMLDivElement>) {
@@ -136,6 +231,8 @@ export default function Rail({ children }: { children: React.ReactNode }) {
     // ambang tidak pernah meminta capture, dan releasePointerCapture pada
     // pointer yang tidak ditangkap melempar InvalidPointerId.
     if (el?.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    // Klik biasa (tidak pernah melewati ambang) tidak boleh menggeser apa pun.
+    if (el && drag.current.moved) pushGlide(el, glide.current, drag.current.v);
     setDragging(false);
   }
 
@@ -168,7 +265,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
         onPointerCancel={endDrag}
         onClickCapture={onClickCapture}
         className={clsx(
-          "rail flex snap-x gap-4 overflow-x-auto px-5 py-2 sm:px-8",
+          "rail flex gap-4 overflow-x-auto px-5 py-2 sm:px-8",
           // py-2 wajib: begitu overflow-x bukan visible, sumbu Y ikut jadi auto
           // dan bayangan kartu akan terpotong.
           // px ada DI DALAM scroller, bukan di pembungkusnya — kartu pertama

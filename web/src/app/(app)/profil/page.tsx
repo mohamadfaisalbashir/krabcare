@@ -116,7 +116,7 @@ export default function ProfilPage() {
                       {user.nama}
                     </h3>
                     <p className="text-sm text-muted">{user.email}</p>
-                    <p className="text-xs font-medium text-muted mt-1 uppercase tracking-wider">
+                    <p className="mt-1 text-xs font-medium capitalize text-muted">
                       {user.role}
                     </p>
                   </div>
@@ -138,7 +138,7 @@ export default function ProfilPage() {
               <div className="mb-4 flex items-center gap-2.5">
                 <Pencil className="h-5 w-5 text-brand-500" />
                 <h3 className="font-display text-base font-semibold text-ink">
-                  Ubah Nama
+                  Ubah nama
                 </h3>
               </div>
               <form onSubmit={handleSaveNama} className="space-y-4">
@@ -159,7 +159,7 @@ export default function ProfilPage() {
               onClick={confirmLogout}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
             >
-              <LogOut className="h-4 w-4" /> Keluar Akun
+              <LogOut className="h-4 w-4" /> Keluar akun
             </button>
           </div>
 
@@ -169,7 +169,7 @@ export default function ProfilPage() {
               <div className="mb-4 flex items-center gap-2.5">
                 <ShieldCheck className="h-5 w-5 text-brand-500" />
                 <h3 className="font-display text-base font-semibold text-ink">
-                  Ubah Kata Sandi
+                  Ubah kata sandi
                 </h3>
               </div>
 

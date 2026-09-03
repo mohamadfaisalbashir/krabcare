@@ -109,7 +109,7 @@ export default function ExportPanel({
   return (
     <Card className="p-4">
       <div className="mb-3">
-        <h3 className="font-display text-base font-semibold text-ink">Unduh Data Mentah</h3>
+        <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
         <p className="mt-1 text-xs text-muted">
           Berkas CSV berisi nilai apa adanya pada rentang tanggal yang dipilih.
         </p>

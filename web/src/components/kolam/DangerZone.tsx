@@ -6,7 +6,7 @@ import Input from "@/components/ui/Input";
 import { api } from "@/lib/api";
 
 /**
- * Zona Berbahaya ala GitHub: menghapus rak butuh mengetik ulang namanya.
+ * Zona berbahaya ala GitHub: menghapus rak butuh mengetik ulang namanya.
  *
  * Halaman detail rak menyembunyikan panel ini sampai tombol "Hapus rak" ditekan,
  * tapi wujudnya tetap INLINE, bukan overlay. Modal buatan sendiri butuh focus
@@ -52,7 +52,7 @@ export default function DangerZone({
       <div className="mb-3 flex items-center gap-2.5">
         <AlertOctagon className="h-5 w-5 text-status-bahaya" />
         <h3 className="font-display text-base font-semibold text-status-bahaya">
-          Zona Berbahaya
+          Zona berbahaya
         </h3>
       </div>
 

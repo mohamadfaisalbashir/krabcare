@@ -4,7 +4,7 @@ import clsx from "clsx";
 
 /** Label sumber notifikasi sesuai backend notification.source. */
 const SOURCE_LABEL: Record<string, string> = {
-  classification: "Kondisi Aktual",
+  classification: "Kondisi aktual",
   prediction: "Prediksi",
 };
 
@@ -59,7 +59,7 @@ export default function NotificationItem({
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
           )}
         </div>
-        <p className="mt-1 text-sm leading-relaxed text-ink/80">{item.message}</p>
+        <p className="mt-1 text-sm leading-relaxed text-ink">{item.message}</p>
         <div className="mt-1.5 flex items-center gap-3">
           <p className="text-xs text-muted">
             {new Date(item.created_at).toLocaleString("id-ID", {
