@@ -6,6 +6,7 @@ from sqlalchemy.sql import func
 
 from app.models import Device, SensorReading
 from app.schemas.sensor_reading import SensorReadingIn, SkippedDuplicateOut
+from app.services import ammonia_service
 from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
 
 
@@ -49,6 +50,29 @@ async def ingest_readings(
             )
             for row in skipped_rows
         ]
+
+        # Indeks risiko amonia dihitung di sini, di siklus yang sudah jalan, supaya
+        # SETIAP reading punya baris perhitungannya (parameter dari hardware,
+        # fraksi NH3 dari software). Menumpang commit di bawah: baris risiko tidak
+        # bisa tersimpan tanpa reading sumbernya. Reading yang salah satu
+        # sensornya mati menghasilkan None dan dilewati, bukan diisi nilai palsu.
+        ammonia_rows = [
+            baris
+            for baris in (
+                ammonia_service.build_row(
+                    device_id=row["device_id"],
+                    time=row["time"],
+                    target_time=row["time"],
+                    horizon_minutes=ammonia_service.HORIZON_TERUKUR,
+                    ph=row["ph"],
+                    temperature_c=row["temperature_c"],
+                    salinity_ppt=row["salinity_ppt"],
+                )
+                for row in rows
+            )
+            if baris is not None
+        ]
+        await ammonia_service.save_ammonia_risks(db, ammonia_rows)
 
         # Bukti device masih hidup — dipakai dashboard untuk status online/offline.
         device_ids = list({row["device_id"] for row in rows})

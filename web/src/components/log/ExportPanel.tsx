@@ -25,14 +25,7 @@ function isoDay(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
-export default function ExportPanel({
-  sensors,
-  defaultDeviceId,
-}: {
-  sensors: Sensor[];
-  /** Ikut pilihan sensor di daftar, supaya panel tidak melawan konteks di layar. */
-  defaultDeviceId: string;
-}) {
+export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
   const today = new Date();
   const weekAgo = new Date(today);
   weekAgo.setDate(today.getDate() - 6);
@@ -40,7 +33,6 @@ export default function ExportPanel({
   const [from, setFrom] = useState(isoDay(weekAgo));
   const [to, setTo] = useState(isoDay(today));
   const [paramSel, setParamSel] = useState<ParamKey | "semua">("semua");
-  const [deviceSel, setDeviceSel] = useState(defaultDeviceId);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -54,9 +46,7 @@ export default function ExportPanel({
       setError("Tanggal 'Dari' melewati tanggal 'Sampai'.");
       return;
     }
-    const targets =
-      deviceSel === "semua" ? sensors : sensors.filter((s) => String(s.deviceId) === deviceSel);
-    if (targets.length === 0) {
+    if (sensors.length === 0) {
       setError("Belum ada sensor yang bisa diunduh.");
       return;
     }
@@ -75,7 +65,7 @@ export default function ExportPanel({
       const { start, end } = dayRangeToIso(from, to);
       // Paralel antar sensor (maksimal 3), berurutan di dalam satu sensor.
       const results = await Promise.all(
-        targets.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))
+        sensors.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))
       );
 
       const rows = results.flatMap((r) => r.rows);
@@ -86,16 +76,15 @@ export default function ExportPanel({
 
       const params = paramSel === "semua" ? PARAM_KEYS : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
-      const label = deviceSel === "semua" ? "semua" : targets[0].deviceCode;
 
-      downloadCsv(toCsv(rows, params, kolamByDevice), csvFilename(label, params, from, to));
+      downloadCsv(toCsv(rows, params, kolamByDevice), csvFilename("semua", params, from, to));
 
       if (results.some((r) => r.truncated)) {
         // Paging berjalan dari terbaru ke terlama, jadi yang terpotong adalah
         // data PALING LAMA. Itu harus dikatakan, bukan sekadar "terpotong".
         setNote(
-          `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai — ` +
-            "berkas berisi data terbaru saja, data paling lama terpotong. " +
+          `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai. ` +
+            "Berkas berisi data terbaru saja, data paling lama terpotong. " +
             "Persempit rentang tanggalnya."
         );
       }
@@ -115,8 +104,8 @@ export default function ExportPanel({
         </p>
       </div>
 
-      {/* flex-wrap wajib: keempat field punya lebar tetap yang totalnya 704px,
-          lebih lebar dari layar 640px kalau dipaksa satu baris. */}
+      {/* flex-wrap wajib: ketiga field punya lebar tetap yang bersama tombolnya
+          masih lebih lebar dari layar 640px kalau dipaksa satu baris. */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="sm:w-40">
           <Input
@@ -151,25 +140,6 @@ export default function ExportPanel({
             {PARAM_KEYS.map((p) => (
               <option key={p} value={p}>
                 {PARAM_UI[p].short}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="sm:w-52">
-          <label htmlFor="unduh-sensor" className="label-field">
-            Sensor
-          </label>
-          <select
-            id="unduh-sensor"
-            value={deviceSel}
-            onChange={(e) => setDeviceSel(e.target.value)}
-            className="input-field"
-          >
-            <option value="semua">Semua sensor</option>
-            {sensors.map((s) => (
-              <option key={s.deviceId} value={s.deviceId}>
-                {s.kolamNama} — {s.deviceCode}
               </option>
             ))}
           </select>

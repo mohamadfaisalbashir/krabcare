@@ -36,7 +36,11 @@ class Settings(BaseSettings):
 
     # Autentikasi user (dashboard web / mobile) — JWT access token
     JWT_SECRET_KEY: str = "ai-dilarangbaca"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    # 30 hari. Sebelumnya 24 jam, dan karena tidak ada refresh token, tiap
+    # pemakai praktis harus login ulang tiap hari — terbaca seperti "tiap
+    # menutup browser jadi logout". Token disimpan di localStorage (bukan
+    # sessionStorage), jadi menutup tab memang tidak pernah jadi penyebabnya.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30
 
     # Reset password via email
     SMTP_HOST: str = ""

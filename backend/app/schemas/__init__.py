@@ -1,5 +1,6 @@
 """Re-export schema Pydantic — suffix In = request body, Out = response."""
 
+from app.schemas.ammonia import AmmoniaRiskLogOut, AmmoniaRiskOut, DeviceAmmoniaOut
 from app.schemas.device import DeviceOut
 from app.schemas.fuzzy import (
     DevicePredictionsOut,
@@ -32,6 +33,9 @@ from app.schemas.user import (
 )
 
 __all__ = [
+    "AmmoniaRiskLogOut",
+    "AmmoniaRiskOut",
+    "DeviceAmmoniaOut",
     "DeviceOut",
     "DevicePredictionsOut",
     "FuzzyClassificationIn",

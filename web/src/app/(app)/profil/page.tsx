@@ -8,7 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import { api, confirmLogout } from "@/lib/api";
-import { User } from "@/lib/types";
+import { setUser, useUser } from "@/lib/user-store";
 
 type Message = { type: "ok" | "err"; text: string } | null;
 
@@ -29,7 +29,10 @@ function FormMessage({ message }: { message: Message }) {
 }
 
 export default function ProfilPage() {
-  const [user, setUser] = useState<User | null>(null);
+  // Dibaca dari store bersama, bukan state lokal: header di atas halaman ini
+  // memakai sumber yang sama, jadi menyimpan nama baru langsung terlihat di
+  // keduanya tanpa perlu memuat ulang halaman.
+  const user = useUser();
   const [nama, setNama] = useState("");
   const [savingNama, setSavingNama] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -41,15 +44,16 @@ export default function ProfilPage() {
   const [passwordMessage, setPasswordMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
 
+  // Store yang mengambil datanya; di sini cuma menyalin nama ke kolom form
+  // begitu user-nya sampai (dan tidak menimpanya lagi setelah itu, supaya
+  // ketikan yang sedang berjalan tidak terhapus oleh render berikutnya).
+  const [namaTerisi, setNamaTerisi] = useState(false);
   useEffect(() => {
-    api
-      .getMe()
-      .then((u) => {
-        setUser(u);
-        setNama(u.nama);
-      })
-      .catch(console.error);
-  }, []);
+    if (user && !namaTerisi) {
+      setNama(user.nama);
+      setNamaTerisi(true);
+    }
+  }, [user, namaTerisi]);
 
   async function handleSaveNama(e: React.FormEvent) {
     e.preventDefault();
@@ -108,7 +112,7 @@ export default function ProfilPage() {
             <Card>
               {user ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-500 font-display text-xl font-semibold text-white">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 font-display text-xl font-semibold text-white">
                     {user.nama.charAt(0).toUpperCase()}
                   </div>
                   <div>

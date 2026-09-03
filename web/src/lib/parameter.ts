@@ -150,7 +150,7 @@ export function trendSentence(
     const min = Math.min(...values);
     const max = Math.max(...values);
     const angka =
-      min === max ? formatValue(max) : `${formatValue(min)} – ${formatValue(max)}`;
+      min === max ? formatValue(max) : `${formatValue(min)} sampai ${formatValue(max)}`;
     return { text: `${short} berkisar di angka ${angka}${satuan}.`, status };
   }
 

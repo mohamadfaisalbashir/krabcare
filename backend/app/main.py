@@ -30,9 +30,22 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Di DEVELOPMENT saja: terima juga origin LAN (mis. http://192.168.1.7:3000)
+    # supaya dashboard bisa dibuka dari HP di WiFi yang sama. Tanpa ini setiap
+    # POST dari alamat non-localhost mati di preflight dan browser cuma melapor
+    # "Failed to fetch" — yang di UI menyamar jadi "gagal membuat kolam".
+    # PRODUCTION tidak berubah: hanya CORS_ORIGINS eksplisit yang diterima.
+    origin_regex = (
+        r"^https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+"
+        r"|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$"
+        if settings.ENVIRONMENT == "development"
+        else None
+    )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,
+        allow_origin_regex=origin_regex,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

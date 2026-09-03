@@ -115,6 +115,39 @@ export interface DevicePredictions {
   predictions: FuzzyPrediction[];
 }
 
+// ── Amonia (schemas/ammonia.py) ─────────────────────────────────────
+
+/** AmmoniaRiskOut — FRAKSI NH3 (% dari TAN), BUKAN konsentrasi mg/L. */
+export interface AmmoniaRisk {
+  time: string;
+  target_time: string;
+  /** 0 = kondisi terukur dari sensor; >0 = ramalan FTS sekian menit ke depan. */
+  horizon_minutes: number;
+  fraction_nh3_pct: number | null;
+  risk_level: string | null;
+  /** false = pH/suhu/salinitas di luar rentang tervalidasi persamaan. */
+  in_valid_range: boolean;
+  input_ph: number | null;
+  input_temperature_c: number | null;
+  input_salinity_ppt: number | null;
+  model_version: string;
+}
+
+/** AmmoniaRiskLogOut — satu baris log historis. */
+export interface AmmoniaRiskLog extends AmmoniaRisk {
+  device_id: number;
+  device_code: string | null;
+}
+
+/** DeviceAmmoniaOut */
+export interface DeviceAmmonia {
+  device_id: number;
+  device_code: string | null;
+  current: AmmoniaRisk | null;
+  forecast: AmmoniaRisk[];
+  disclaimer: string;
+}
+
 // ── Notification (schemas/notification.py) ──────────────────────────
 
 /** NotificationOut */

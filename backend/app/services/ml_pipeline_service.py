@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Device, Kolam, SensorReading
 from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
-from app.services import notification_service, quality_ingest_service
+from app.services import ammonia_service, notification_service, quality_ingest_service
 from ml.fuzzy.aggregation import aggregate_by_time_bucket
 from ml.fuzzy.fts import forecast_multi_step
 from ml.fuzzy.mamdani import ANOMALY_CATEGORIES, classify_water_quality
@@ -157,6 +157,11 @@ async def run_pipeline_for_device(
     )
 
     predictions_in: list[FuzzyPredictionIn] = []
+    # Risiko amonia untuk tiap horizon, dihitung dari nilai ramalan FTS ketiga
+    # parameter. Nilai SEKARANG tidak ditulis di sini — itu sudah ditulis per
+    # reading saat ingest, jadi log-nya seiring cadence sensor, bukan cadence
+    # scheduler yang cuma sejam sekali.
+    ammonia_rows: list[dict] = []
     anomaly_steps: list[int] = []
     prediction_anomalies: list[dict] = []
 
@@ -186,6 +191,18 @@ async def run_pipeline_for_device(
             )
         )
 
+        baris_amonia = ammonia_service.build_row(
+            device_id=device.id,
+            time=now,
+            target_time=target_time,
+            horizon_minutes=h * bucket_minutes,
+            ph=ph_forecast[h - 1],
+            temperature_c=temp_forecast[h - 1],
+            salinity_ppt=salinity_forecast[h - 1],
+        )
+        if baris_amonia is not None:
+            ammonia_rows.append(baris_amonia)
+
         if result["quality_category"] in ANOMALY_CATEGORIES:
             anomaly_steps.append(h)
             prediction_anomalies.append(
@@ -196,6 +213,9 @@ async def run_pipeline_for_device(
                 }
             )
 
+    # Sebelum ingest_predictions: fungsi itu yang memegang commit-nya, jadi baris
+    # amonia ikut masuk dalam transaksi yang sama dengan prediksi sumbernya.
+    await ammonia_service.save_ammonia_risks(db, ammonia_rows)
     await quality_ingest_service.ingest_predictions(db, predictions_in)
     prediction_notifs = await notification_service.create_prediction_notifications(
         db, device, kolam, prediction_anomalies

@@ -3,8 +3,54 @@
 //
 // Semua path sudah diselaraskan dengan route di backend/app/routers/*.
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000/api/v1";
+const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+/**
+ * Alamat backend, dihitung SAAT DIPANGGIL dan bukan konstanta modul.
+ *
+ * Next meng-inline NEXT_PUBLIC_* ke bundel saat BUILD (lihat web/Dockerfile),
+ * dan nilai default proyek ini `http://localhost:8000/api/v1`. Buka dashboard
+ * dari HP di WiFi yang sama, dan browser HP itu menembak localhost-nya SENDIRI
+ * — tidak ada backend di sana, jadi setiap permintaan mati sebagai
+ * "Failed to fetch". Halamannya tetap terbuka (HTML-nya sudah sampai), sehingga
+ * gejalanya menyamar jadi "gagal membuat kolam" / "error jaringan".
+ *
+ * Jadi: kalau alamat yang di-build menunjuk ke localhost padahal halamannya
+ * dibuka dari host lain, host-nya ditukar ke host halaman. Alamat yang memang
+ * disetel ke domain sungguhan (produksi) tidak disentuh sama sekali.
+ */
+function resolveApiBaseUrl(): string {
+  const fallback = "http://localhost:8000/api/v1";
+  if (typeof window === "undefined") return CONFIGURED_API_BASE_URL ?? fallback;
+
+  const hostHalaman = window.location.hostname;
+  const halamanDiLocalhost =
+    hostHalaman === "localhost" || hostHalaman === "127.0.0.1" || hostHalaman === "::1";
+
+  if (!CONFIGURED_API_BASE_URL) {
+    return halamanDiLocalhost
+      ? fallback
+      : `${window.location.protocol}//${hostHalaman}:8000/api/v1`;
+  }
+
+  if (halamanDiLocalhost) return CONFIGURED_API_BASE_URL;
+
+  try {
+    const url = new URL(CONFIGURED_API_BASE_URL);
+    if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+      url.hostname = hostHalaman;
+      return url.toString().replace(/\/$/, "");
+    }
+  } catch {
+    // Alamat tidak bisa di-parse — pakai apa adanya, biar errornya jujur.
+  }
+  return CONFIGURED_API_BASE_URL;
+}
+
+/** Dipakai pesan error supaya "tidak bisa menghubungi" menyebut alamatnya. */
+export function apiBaseUrl(): string {
+  return resolveApiBaseUrl();
+}
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
@@ -36,14 +82,28 @@ async function request<T>(
 ): Promise<T> {
   const token = getToken();
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+  const base = resolveApiBaseUrl();
+
+  let res: Response;
+  try {
+    res = await fetch(`${base}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    // fetch hanya melempar untuk kegagalan JARINGAN (server mati, CORS preflight
+    // ditolak, DNS gagal) — status HTTP berapa pun tetap resolve. Pesan bawaannya
+    // "Failed to fetch" tanpa konteks apa pun, dan pemanggil membungkusnya lagi
+    // jadi "Gagal membuat kolam", sehingga penyebab sebenarnya tidak pernah
+    // terlihat. Sebut alamatnya supaya bisa dicek langsung.
+    throw new Error(
+      `Tidak bisa menghubungi server di ${base}. Pastikan backend hidup dan alamat ini terjangkau dari perangkat Anda.`
+    );
+  }
 
   if (res.status === 401) {
     logout();
@@ -192,6 +252,39 @@ export const api = {
     const qs = deviceId != null ? `?device_id=${deviceId}` : "";
     return request<import("./types").DevicePredictions[]>(
       `/quality/predictions${qs}`
+    );
+  },
+
+  // ── Amonia (routers/quality.py) ───────────────────────────────────
+
+  /** GET /quality/ammonia-risk → DeviceAmmoniaOut[] (terukur terkini + ramalan) */
+  getAmmoniaRisk: (deviceId?: number) => {
+    const qs = deviceId != null ? `?device_id=${deviceId}` : "";
+    return request<import("./types").DeviceAmmonia[]>(`/quality/ammonia-risk${qs}`);
+  },
+
+  /** GET /quality/ammonia-risk/history → AmmoniaRiskLogOut[] */
+  getAmmoniaHistory: (params?: {
+    device_id?: number;
+    start_time?: string;
+    end_time?: string;
+    risk_level?: "normal" | "perhatian" | "berbahaya";
+    only_measured?: boolean;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params?.device_id) qs.set("device_id", String(params.device_id));
+    if (params?.start_time) qs.set("start_time", params.start_time);
+    if (params?.end_time) qs.set("end_time", params.end_time);
+    if (params?.risk_level) qs.set("risk_level", params.risk_level);
+    if (params?.only_measured) qs.set("only_measured", "true");
+    if (params?.limit) qs.set("limit", String(params.limit));
+    // != null, bukan cek falsy: offset=0 itu halaman pertama, bukan "tidak diisi".
+    if (params?.offset != null) qs.set("offset", String(params.offset));
+    const query = qs.toString();
+    return request<import("./types").AmmoniaRiskLog[]>(
+      `/quality/ammonia-risk/history${query ? `?${query}` : ""}`
     );
   },
 

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
-import { SensorReading, StatusLabel } from "@/lib/types";
+import AmmoniaCell from "@/components/kolam/AmmoniaCell";
+import { AmmoniaRisk, SensorReading, StatusLabel } from "@/lib/types";
 import {
   ParamKey,
   PARAM_KEYS,
@@ -27,12 +28,24 @@ import {
  * terbaca meleleh jadi satu blok — yang dibutuhkan justru batas yang tegas
  * antara satu parameter dan tetangganya.
  */
-export default function ParameterStrip({ reading }: { reading: SensorReading | null }) {
+export default function ParameterStrip({
+  reading,
+  ammonia,
+}: {
+  reading: SensorReading | null;
+  /** Kolom keempat: indeks risiko amonia untuk kondisi terukur (horizon 0).
+   *  Datang dari backend, BUKAN dihitung ulang di browser — angkanya harus
+   *  persis sama dengan baris yang tersimpan di log historis. */
+  ammonia?: AmmoniaRisk | null;
+}) {
   return (
-    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+    // 4 kolom, bukan 3: amonia duduk berdampingan dengan ketiga parameter yang
+    // melahirkannya. Di layar sempit tetap menumpuk satu per baris.
+    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => (
         <ParameterCell key={param} param={param} value={reading?.[param] ?? null} />
       ))}
+      <AmmoniaCell mode="terkini" current={ammonia ?? null} />
     </div>
   );
 }

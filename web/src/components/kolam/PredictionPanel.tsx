@@ -1,7 +1,8 @@
 "use client";
 
 import clsx from "clsx";
-import { FuzzyPrediction, StatusLabel } from "@/lib/types";
+import AmmoniaCell from "@/components/kolam/AmmoniaCell";
+import { AmmoniaRisk, FuzzyPrediction, StatusLabel } from "@/lib/types";
 import { ParamKey, PARAM_KEYS, PARAM_UI, trendSentence } from "@/lib/parameter";
 
 /** Jendela yang ditampilkan. Backend tetap meramal 6 langkah (ML_FORECAST_STEPS),
@@ -43,15 +44,21 @@ const ACCENT: Record<StatusLabel, string> = {
  */
 export default function PredictionPanel({
   predictions,
+  ammoniaForecast,
 }: {
   predictions: FuzzyPrediction[];
+  /** Risiko amonia per horizon, dihitung backend dari nilai ramalan FTS
+   *  ketiga parameter di baris yang sama. */
+  ammoniaForecast?: AmmoniaRisk[];
 }) {
   const window = predictions
     .filter((p) => p.horizon_minutes <= HORIZON_MINUTES)
     .sort((a, b) => a.horizon_minutes - b.horizon_minutes);
 
   return (
-    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+    // Jumlah kolom mengikuti ParameterStrip di atasnya — dua baris dari satu
+    // instrumen, jadi kolom ke-n di sini harus sejajar dengan kolom ke-n di sana.
+    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => {
         const cfg = PARAM_UI[param];
         // Baris prediksi dari sebelum kolom per parameter ada bernilai null —
@@ -99,6 +106,7 @@ export default function PredictionPanel({
           </div>
         );
       })}
+      <AmmoniaCell mode="prediksi" forecast={ammoniaForecast ?? []} />
     </div>
   );
 }

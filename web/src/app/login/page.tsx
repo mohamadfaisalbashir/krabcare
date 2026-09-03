@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Waves } from "lucide-react";
+import { Waves } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -13,7 +13,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,31 +98,19 @@ export default function LoginPage() {
             />
 
             <div>
-              <div className="relative">
-                <Input
-                  label="Kata sandi"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-[38px] text-muted hover:text-ink"
-                  aria-label={
-                    showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"
-                  }
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4.5 w-4.5" />
-                  ) : (
-                    <Eye className="h-4.5 w-4.5" />
-                  )}
-                </button>
-              </div>
+              {/* Tombol intip sandi sekarang milik komponen Input — lihat
+                  components/ui/Input.tsx. Versi tempelan yang dulu di sini
+                  memakai offset tetap top-[38px] yang meleset di mobile, dan
+                  tertutup mata bawaan browser yang belum dimatikan. */}
+              <Input
+                label="Kata sandi"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
               <div className="mt-2 text-right">
                 <Link
                   href="/lupa-sandi"

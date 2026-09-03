@@ -47,6 +47,19 @@
   .input-field:focus {
     border-bottom-color: theme("colors.brand.600");
   }
+  /* Edge/Chromium menyisipkan tombol "intip sandi" sendiri DI DALAM input.
+     Hasilnya dua ikon mata berdampingan, dan yang bawaan duduk di atas tombol
+     React kita sehingga tekanan pengguna tidak pernah sampai ke handler-nya —
+     persis keluhan "ikon mata ganda & tidak berfungsi". Tombol milik kita yang
+     dipertahankan karena ia yang tetap ada di Firefox/Safari. */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear,
+  input::-webkit-credentials-auto-fill-button,
+  input::-webkit-strong-password-auto-fill-button {
+    display: none !important;
+    visibility: hidden;
+    pointer-events: none;
+  }
   /* Outline :focus-visible global sengaja TIDAK dimatikan untuk input: garis
      bawah saja bukan penanda fokus keyboard yang memadai. */
 
@@ -96,13 +109,22 @@
     @apply block text-sm font-medium text-ink mb-1.5;
   }
 
-  /* Tinggi kontrol WinUI adalah 32px. Itu aman di desktop (>24px), tapi tombol
-     tidak boleh ikut menyusut di mobile — min-h yang lebih longgar di bawah
-     breakpoint sm menjaga target sentuhnya tetap nyaman. */
+  /* Tinggi kontrol WinUI adalah 32px, dan tombol ini SEBELUMNYA menyusut ke
+     sana mulai breakpoint sm. Itu penyebab "tombol Masuk tidak responsif
+     terhadap tap touchpad": tap-to-click menggeser kursor beberapa piksel
+     antara mousedown dan mouseup, dan kalau mouseup mendarat di luar elemen,
+     browser tidak pernah menerbitkan `click` — form-nya tidak submit sama
+     sekali. 38px di semua ukuran layar, jadi ada ruang untuk geseran itu.
+
+     active: bukan hiasan. html { -webkit-tap-highlight-color: transparent }
+     di atas menghapus umpan balik bawaan, sehingga tekanan yang tertelan
+     terlihat persis sama dengan tombol mati — pengguna menekan lagi dan lagi
+     tanpa tahu yang mana yang masuk. */
   .btn-base {
     @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-lg
       px-4 text-sm font-semibold transition-colors
-      disabled:opacity-50 disabled:pointer-events-none sm:min-h-[32px];
+      active:scale-[0.985] motion-reduce:active:scale-100
+      disabled:opacity-50 disabled:pointer-events-none;
   }
 
   /* AccentButton. bg-brand-600, bukan 500: teks putih di atas brand-500 hanya

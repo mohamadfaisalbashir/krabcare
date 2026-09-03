@@ -17,7 +17,8 @@ import Logo from "./Logo";
 import { confirmLogout } from "@/lib/api";
 import { isNavActive } from "@/lib/nav";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
-import { PARAM_ICON } from "@/lib/param-icons";
+import { AMONIA_UI, LOG_PARAM_AMONIA, LogParam } from "@/lib/ammonia";
+import { AMONIA_ICON, PARAM_ICON } from "@/lib/param-icons";
 
 const STORAGE_KEY = "sidebar_collapsed";
 
@@ -53,9 +54,14 @@ const NAV = [
     // Anak-anaknya menaut ke tampilan per-parameter yang sudah ada. `param`
     // adalah nama field mentah backend (ph / temperature_c / salinity_ppt),
     // labelnya diambil dari PARAM_UI supaya tidak ada string yang diduplikasi.
-    children: PARAM_KEYS.map((p) => ({ param: p, label: PARAM_UI[p].short })),
+    children: [
+      ...PARAM_KEYS.map((p) => ({ param: p as LogParam, label: PARAM_UI[p].short })),
+      // Amonia menutup daftar, bukan menyelip di tengah: ia turunan dari ketiga
+      // parameter di atasnya, jadi urutannya ikut menjelaskan asalnya.
+      { param: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
+    ],
   },
-  { href: "/notifikasi", label: "Notifikasi & Prediksi", icon: BellRing },
+  { href: "/notifikasi", label: "Notifikasi & prediksi", icon: BellRing },
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
@@ -121,9 +127,10 @@ export default function Sidebar({ className }: { className?: string }) {
   // (log-historis/page.tsx:69-72). Ditiru di sini supaya /log-historis polos
   // menyalakan submenu "pH", sesuai apa yang benar-benar dirender halaman itu.
   const rawParam = searchParams.get("param");
-  const activeParam: ParamKey = PARAM_KEYS.includes(rawParam as ParamKey)
-    ? (rawParam as ParamKey)
-    : "ph";
+  const activeParam: LogParam =
+    rawParam === LOG_PARAM_AMONIA || PARAM_KEYS.includes(rawParam as ParamKey)
+      ? (rawParam as LogParam)
+      : "ph";
 
   return (
     <aside
@@ -217,8 +224,8 @@ function NavGroup({
   Icon: typeof LayoutDashboard;
   active: boolean;
   collapsed: boolean;
-  children_?: { param: ParamKey; label: string }[];
-  activeParam: ParamKey;
+  children_?: { param: LogParam; label: string }[];
+  activeParam: LogParam;
 }) {
   // Sentinel, bukan useEffect sinkronisasi: grup terbuka sendiri saat halamannya
   // aktif, tetap bisa dibuka manual dari halaman lain, dan tidak ada state yang
@@ -313,7 +320,8 @@ function NavGroup({
                 // Ikon yang sama dengan yang dipakai kartu parameter dan panel
                 // prediksi, supaya satu parameter selalu dikenali lewat lambang
                 // yang sama di seluruh aplikasi.
-                const ChildIcon = PARAM_ICON[param];
+                const ChildIcon =
+                  param === LOG_PARAM_AMONIA ? AMONIA_ICON : PARAM_ICON[param];
                 return (
                   <Link
                     key={param}

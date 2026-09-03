@@ -1,5 +1,6 @@
 """Autentikasi: API key untuk gateway (Raspberry Pi) & JWT untuk user (web/mobile)."""
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -26,13 +27,26 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-def hash_password(password: str) -> str:
-    """Hash bcrypt untuk disimpan di kolom users.password_hash."""
+# bcrypt 12 rounds memakan ~250-400 ms CPU per operasi, dan itu MEMANG tujuannya
+# — jangan diturunkan untuk mengejar kecepatan. Yang salah sebelumnya bukan
+# biayanya, tapi tempatnya: dipanggil langsung di dalam `async def` sehingga
+# memblokir event loop, jadi satu pendaftaran membekukan SEMUA request lain
+# selama ~700 ms (daftar + auto-login = dua operasi bcrypt berturut-turut).
+# asyncio.to_thread memindahkannya ke thread pool, pola yang sama dengan
+# core/email.py:36.
+def _hash_sync(password: str) -> str:
     return _pwd_context.hash(password)
 
-def verify_password(password: str, password_hash: str) -> bool:
-    """Cocokkan password plaintext dengan hash-nya."""
+def _verify_sync(password: str, password_hash: str) -> bool:
     return _pwd_context.verify(password, password_hash)
+
+async def hash_password(password: str) -> str:
+    """Hash bcrypt untuk disimpan di kolom users.password_hash."""
+    return await asyncio.to_thread(_hash_sync, password)
+
+async def verify_password(password: str, password_hash: str) -> bool:
+    """Cocokkan password plaintext dengan hash-nya."""
+    return await asyncio.to_thread(_verify_sync, password, password_hash)
 
 def create_access_token(user_id: int) -> str:
     """Terbitkan JWT HS256 berisi user_id (sub) + masa berlaku."""

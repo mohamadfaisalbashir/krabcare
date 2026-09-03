@@ -18,9 +18,11 @@ import {
   SensorReading,
   LatestQuality,
   FuzzyPrediction,
+  DeviceAmmonia,
   StatusLabel,
   categoryToLabel,
 } from "@/lib/types";
+import { DISCLAIMER as AMONIA_DISCLAIMER } from "@/lib/ammonia";
 import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { api } from "@/lib/api";
 
@@ -34,15 +36,16 @@ import { api } from "@/lib/api";
  * kerangkanya pelan-pelan lepas dari tata letak yang ditirunya.
  */
 const SECTION = {
-  prediksi: { title: "Prediksi 3 jam ke depan", note: "Fuzzy Time Series Chen" },
-  pemantauan: {
-    title: "Grafik pemantauan",
-    note: "Pita hijau = rentang optimal dan garis merah putus-putus = batas toleransi",
+  // Satu-satunya catatan yang tersisa. Angka fraksi tanpa kalimat ini gampang
+  // dibaca sebagai kadar amonia terukur, yang justru TIDAK diukur sistem ini
+  // (amonia.md:7).
+  terkini: {
+    title: "Parameter",
+    note: AMONIA_DISCLAIMER,
   },
-  gabungan: {
-    title: "Grafik gabungan",
-    note: "Bandingkan bentuknya, bukan jarak antar area.",
-  },
+  prediksi: { title: "Prediksi 3 jam ke depan" },
+  pemantauan: { title: "Grafik pemantauan" },
+  gabungan: { title: "Grafik gabungan" },
   pengaturan: { title: "Pengaturan rak" },
 } as const;
 
@@ -81,6 +84,7 @@ export default function RakDetail({
   const [reading, setReading] = useState<SensorReading | null>(null);
   const [history, setHistory] = useState<SensorReading[]>([]);
   const [predictions, setPredictions] = useState<FuzzyPrediction[]>([]);
+  const [ammonia, setAmmonia] = useState<DeviceAmmonia | null>(null);
   const [activeParam, setActiveParam] = useState<ParamKey>("ph");
   const [loading, setLoading] = useState(true);
   // Terpisah dari `loading`, yang cuma menutup pengambilan device. Ini yang
@@ -128,6 +132,7 @@ export default function RakDetail({
       setReading(null);
       setHistory([]);
       setPredictions([]);
+      setAmmonia(null);
       setDataLoading(false);
       return;
     }
@@ -136,10 +141,11 @@ export default function RakDetail({
 
     async function loadDeviceData(deviceId: number) {
       try {
-        const [qualityList, readings, predictionList] = await Promise.all([
+        const [qualityList, readings, predictionList, ammoniaList] = await Promise.all([
           api.getLatestQuality(deviceId),
           api.getReadings({ device_id: deviceId, limit: 100 }),
           api.getPredictions(deviceId),
+          api.getAmmoniaRisk(deviceId),
         ]);
         setQuality(qualityList[0] ?? null);
         setReading(readings[0] ?? null);
@@ -147,6 +153,7 @@ export default function RakDetail({
         // supaya sumbu waktu tidak terbaca mundur.
         setHistory([...readings].reverse());
         setPredictions(predictionList[0]?.predictions ?? []);
+        setAmmonia(ammoniaList[0] ?? null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat data sensor.");
       } finally {
@@ -254,26 +261,24 @@ export default function RakDetail({
             </p>
           )}
 
-          {/* Pembacaan terkini — satu baris, bukan tiga kartu. */}
-          <Section>
-            <ParameterStrip reading={reading} />
+          {/* Pembacaan terkini — satu baris, bukan empat kartu. */}
+          <Section {...SECTION.terkini}>
+            <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
           </Section>
 
           <Section {...SECTION.prediksi}>
-            <PredictionPanel predictions={predictions} />
+            <PredictionPanel
+              predictions={predictions}
+              ammoniaForecast={ammonia?.forecast ?? []}
+            />
           </Section>
 
           {/* Klaim device — satu rak hanya boleh satu device, jadi bagian ini
               hilang begitu raknya sudah terhubung. */}
           {!device && (
-            <Section
-              title="Hubungkan device"
-              note="Satu rak terhubung ke satu device"
-            >
+            <Section>
               <p className="mb-3 text-sm text-muted">
-                Masukkan kode device yang terpasang pada rak ini — MAC address ESP32
-                tanpa pemisah, huruf besar (mis.{" "}
-                <code>54D660E9BFB4</code>).
+                Masukkan kode device yang terpasang pada rak.
               </p>
               <form
                 onSubmit={handleClaim}
@@ -530,9 +535,9 @@ function ChartEmpty() {
 function DetailSkeleton() {
   return (
     <>
-      <Section>
-        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {[0, 1, 2].map((i) => (
+      <Section {...SECTION.terkini}>
+        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="mt-3 h-8 w-24" />
@@ -544,8 +549,8 @@ function DetailSkeleton() {
       </Section>
 
       <Section {...SECTION.prediksi}>
-        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {[0, 1, 2].map((i) => (
+        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
               <Skeleton className="h-4 w-28" />
               <Skeleton className="mt-3 h-0.5 w-full rounded-full" />
