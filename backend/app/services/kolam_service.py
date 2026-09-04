@@ -103,11 +103,11 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
 
 
 async def list_kolam_devices(db: AsyncSession, kolam: Kolam) -> list[Device]:
-    """Device dalam `kolam`, urut level_number lalu device_code."""
+    """Device dalam `kolam`, urut device_code."""
     result = await db.execute(
         select(Device)
         .where(Device.kolam_id == kolam.id)
-        .order_by(Device.level_number.asc().nulls_last(), Device.device_code.asc())
+        .order_by(Device.device_code.asc())
     )
     return list(result.scalars().all())
 

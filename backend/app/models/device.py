@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy import TIMESTAMP, ForeignKey, Index, SmallInteger, Text
+from sqlalchemy import TIMESTAMP, ForeignKey, Index, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
@@ -10,7 +10,7 @@ from app.models.enums import DeviceType
 
 
 class Device(Base):
-    """Node/perangkat IoT: slave node (ESP32C3 per tingkat), master node (ESP32), atau gateway (Raspberry Pi)."""
+    """Node/perangkat IoT: slave node (ESP32C3), master node (ESP32), atau gateway (Raspberry Pi)."""
 
     __tablename__ = "devices"
     # Index dibuat SQL init; wajib dideklarasi ulang di sini supaya autogenerate
@@ -33,7 +33,6 @@ class Device(Base):
         default=DeviceType.SLAVE_NODE,
         nullable=False,
     )
-    level_number: Mapped[int | None] = mapped_column(SmallInteger)
     rack_label: Mapped[str | None] = mapped_column(Text)
     parent_device_id: Mapped[int | None] = mapped_column(
         ForeignKey("devices.id", ondelete="SET NULL")

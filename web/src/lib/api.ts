@@ -210,9 +210,9 @@ export const api = {
 
   // ── Devices (routers/devices.py, khusus admin) ───────────────────
 
-  /** GET /devices/unclaimed → DeviceOut[] */
-  listUnclaimedDevices: () =>
-    request<import("./types").Device[]>("/devices/unclaimed"),
+  /** GET /devices → DeviceAdminOut[] — semua device, sudah diklaim maupun belum. */
+  listDevices: () =>
+    request<import("./types").DeviceAdmin[]>("/devices"),
 
   /** POST /devices → DeviceOut (201). Ganti INSERT manual ke DB. */
   createDevice: (payload: import("./types").DeviceCreateIn) =>

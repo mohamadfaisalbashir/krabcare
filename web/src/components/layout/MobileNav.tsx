@@ -21,7 +21,12 @@ const ADMIN_NAV_ITEM = { href: "/perangkat", label: "Device", icon: Cpu };
 export default function MobileNav() {
   const pathname = usePathname();
   const user = useUser();
-  const navItems = user?.role === "admin" ? [...NAV, ADMIN_NAV_ITEM] : NAV;
+  // Sama seperti Sidebar: admin cuma butuh Perangkat + Profil, gak punya
+  // kolam sendiri buat Dashboard/Log/Notifikasi.
+  const navItems =
+    user?.role === "admin"
+      ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
+      : NAV;
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"

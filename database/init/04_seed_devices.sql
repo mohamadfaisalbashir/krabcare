@@ -14,7 +14,7 @@
 --
 -- Aman dijalankan berulang (idempoten).
 
-INSERT INTO devices (device_code, device_type, level_number, rack_label, location_note)
-VALUES ('54D660E9BFB4', 'slave_node', 1, 'Rak A',
-        'ESP32 slave node tingkat 1 Rak A — sensor pH, suhu, salinitas')
+INSERT INTO devices (device_code, device_type, rack_label, location_note)
+VALUES ('54D660E9BFB4', 'slave_node', 'Rak A',
+        'ESP32 slave node Rak A — sensor pH, suhu, salinitas')
 ON CONFLICT (device_code) DO NOTHING;

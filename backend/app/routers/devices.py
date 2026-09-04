@@ -1,4 +1,4 @@
-"""Router device — khusus admin: lihat device belum terklaim & tambah device baru.
+"""Router device — khusus admin: lihat semua device (klaim/belum) & tambah device baru.
 
 Menggantikan alur lama (INSERT manual ke tabel devices lewat psql) dengan form
 web. Klaim device ke kolam TETAP lewat POST /kolam/:id/devices/:code (kolam.py)
@@ -11,21 +11,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_admin
 from app.db.session import get_db
 from app.models import User
-from app.schemas.device import DeviceCreateIn, DeviceOut
+from app.schemas.device import DeviceAdminOut, DeviceCreateIn, DeviceOut
 from app.services import device_service
 from app.services.device_service import DeviceCodeConflictError
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 
 
-@router.get("/unclaimed", response_model=list[DeviceOut])
-async def list_unclaimed_devices(
+@router.get("", response_model=list[DeviceAdminOut])
+async def list_devices(
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
-) -> list[DeviceOut]:
-    """Device yang sudah terdaftar di DB tapi belum diklaim kolam mana pun."""
-    devices = await device_service.list_unclaimed_devices(db)
-    return [DeviceOut.model_validate(d) for d in devices]
+) -> list[DeviceAdminOut]:
+    """Semua device terdaftar — sudah diklaim (ikut nama kolamnya) maupun belum."""
+    return await device_service.list_all_devices(db)
 
 
 @router.post("", response_model=DeviceOut, status_code=201)

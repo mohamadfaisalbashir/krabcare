@@ -114,7 +114,14 @@ export default function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const user = useUser();
-  const navItems = user?.role === "admin" ? [...NAV, ADMIN_NAV_ITEM] : NAV;
+  // Admin gak punya kolam sendiri, jadi Dashboard/Log historis/Notifikasi
+  // (semuanya berbasis kepemilikan kolam) gak relevan buatnya — nav-nya cuma
+  // Perangkat (kelola device) + Profil. Item "Profil" diambil dari NAV yang
+  // sama (bukan didefinisikan ulang) supaya tidak ada dua sumber kebenaran.
+  const navItems =
+    user?.role === "admin"
+      ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
+      : NAV;
 
   // Aman dari hydration mismatch tanpa trik: (app)/layout.tsx mengembalikan null
   // sampai `authorized` di-set di dalam useEffect, jadi komponen ini tidak pernah

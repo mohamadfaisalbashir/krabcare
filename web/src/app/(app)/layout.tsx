@@ -13,11 +13,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!window.localStorage.getItem("access_token")) {
-      router.replace("/login");
-      return;
+    function cekToken() {
+      if (!window.localStorage.getItem("access_token")) {
+        router.replace("/login");
+        setAuthorized(false);
+        return;
+      }
+      setAuthorized(true);
     }
-    setAuthorized(true);
+
+    cekToken();
+
+    // Bug: logout() navigasi penuh ke /login (window.location.href) SETELAH
+    // menghapus token. Kalau abis itu user pencet tombol Back, browser
+    // memulihkan halaman (mis. /dashboard) dari BFCACHE — potretan JS/DOM
+    // sebelum logout, bukan mount baru — jadi efek di atas TIDAK jalan lagi
+    // dan `authorized` yang sudah true sebelumnya tetap nempel, halaman
+    // terproteksi sempat kelihatan lagi walau token sudah tidak ada. Baru
+    // ketauan pas ADA request API berikutnya yang balas 401 (lihat
+    // lib/api.ts:request) — makanya baru "keluar" setelah beberapa saat.
+    // `pageshow` dengan `persisted: true` adalah satu-satunya sinyal yang
+    // nembak tepat saat halaman dipulihkan dari bfcache; cek ulang token di
+    // situ supaya user langsung terlempar balik ke /login tanpa jeda.
+    function handlePageShow(e: PageTransitionEvent) {
+      if (e.persisted) cekToken();
+    }
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
   }, [router]);
 
   // Jangan render isi halaman sebelum token dipastikan ada — kalau tidak,

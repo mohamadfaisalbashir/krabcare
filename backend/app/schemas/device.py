@@ -17,7 +17,6 @@ class DeviceCreateIn(BaseModel):
 
     device_code: str = Field(min_length=1, max_length=100)
     device_type: DeviceType = DeviceType.SLAVE_NODE
-    level_number: int | None = None
     rack_label: str | None = None
     parent_device_id: int | None = None
 
@@ -28,10 +27,17 @@ class DeviceOut(BaseModel):
     id: int
     device_code: str
     device_type: DeviceType
-    level_number: int | None
     rack_label: str | None
     parent_device_id: int | None
     is_active: bool
     last_seen_at: datetime | None
 
     model_config = {"from_attributes": True}
+
+
+class DeviceAdminOut(DeviceOut):
+    """DeviceOut + status klaim — dipakai panel admin (GET /devices) supaya
+    device yang sudah diklaim dan yang belum bisa ditampilkan dalam satu list."""
+
+    kolam_id: int | None
+    kolam_nama: str | None

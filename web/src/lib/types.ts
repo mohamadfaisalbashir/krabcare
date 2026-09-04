@@ -56,18 +56,22 @@ export interface Device {
   id: number;
   device_code: string;
   device_type: "slave_node" | "master_node" | "gateway";
-  level_number: number | null;
   rack_label: string | null;
   parent_device_id: number | null;
   is_active: boolean;
   last_seen_at: string | null;
 }
 
+/** DeviceAdminOut — Device + status klaim, dipakai halaman admin /perangkat. */
+export interface DeviceAdmin extends Device {
+  kolam_id: number | null;
+  kolam_nama: string | null;
+}
+
 /** Payload POST /devices (schemas/device.py DeviceCreateIn) — form tambah device admin. */
 export interface DeviceCreateIn {
   device_code: string;
   device_type: Device["device_type"];
-  level_number?: number | null;
   rack_label?: string | null;
   parent_device_id?: number | null;
 }
