@@ -34,8 +34,11 @@ const ACCENT: Record<StatusLabel, string> = {
  *
  * Nama parameter TANPA status di pojok kanan (dihapus sengaja): dengan tiga
  * horizon sekaligus, satu status ringkasan di pojok jadi tidak mewakili
- * ketiganya. Garis aksen di bawah nama parameter masih membawa warna status
- * (dari tren gabungan values), sebagai isyarat visual ringan tanpa kata.
+ * ketiganya. Garis aksen di bawah nama parameter sengaja NETRAL (bg-ink),
+ * bukan warna status lagi — warnanya sekarang pindah jadi bulatan kecil di
+ * depan MASING-MASING baris horizon, karena status 15/30/60 menit bisa
+ * berbeda satu sama lain dan satu garis tidak bisa mewakili ketiganya
+ * sekaligus. Arti warnanya dijelaskan di legenda atas panel (RakDetail).
  */
 export default function PredictionPanel({
   predictions,
@@ -56,33 +59,17 @@ export default function PredictionPanel({
     <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => {
         const cfg = PARAM_UI[param];
-        // Baris prediksi dari sebelum kolom per parameter ada bernilai null —
-        // tampilkan apa adanya, jangan rakit kalimat setengah jadi.
-        const values = window
-          .map((p) => p[FIELD[param]])
-          .filter((v): v is number => typeof v === "number");
-
-        // Dipakai cuma untuk warna garis aksen (status keseluruhan kolom),
-        // BUKAN untuk teks — teks statusnya sudah dihapus dari sini.
-        const hasil = values.length > 0 ? trendSentence(param, values) : null;
 
         return (
           <div key={param} className="px-1 py-4 sm:px-5 sm:py-3">
             <p className="truncate text-sm font-medium text-ink">{cfg.label}</p>
 
-            {/* Garis aksen: penanda kolom yang menyimpang, menggantikan tint
-                latar. Di ParameterStrip peran ini dipegang track rentang, yang
-                tidak ada padanannya untuk angka ramalan. */}
-            <div
-              aria-hidden
-              className={clsx(
-                "mt-3 h-0.5 rounded-full",
-                hasil ? ACCENT[hasil.status] : "bg-ink/15"
-              )}
-            />
+            {/* Garis aksen netral: pemisah kolom, bukan lagi pembawa warna
+                status (lihat catatan di atas fungsi). */}
+            <div aria-hidden className="mt-3 h-0.5 rounded-full bg-ink" />
 
-            {/* Satu baris per horizon (15/30/60 menit), bukan satu kalimat
-                gabungan — supaya angka tiap horizon kelihatan sendiri-sendiri. */}
+            {/* Satu baris per horizon (15/30/60 menit), masing-masing dengan
+                bulatan warna statusnya sendiri. */}
             <div className="mt-3 space-y-1.5">
               {HORIZONS.map((horizon) => {
                 const value = window.find((p) => p.horizon_minutes === horizon)?.[
@@ -91,9 +78,21 @@ export default function PredictionPanel({
                 const baris =
                   typeof value === "number" ? trendSentence(param, [value]) : null;
                 return (
-                  <p key={horizon} className="text-sm leading-relaxed text-ink">
-                    <span className="font-medium">{horizon} menit:</span>{" "}
-                    {baris ? baris.text : "Belum ada data prediksi."}
+                  <p
+                    key={horizon}
+                    className="flex items-start gap-1.5 text-sm leading-relaxed text-ink"
+                  >
+                    <span
+                      aria-hidden
+                      className={clsx(
+                        "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                        baris ? ACCENT[baris.status] : "bg-ink/15"
+                      )}
+                    />
+                    <span>
+                      <span className="font-medium">{horizon} menit:</span>{" "}
+                      {baris ? baris.text : "Belum ada data prediksi."}
+                    </span>
                   </p>
                 );
               })}

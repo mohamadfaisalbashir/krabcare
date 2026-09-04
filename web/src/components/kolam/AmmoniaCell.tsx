@@ -49,16 +49,22 @@ export default function AmmoniaCell({
     <div className="px-1 py-4 sm:px-5 sm:py-3">
       <div className="flex items-center gap-2">
         <p className="truncate text-sm font-medium text-ink">{AMONIA_UI.label}</p>
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs">
-          {isi.status ? (
-            <>
-              <span aria-hidden className={clsx("h-2 w-2 rounded-full", WARNA[isi.status])} />
-              <span className="font-semibold text-ink">{isi.status}</span>
-            </>
-          ) : (
-            <span className="text-muted">Belum ada data</span>
-          )}
-        </span>
+        {/* Badge status pojok kanan cuma untuk baris "Parameter" (terkini).
+            Baris "Prediksi" tidak punya badge ini lagi, sama seperti ketiga
+            kolom tetangganya di PredictionPanel — statusnya sekarang bulatan
+            per horizon di dalam body. */}
+        {mode === "terkini" && (
+          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs">
+            {isi.status ? (
+              <>
+                <span aria-hidden className={clsx("h-2 w-2 rounded-full", WARNA[isi.status])} />
+                <span className="font-semibold text-ink">{isi.status}</span>
+              </>
+            ) : (
+              <span className="text-muted">Belum ada data</span>
+            )}
+          </span>
+        )}
       </div>
       {isi.body}
     </div>
@@ -132,46 +138,55 @@ function renderTerkini(risk: AmmoniaRisk | null): {
   };
 }
 
+/** Sama tiga horizon dengan HORIZONS di PredictionPanel, supaya kolom amonia
+ *  tidak bicara tentang rentang waktu yang berbeda dari tetangganya. */
+const HORIZONS: readonly number[] = [15, 30, 60];
+
 function renderPrediksi(forecast: AmmoniaRisk[]): {
   status: StatusLabel | null;
   body: React.ReactNode;
 } {
-  // Sama dengan HORIZON_MINUTES di PredictionPanel supaya kolom amonia tidak
-  // bicara tentang rentang waktu yang berbeda dari tetangganya.
-  const window = forecast
-    .filter((f) => f.horizon_minutes <= 60 && f.fraction_nh3_pct != null)
-    .sort((a, b) => a.horizon_minutes - b.horizon_minutes);
-
-  if (window.length === 0) {
-    return {
-      status: null,
-      body: (
-        <>
-          <div aria-hidden className="mt-3 h-0.5 rounded-full bg-ink/15" />
-          <p className="mt-3 text-sm leading-relaxed text-ink">
-            Belum ada data prediksi.
-          </p>
-        </>
-      ),
-    };
-  }
-
-  const terakhir = window[window.length - 1];
-  const status = riskToStatus(terakhir.risk_level);
-  const nilai = window.map((f) => f.fraction_nh3_pct as number);
-
   return {
-    status,
+    // Tidak ada satu status ringkasan lagi untuk kolom ini (lihat komentar di
+    // PredictionPanel) — badge di kepala kolom sudah disembunyikan untuk mode
+    // prediksi, jadi field ini praktis tidak dipakai, dipertahankan cuma
+    // supaya tipe kembaliannya tetap sama dengan renderTerkini.
+    status: null,
     body: (
       <>
-        <div
-          aria-hidden
-          className={clsx(
-            "mt-3 h-0.5 rounded-full",
-            status ? WARNA[status] : "bg-ink/15"
-          )}
-        />
-        <p className="mt-3 text-sm leading-relaxed text-ink">{trenAmonia(nilai)}</p>
+        {/* Garis aksen netral, sama seperti PredictionPanel: warnanya pindah
+            jadi bulatan per horizon di bawah, bukan satu warna ringkasan. */}
+        <div aria-hidden className="mt-3 h-0.5 rounded-full bg-ink" />
+
+        <div className="mt-3 space-y-1.5">
+          {HORIZONS.map((horizon) => {
+            const row = forecast.find(
+              (f) => f.horizon_minutes === horizon && f.fraction_nh3_pct != null
+            );
+            const nilai = row?.fraction_nh3_pct;
+            const status = row ? riskToStatus(row.risk_level) : null;
+            return (
+              <p
+                key={horizon}
+                className="flex items-start gap-1.5 text-sm leading-relaxed text-ink"
+              >
+                <span
+                  aria-hidden
+                  className={clsx(
+                    "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+                    status ? WARNA[status] : "bg-ink/15"
+                  )}
+                />
+                <span>
+                  <span className="font-medium">{horizon} menit:</span>{" "}
+                  {typeof nilai === "number"
+                    ? trenAmonia([nilai])
+                    : "Belum ada data prediksi."}
+                </span>
+              </p>
+            );
+          })}
+        </div>
       </>
     ),
   };

@@ -44,7 +44,10 @@ const SECTION = {
     note: AMONIA_DISCLAIMER,
   },
   prediksi: { title: "Prediksi 15/30/60 menit" },
-  pemantauan: { title: "Grafik Pemantauan" },
+  pemantauan: {
+    title: "Grafik Pemantauan",
+    note: "Warna hijau pada grafik adalah rentang nilai optimal.",
+  },
   gabungan: { title: "Grafik Gabungan" },
   pengaturan: { title: "Pengaturan Rak" },
 } as const;
@@ -249,6 +252,26 @@ export default function RakDetail({
         >
           <X className="h-[18px] w-[18px]" strokeWidth={2.2} />
         </button>
+      </div>
+
+      {/* Legenda warna kondisi. Sekali ditulis di sini, berlaku untuk semua
+          titik/garis warna aman-waspada-bahaya di bawahnya (Parameter,
+          Prediksi, amonia) supaya tidak perlu dijelaskan berulang di tiap
+          bagian. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/60 px-5 py-2.5 text-xs text-muted sm:px-6">
+        <span className="font-medium text-ink">Warna kondisi:</span>
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
+          Aman: dalam rentang optimal
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-status-waspada" />
+          Waspada: di luar optimal, masih toleransi
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span aria-hidden className="h-2 w-2 rounded-full bg-status-bahaya" />
+          Bahaya: di luar rentang toleransi
+        </span>
       </div>
 
       {loading ? (
@@ -468,7 +491,7 @@ function ParamSwitch({
     <div
       role="tablist"
       aria-label="Parameter grafik"
-      className="relative flex shrink-0 rounded-lg bg-white/50 p-1 ring-1 ring-inset ring-white/70"
+      className="relative flex w-full shrink-0 rounded-lg bg-white/50 p-1 ring-1 ring-inset ring-white/70 sm:w-auto"
     >
       <span
         aria-hidden
@@ -489,7 +512,7 @@ function ParamSwitch({
             onClick={() => onChange(p)}
             style={{ width: `${pct}%` }}
             className={clsx(
-              "relative z-10 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
+              "relative z-10 min-w-[4.75rem] whitespace-nowrap rounded-md px-3 py-1.5 text-xs font-semibold transition-colors duration-200",
               active ? "" : "text-muted hover:text-ink"
             )}
           >

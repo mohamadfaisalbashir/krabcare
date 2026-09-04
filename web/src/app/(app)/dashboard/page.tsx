@@ -295,7 +295,7 @@ export default function DashboardPage() {
         {/* pb di sini BERPASANGAN dengan -mt pada daftar rak di bawah: selisih
             keduanya yang menentukan seberapa dalam kartu menindih banner.
             Ubah berdua, atau tindihannya bergeser. */}
-        <div className="relative px-5 pb-32 pt-6 sm:px-8 sm:pb-36 sm:pt-8">
+        <div className="relative px-5 pb-32 pt-6 sm:px-8 sm:pb-36">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-xs font-semibold text-brass-300">
