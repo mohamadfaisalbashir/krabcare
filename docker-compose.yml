@@ -9,6 +9,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-krabcare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
       POSTGRES_DB: ${POSTGRES_DB:-krabcare_db}
+      # Zona waktu default TAMPILAN query (bukan cara penyimpanan — kolom time/
+      # received_at tetap TIMESTAMPTZ, instant absolut, tidak berubah nilainya).
+      TZ: ${TZ:-Asia/Jakarta}
     ports:
       # Bind ke localhost saja: di laptop tidak ada bedanya (pytest dari host tetap
       # konek), tapi di VPS ini yang mencegah database terekspos ke internet.
@@ -38,6 +41,8 @@ services:
       PROJECT_NAME: ${PROJECT_NAME:-KrabCare API}
       ENVIRONMENT: development
       DEBUG: "true"
+      # Biar timestamp di log/scheduler container ini juga WIB, konsisten sama db.
+      TZ: ${TZ:-Asia/Jakarta}
       # Bertipe list[str] di pydantic-settings — nilainya WAJIB format JSON
       # (kurung siku + kutip ganda), bukan dipisah koma.
       CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'

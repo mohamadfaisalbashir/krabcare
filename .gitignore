@@ -51,3 +51,8 @@ Thumbs.db
 
 # ── Backup database ─────────────────────────────────────
 backups/
+
+# ── Eksperimen riset lokal (WLR vs FTS, dsb) — sengaja terisolasi dari
+# program utama, tidak pernah di-commit (lihat experiments/wlr_vs_fts/README.md)
+experiments/
+data/
