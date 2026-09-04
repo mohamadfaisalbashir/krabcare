@@ -113,7 +113,7 @@ export default function PerangkatPage() {
       );
       setFormMessage({
         type: "ok",
-        text: `Device '${created.device_code}' berhasil ditambahkan — siap diklaim ke kolam.`,
+        text: `Device '${created.device_code}' berhasil ditambahkan, siap diklaim ke kolam.`,
       });
       setDeviceCode("");
       setRackLabel("");
@@ -150,7 +150,7 @@ export default function PerangkatPage() {
             </h3>
           </div>
           <p className="mb-4 text-sm text-muted">
-            Ganti INSERT manual ke database — device_code harus persis sama
+            Ganti INSERT manual ke database. device_code harus persis sama
             dengan yang dikirim firmware (case-sensitive). Device baru lahir
             belum terklaim kolam mana pun; pemilik kolam yang klaim lewat kode
             ini dari halaman Dashboard.
@@ -221,7 +221,7 @@ export default function PerangkatPage() {
               </div>
             ) : belumDiklaim.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted">
-                Tidak ada device menunggu klaim — semua device terdaftar sudah
+                Tidak ada device menunggu klaim. Semua device terdaftar sudah
                 terhubung ke kolam.
               </p>
             ) : (

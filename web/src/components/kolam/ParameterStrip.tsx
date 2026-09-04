@@ -103,7 +103,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
           membuat koma ketiganya sejajar walau angkanya berganti tiap menit. */}
       <p className="mt-3 flex items-baseline gap-1.5">
         <span className="font-mono text-3xl font-semibold leading-none text-ink">
-          {value != null ? formatValue(value) : "—"}
+          {value != null ? formatValue(value) : "N/A"}
         </span>
         <span className="text-sm text-muted">{unit}</span>
       </p>

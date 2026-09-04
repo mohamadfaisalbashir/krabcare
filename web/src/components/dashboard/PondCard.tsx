@@ -51,7 +51,7 @@ export default function PondCard({
         hour: "2-digit",
         minute: "2-digit",
       })
-    : "—";
+    : "N/A";
 
   return (
     // <button>, bukan <Link>: detail rak tidak lagi punya halaman sendiri, ia
@@ -108,15 +108,15 @@ export default function PondCard({
       <div className="mt-3 flex items-center justify-between gap-1 border-t border-white/70 pt-3 font-mono text-xs text-muted">
         <span className="inline-flex items-center gap-1">
           <FlaskConical className="h-3.5 w-3.5 text-brand-500" />
-          {latestReading?.ph ?? "—"}
+          {latestReading?.ph ?? "N/A"}
         </span>
         <span className="inline-flex items-center gap-1">
           <Thermometer className="h-3.5 w-3.5 text-brand-500" />
-          {latestReading?.temperature_c ?? "—"}°
+          {latestReading?.temperature_c ?? "N/A"}°
         </span>
         <span className="inline-flex items-center gap-1">
           <Droplets className="h-3.5 w-3.5 text-brand-500" />
-          {latestReading?.salinity_ppt ?? "—"}
+          {latestReading?.salinity_ppt ?? "N/A"}
         </span>
       </div>
     </button>

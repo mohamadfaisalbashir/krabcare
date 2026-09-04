@@ -1,33 +1,28 @@
 """Entry point aplikasi FastAPI — KrabCare Backend."""
 
 import logging
-from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routers import auth, devices, health, ingest, kolam, notifications, quality, readings
-from app.services.scheduler import shutdown_scheduler, start_scheduler
 
-# Root logger default-nya WARNING — tanpa ini logger.info() modul lain (scheduler) tidak tampil.
+# Root logger default-nya WARNING — tanpa ini logger.info() modul lain tidak tampil.
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Nyalakan scheduler ML saat startup, matikan saat shutdown."""
-    start_scheduler()
-    yield
-    shutdown_scheduler()
-
-
 def create_app() -> FastAPI:
-    """Rakit app: middleware CORS + semua router (v1 di-prefix /api/v1)."""
+    """Rakit app: middleware CORS + semua router (v1 di-prefix /api/v1).
+
+    Tidak ada lifespan/scheduler di sini lagi — klasifikasi Mamdani, forecast,
+    dan risiko amonia sekarang dihitung di edge (Raspi, raspi/edge_pipeline.py)
+    dan masuk lewat POST /ingest/quality. Backend murni menyimpan dan melayani
+    permintaan, tidak menjalankan siklus berkala apa pun sendiri.
+    """
     app = FastAPI(
         title=settings.PROJECT_NAME,
         debug=settings.DEBUG,
-        lifespan=lifespan,
     )
 
     # Di DEVELOPMENT saja: terima juga origin LAN (mis. http://192.168.1.7:3000)

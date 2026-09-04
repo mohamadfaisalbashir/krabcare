@@ -5,9 +5,10 @@ import AmmoniaCell from "@/components/kolam/AmmoniaCell";
 import { AmmoniaRisk, FuzzyPrediction, StatusLabel } from "@/lib/types";
 import { ParamKey, PARAM_KEYS, PARAM_UI, trendSentence } from "@/lib/parameter";
 
-/** Jendela yang ditampilkan. Backend tetap meramal 6 langkah (ML_FORECAST_STEPS),
- *  langkah 4-6 dipakai deteksi anomali & backtest tapi tidak ditampilkan di sini. */
-const HORIZON_MINUTES = 180;
+/** Ketiga horizon yang dikirim edge (Raspi): 15, 30, 60 menit. Tidak ada
+ *  langkah lain untuk difilter, konstanta ini cuma jaga-jaga kalau suatu saat
+ *  backend menerima horizon tambahan yang belum perlu ditampilkan di sini. */
+const HORIZON_MINUTES = 60;
 
 const FIELD: Record<ParamKey, keyof FuzzyPrediction> = {
   ph: "predicted_ph",
@@ -25,7 +26,7 @@ const ACCENT: Record<StatusLabel, string> = {
 };
 
 /**
- * Ramalan tiga jam ke depan, satu kolom per parameter.
+ * Ramalan 15/30/60 menit ke depan, satu kolom per parameter.
  *
  * Bentuknya sengaja dibuat sama persis dengan ParameterStrip di atasnya —
  * nama parameter, status di pojok kanan, lalu isinya — supaya "keadaan

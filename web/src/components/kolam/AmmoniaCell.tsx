@@ -84,7 +84,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
       <>
         <p className="mt-3 flex items-baseline gap-1.5">
           <span className="font-mono text-3xl font-semibold leading-none text-ink">
-            {nilai != null ? formatFraksi(nilai) : "—"}
+            {nilai != null ? formatFraksi(nilai) : "N/A"}
           </span>
           <span className="text-sm text-muted">{AMONIA_UI.unit}</span>
         </p>
@@ -136,10 +136,10 @@ function renderPrediksi(forecast: AmmoniaRisk[]): {
   status: StatusLabel | null;
   body: React.ReactNode;
 } {
-  // Jendela 3 jam, sama dengan HORIZON_MINUTES di PredictionPanel supaya kolom
-  // amonia tidak bicara tentang rentang waktu yang berbeda dari tetangganya.
+  // Sama dengan HORIZON_MINUTES di PredictionPanel supaya kolom amonia tidak
+  // bicara tentang rentang waktu yang berbeda dari tetangganya.
   const window = forecast
-    .filter((f) => f.horizon_minutes <= 180 && f.fraction_nh3_pct != null)
+    .filter((f) => f.horizon_minutes <= 60 && f.fraction_nh3_pct != null)
     .sort((a, b) => a.horizon_minutes - b.horizon_minutes);
 
   if (window.length === 0) {

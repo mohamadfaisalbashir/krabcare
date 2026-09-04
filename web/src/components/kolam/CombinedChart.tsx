@@ -178,7 +178,7 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
               />
               <span className="font-medium text-muted">{cfg.short}</span>
               <span className="ml-auto font-mono font-semibold text-ink">
-                {value != null ? formatValue(value) : "—"}
+                {value != null ? formatValue(value) : "N/A"}
               </span>
             </li>
           );

@@ -52,6 +52,28 @@ class AmmoniaRiskLogOut(AmmoniaRiskOut):
     device_code: str | None
 
 
+class AmmoniaRiskIn(BaseModel):
+    """Payload ingest satu baris risiko amonia, dihitung & dikirim Raspi (edge_pipeline.py).
+
+    Bentuknya sengaja sejajar field demi field dengan AmmoniaRiskOut/tabel
+    ammonia_risks — backend di sini cuma menyimpan, tidak menghitung ulang."""
+
+    device_code: str
+    time: datetime
+    target_time: datetime
+    horizon_minutes: int = Field(
+        ge=0, description="0 = kondisi terukur; >0 = ramalan sekian menit ke depan"
+    )
+    input_ph: float | None = None
+    input_temperature_c: float | None = None
+    input_salinity_ppt: float | None = None
+    fraction_nh3_pct: float | None = None
+    pka: float | None = None
+    risk_level: str | None = None
+    in_valid_range: bool = True
+    model_version: str = "speciation-bb78"
+
+
 class DeviceAmmoniaOut(BaseModel):
     """Risiko amonia satu device: kondisi terukur terkini + horizon ramalan."""
 

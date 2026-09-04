@@ -15,9 +15,6 @@ pyjwt==2.10.1
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1  # pin: passlib 1.7.4 tidak kompatibel dengan bcrypt>=4.1 (breaking change deteksi backend)
 
-# Scheduler untuk automasi pipeline ML (klasifikasi + prediksi berkala)
-apscheduler==3.10.4
-
 # Push notification (Firebase Cloud Messaging)
 firebase-admin==7.5.0
 

@@ -12,9 +12,10 @@ dan berbicara ke backend lewat endpoint `/api/v1/ingest/*`.
 - **Backend**: FastAPI + PostgreSQL/TimescaleDB
 - **Web**: Next.js (standalone output)
 - **Proxy**: Caddy (HTTPS otomatis via Let's Encrypt)
-- **ML**: fuzzy logic Mamdani (klasifikasi kualitas air) + fuzzy time series metode Chen
-  (prediksi tren jangka pendek) — dijalankan otomatis oleh scheduler di dalam backend,
-  kode-nya di `ml/fuzzy/`
+- **Edge computing**: fuzzy logic Mamdani (klasifikasi kualitas air) + WLR (forecast
+  15/30/60 menit) + spesiasi NH3 (risiko amonia), dihitung LANGSUNG di Raspberry Pi
+  gateway, kode-nya di `raspi/`. Backend cuma menerima hasil yang sudah jadi lewat
+  `/api/v1/ingest/quality`, tidak menghitung apa pun sendiri.
 
 ## Setup Lokal
 
@@ -93,14 +94,13 @@ Langkah yang harus dilakukan sebelum ada apa pun kelihatan di web:
 3. `POST /api/v1/kolam/{kolam_id}/devices/{device_code}` — klaim device ke kolam.
    **Satu kolam = satu rak = TEPAT SATU device** (`kolam_service.py:74`). Klaim device
    kedua ke kolam yang sama ditolak 409, dan tidak ada cascade master → slave.
-4. Nyalakan Raspberry Pi. Gateway POST ke `/api/v1/ingest/readings` dengan `X-API-Key`.
-5. Scheduler backend mengklasifikasi & memprediksi otomatis (default tiap 60 menit,
-   siklus pertama langsung jalan saat backend startup — cek `docker compose logs backend`).
-   Interval diatur lewat `ML_SCHEDULER_INTERVAL_MINUTES` di `.env`.
-6. Data bisa diambil lewat:
+4. Nyalakan Raspberry Pi. Gateway POST ke `/api/v1/ingest/readings` (data mentah sensor)
+   dan `/api/v1/ingest/quality` (hasil klasifikasi, forecast, risiko amonia yang sudah
+   dihitung Raspi lewat `raspi/edge_pipeline.py`), keduanya pakai `X-API-Key` yang sama.
+5. Data bisa diambil lewat:
    - `GET /api/v1/readings` — data historis sensor
    - `GET /api/v1/quality/latest` — status ringkas kualitas air terkini
-   - `GET /api/v1/quality/predictions` — forecast 1-6 jam ke depan (untuk grafik)
+   - `GET /api/v1/quality/predictions` — forecast 15/30/60 menit ke depan (untuk grafik)
    - `GET /api/v1/kolam/{kolam_id}/devices` — topologi device dalam satu kolam (rak)
 
 ## Isolasi Data

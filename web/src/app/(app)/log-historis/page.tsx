@@ -355,7 +355,7 @@ function LogHistorisView() {
                         fraksi NH₃ toksik{" "}
                         {r.fraction_nh3_pct != null
                           ? `${formatFraksi(r.fraction_nh3_pct)}%`
-                          : "—"}{" "}
+                          : "N/A"}{" "}
                         dari TAN
                       </span>
                     </p>
@@ -400,7 +400,7 @@ function LogHistorisView() {
                   <p className="text-sm font-medium text-ink">
                     {r.device_code}{" "}
                     <span className="text-muted">
-                      {meta.label} terukur {value != null ? formatValue(value) : "—"}
+                      {meta.label} terukur {value != null ? formatValue(value) : "N/A"}
                       {/* PARAM_UI.ph.unit === "pH", jadi "8.1 pH" untuk pH saja
                           sudah cukup — tanpa satuan yang mengulang. */}
                       {param === "ph" || value == null ? "" : ` ${meta.unit}`}

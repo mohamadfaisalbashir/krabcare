@@ -43,7 +43,7 @@ const SECTION = {
     title: "Parameter",
     note: AMONIA_DISCLAIMER,
   },
-  prediksi: { title: "Prediksi 3 jam ke depan" },
+  prediksi: { title: "Prediksi 15/30/60 menit" },
   pemantauan: { title: "Grafik pemantauan" },
   gabungan: { title: "Grafik gabungan" },
   pengaturan: { title: "Pengaturan rak" },

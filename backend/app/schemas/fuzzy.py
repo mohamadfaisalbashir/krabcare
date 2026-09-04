@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import WaterQualityCategory
+from app.schemas.ammonia import AmmoniaRiskIn
 from app.schemas.sensor_reading import SkippedDuplicateOut
 
 
@@ -82,26 +83,31 @@ class FuzzyPredictionIn(BaseModel):
 
 
 class QualityIngestIn(BaseModel):
-    """Batch ingest: boleh isi klasifikasi saja, prediksi saja, atau keduanya."""
+    """Batch ingest dari edge (Raspi, raspi/edge_pipeline.py): klasifikasi, prediksi,
+    risiko amonia — boleh isi salah satu, sebagian, atau semuanya."""
 
     classifications: list[FuzzyClassificationIn] = Field(default_factory=list)
     predictions: list[FuzzyPredictionIn] = Field(default_factory=list)
+    ammonia_risks: list[AmmoniaRiskIn] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "QualityIngestIn":
-        """Tolak payload yang dua-duanya kosong (kalau lolos, request jadi no-op diam)."""
-        if not self.classifications and not self.predictions:
-            raise ValueError("Minimal harus ada satu classification atau prediction")
+        """Tolak payload yang semuanya kosong (kalau lolos, request jadi no-op diam)."""
+        if not self.classifications and not self.predictions and not self.ammonia_risks:
+            raise ValueError("Minimal harus ada satu classification, prediction, atau ammonia_risk")
         return self
 
 
 class QualityIngestResultOut(BaseModel):
-    """Ringkasan ingest ML — dipisah per jenis karena keduanya masuk satu request."""
+    """Ringkasan ingest kualitas air — dipisah per jenis karena semuanya masuk satu request."""
 
     received_classifications: int
     received_predictions: int
+    received_ammonia_risks: int
     inserted_classifications: int
     inserted_predictions: int
+    inserted_ammonia_risks: int
     unknown_device_codes: list[str]
     skipped_duplicate_classifications: list[SkippedDuplicateOut] = []
     skipped_duplicate_predictions: list[SkippedDuplicateOut] = []
+    skipped_duplicate_ammonia_risks: list[SkippedDuplicateOut] = []

@@ -1,9 +1,8 @@
-"""Tulis & baca indeks risiko toksisitas amonia (tabel ammonia_risks).
+"""Baca indeks risiko toksisitas amonia (tabel ammonia_risks).
 
-Perhitungannya sendiri ada di ammonia_speciation.py — di sini cuma perakitan
-baris, penyimpanan, dan query. Dipanggil dari DUA siklus yang sudah jalan:
-ingest_service (kondisi terukur, horizon 0) dan ml_pipeline_service (ramalan,
-horizon >0). Sengaja TIDAK punya scheduler sendiri.
+Perhitungannya TIDAK LAGI di sini — sekarang dihitung di edge (Raspi,
+raspi/ammonia_nh3.py) dan disimpan lewat quality_ingest_service.ingest_ammonia_risks.
+Modul ini murni QUERY, dipakai routers/quality.py untuk menampilkan hasilnya.
 """
 
 from datetime import datetime
@@ -12,66 +11,10 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AmmoniaRisk, Device
-from app.services.ammonia_speciation import MODEL_VERSION, assess_ammonia_risk
-from app.services.ingest_base import insert_skip_duplicates
 
-#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan).
+#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan). SAMA dengan
+#: HORIZON_TERUKUR di raspi/edge_pipeline.py, WAJIB tetap 0 di dua sisi.
 HORIZON_TERUKUR = 0
-
-
-def build_row(
-    *,
-    device_id: int,
-    time: datetime,
-    target_time: datetime,
-    horizon_minutes: int,
-    ph: float | None,
-    temperature_c: float | None,
-    salinity_ppt: float | None,
-) -> dict | None:
-    """Satu baris ammonia_risks, atau None kalau inputnya tidak lengkap.
-
-    None (bukan nilai default palsu, bukan exception) supaya pemanggil tinggal
-    melewatkan reading yang salah satu sensornya mati — amonia.md:220.
-    """
-    if ph is None or temperature_c is None or salinity_ppt is None:
-        return None
-
-    hasil = assess_ammonia_risk(
-        ph=float(ph), temperature_c=float(temperature_c), salinity_ppt=float(salinity_ppt)
-    )
-    return {
-        "device_id": device_id,
-        "time": time,
-        "horizon_minutes": horizon_minutes,
-        "target_time": target_time,
-        "input_ph": hasil.input_ph,
-        "input_temperature_c": hasil.input_temperature_c,
-        "input_salinity_ppt": hasil.input_salinity_ppt,
-        "fraction_nh3_pct": round(hasil.fraction_nh3_pct, 3),
-        "pka": round(hasil.pka, 4),
-        "risk_level": hasil.risk_level.value,
-        "in_valid_range": hasil.in_valid_range,
-        "model_version": MODEL_VERSION,
-    }
-
-
-async def save_ammonia_risks(db: AsyncSession, rows: list[dict]) -> int:
-    """Simpan idempoten pada (device_id, time, horizon_minutes).
-
-    TIDAK commit sendiri — pemanggilnya (ingest_service / ml_pipeline_service)
-    sudah punya commit-nya masing-masing, dan menumpang di situ yang membuat
-    baris risiko tidak bisa tersimpan tanpa data sumbernya.
-    """
-    if not rows:
-        return 0
-    inserted, _ = await insert_skip_duplicates(
-        db,
-        AmmoniaRisk,
-        rows,
-        [AmmoniaRisk.device_id, AmmoniaRisk.time, AmmoniaRisk.horizon_minutes],
-    )
-    return inserted
 
 
 async def _device_by_id(

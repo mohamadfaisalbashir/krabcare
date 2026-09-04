@@ -6,7 +6,8 @@ yang di-skip). Bedanya cuma conflict target, mengikuti PK tabel masing-masing.
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import FuzzyClassification, FuzzyPrediction
+from app.models import AmmoniaRisk, FuzzyClassification, FuzzyPrediction
+from app.schemas.ammonia import AmmoniaRiskIn
 from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
 from app.schemas.sensor_reading import SkippedDuplicateOut
 from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
@@ -105,3 +106,56 @@ async def ingest_predictions(
         await db.commit()
 
     return inserted, unknown, skipped_duplicates
+
+async def ingest_ammonia_risks(
+    db: AsyncSession, ammonia_risks: list[AmmoniaRiskIn]
+) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
+    """Simpan batch risiko amonia dari edge; conflict target ikut horizon_minutes
+    (satu device di satu waktu bisa punya beberapa baris: 0=terukur, 15/30/60=ramalan)."""
+    device_map = await find_devices_by_code(db, [a.device_code for a in ammonia_risks])
+    unknown = sorted({a.device_code for a in ammonia_risks if a.device_code not in device_map})
+    device_code_by_id = {d.id: code for code, d in device_map.items()}
+
+    rows = [
+        {
+            "device_id": device_map[a.device_code].id,
+            "time": a.time,
+            "target_time": a.target_time,
+            "horizon_minutes": a.horizon_minutes,
+            "input_ph": a.input_ph,
+            "input_temperature_c": a.input_temperature_c,
+            "input_salinity_ppt": a.input_salinity_ppt,
+            "fraction_nh3_pct": a.fraction_nh3_pct,
+            "pka": a.pka,
+            "risk_level": a.risk_level,
+            "in_valid_range": a.in_valid_range,
+            "model_version": a.model_version,
+        }
+        for a in ammonia_risks
+        if a.device_code in device_map
+    ]
+
+    inserted = 0
+    skipped_duplicates: list[SkippedDuplicateOut] = []
+
+    if rows:
+        inserted, skipped_rows = await insert_skip_duplicates(
+            db,
+            AmmoniaRisk,
+            rows,
+            [AmmoniaRisk.device_id, AmmoniaRisk.time, AmmoniaRisk.horizon_minutes],
+        )
+
+        skipped_duplicates = [
+            SkippedDuplicateOut(
+                device_code=device_code_by_id[row["device_id"]],
+                time=row["time"],
+                horizon_minutes=row["horizon_minutes"],
+            )
+            for row in skipped_rows
+        ]
+
+        await db.commit()
+
+    return inserted, unknown, skipped_duplicates
+

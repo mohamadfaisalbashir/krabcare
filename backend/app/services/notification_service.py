@@ -3,6 +3,8 @@
 import logging
 from datetime import datetime
 
+from typing import TYPE_CHECKING
+
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,9 +12,18 @@ from sqlalchemy.sql import func
 
 from app.core.push import send_push
 from app.models import Device, Kolam, Notification, PushToken, User
-from ml.fuzzy.mamdani import ANOMALY_CATEGORIES
+
+if TYPE_CHECKING:
+    from app.schemas.fuzzy import FuzzyClassificationIn, FuzzyPredictionIn
 
 logger = logging.getLogger("app.services.notification_service")
+
+#: Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali. SALINAN dari
+#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py — klasifikasi sekarang dihitung
+#: di edge, tapi keputusan "kapan kirim notifikasi" tetap di backend, jadi
+#: konstanta ini WAJIB tetap sinkron dengan sumber itu kalau kategorinya
+#: pernah berubah.
+ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
@@ -88,7 +99,7 @@ async def create_prediction_notifications(
             "event_time": a["target_time"],
             "message": (
                 f"Prediksi: kualitas air {device.device_code} berpotensi {a['category'].upper()} "
-                f"sekitar {a['target_time'].strftime('%H:%M')} (~{a['horizon_minutes'] // 60} jam lagi)."
+                f"sekitar {a['target_time'].strftime('%H:%M')} ({a['horizon_minutes']} menit lagi)."
             ),
         }
         for a in anomalies
@@ -128,6 +139,64 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         if any_success:
             notif.is_pushed = True
     await db.commit()
+
+
+async def dispatch_from_quality_ingest(
+    db: AsyncSession,
+    classifications: list["FuzzyClassificationIn"],
+    predictions: list["FuzzyPredictionIn"],
+) -> None:
+    """Pemicu notifikasi untuk klasifikasi & prediksi yang BARU DITERIMA lewat
+    POST /ingest/quality (dikirim edge, lihat raspi/edge_pipeline.py).
+
+    Dulu dipanggil dari ml_pipeline_service.py setiap siklus scheduler backend
+    menghitung sendiri; sekarang backend cuma menerima hasil hitungnya, jadi
+    titik pemicunya pindah ke sini — tapi ATURANNYA sama persis (transition
+    check untuk klasifikasi, dedup UNIQUE untuk prediksi, lihat fungsi masing-
+    masing di atas). Device yang belum diklaim (kolam_id NULL) dilewati:
+    notifikasi butuh pemilik (kolam.owner_user_id).
+    """
+    device_codes = sorted({c.device_code for c in classifications} | {p.device_code for p in predictions})
+    if not device_codes:
+        return
+
+    result = await db.execute(
+        select(Device, Kolam)
+        .join(Kolam, Device.kolam_id == Kolam.id)
+        .where(Device.device_code.in_(device_codes))
+    )
+    claimed = {device.device_code: (device, kolam) for device, kolam in result.all()}
+
+    new_notifications: list[Notification] = []
+
+    for c in classifications:
+        pasangan = claimed.get(c.device_code)
+        if pasangan is None:
+            continue  # device belum diklaim, atau device_code tidak dikenal
+        device, kolam = pasangan
+        notif = await create_classification_notification(
+            db, device, kolam, c.quality_category, c.quality_score, c.sensor_reading_time or c.time
+        )
+        if notif is not None:
+            new_notifications.append(notif)
+
+    predictions_by_device: dict[str, list[dict]] = {}
+    for p in predictions:
+        if p.predicted_category is None or p.predicted_category not in ANOMALY_CATEGORIES:
+            continue
+        predictions_by_device.setdefault(p.device_code, []).append(
+            {"target_time": p.target_time, "category": p.predicted_category, "horizon_minutes": p.horizon_minutes}
+        )
+
+    for device_code, anomalies in predictions_by_device.items():
+        pasangan = claimed.get(device_code)
+        if pasangan is None:
+            continue
+        device, kolam = pasangan
+        new_notifications.extend(await create_prediction_notifications(db, device, kolam, anomalies))
+
+    if new_notifications:
+        await dispatch_push(db, new_notifications)
 
 
 async def list_notifications(

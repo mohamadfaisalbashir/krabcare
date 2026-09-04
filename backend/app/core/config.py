@@ -55,14 +55,6 @@ class Settings(BaseSettings):
     # Push notification (Firebase Cloud Messaging)
     FIREBASE_CREDENTIALS_PATH: str = ""
 
-    # Scheduler pipeline ML (Mamdani + FTS berkala). Jalur sementara di cloud —
-    # sesuai desain akhir, nanti pindah ke Raspberry Pi (edge computation).
-    ML_SCHEDULER_ENABLED: bool = True
-    ML_SCHEDULER_INTERVAL_MINUTES: int = 60
-    ML_HISTORY_HOURS: int = 24
-    ML_FORECAST_STEPS: int = 6
-    ML_BUCKET_MINUTES: int = 60
-
     @model_validator(mode="after")
     def _validate_production_secrets(self) -> "Settings":
         """Tolak start kalau production masih pakai secret placeholder / DEBUG on.

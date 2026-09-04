@@ -37,7 +37,7 @@ async def list_readings(
     if status is not None and param is None:
         raise HTTPException(
             status_code=http_status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Filter `status` butuh `param` — tanpa itu kolom mana yang dinilai tidak jelas.",
+            detail="Filter `status` butuh `param`. Tanpa itu kolom mana yang dinilai tidak jelas.",
         )
 
     rows = await reading_service.get_readings(

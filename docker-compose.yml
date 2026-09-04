@@ -41,7 +41,7 @@ services:
       PROJECT_NAME: ${PROJECT_NAME:-KrabCare API}
       ENVIRONMENT: development
       DEBUG: "true"
-      # Biar timestamp di log/scheduler container ini juga WIB, konsisten sama db.
+      # Biar timestamp di log container ini juga WIB, konsisten sama db.
       TZ: ${TZ:-Asia/Jakarta}
       # Bertipe list[str] di pydantic-settings — nilainya WAJIB format JSON
       # (kurung siku + kutip ganda), bukan dipisah koma.
@@ -54,11 +54,6 @@ services:
       GATEWAY_API_KEY: ${GATEWAY_API_KEY:-ai-dilarangbaca}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-ai-dilarangbaca}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-43200}
-      ML_SCHEDULER_ENABLED: ${ML_SCHEDULER_ENABLED:-true}
-      ML_SCHEDULER_INTERVAL_MINUTES: ${ML_SCHEDULER_INTERVAL_MINUTES:-60}
-      ML_HISTORY_HOURS: ${ML_HISTORY_HOURS:-24}
-      ML_FORECAST_STEPS: ${ML_FORECAST_STEPS:-6}
-      ML_BUCKET_MINUTES: ${ML_BUCKET_MINUTES:-60}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -74,11 +69,6 @@ services:
     ports:
       # Lihat catatan di service db — di VPS hanya Caddy yang boleh terekspos ke luar.
       - "127.0.0.1:8000:8000"
-    volumes:
-      # ml/ berada di luar build context Dockerfile (./backend), jadi TIDAK ikut
-      # ter-COPY ke image. Mount ini wajib ada di dev MAUPUN prod — tanpa dia
-      # `import ml.fuzzy` gagal dan seluruh scheduler mati.
-      - ./ml:/app/ml:ro
     healthcheck:
       # Pakai python, bukan curl/wget — image python:3.12-slim tidak punya keduanya.
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
