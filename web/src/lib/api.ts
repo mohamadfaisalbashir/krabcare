@@ -208,6 +208,19 @@ export const api = {
   getKolamDevices: (kolamId: number) =>
     request<import("./types").Device[]>(`/kolam/${kolamId}/devices`),
 
+  // ── Devices (routers/devices.py, khusus admin) ───────────────────
+
+  /** GET /devices/unclaimed → DeviceOut[] */
+  listUnclaimedDevices: () =>
+    request<import("./types").Device[]>("/devices/unclaimed"),
+
+  /** POST /devices → DeviceOut (201). Ganti INSERT manual ke DB. */
+  createDevice: (payload: import("./types").DeviceCreateIn) =>
+    request<import("./types").Device>("/devices", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
   // ── Readings (routers/readings.py) ────────────────────────────────
 
   /** GET /readings → SensorReadingOut[].

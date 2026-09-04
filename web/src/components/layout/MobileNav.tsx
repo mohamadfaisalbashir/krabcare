@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, History, BellRing, UserRound } from "lucide-react";
+import { LayoutDashboard, History, BellRing, UserRound, Cpu } from "lucide-react";
 import clsx from "clsx";
 import { isNavActive } from "@/lib/nav";
+import { useUser } from "@/lib/user-store";
 
 // Label sengaja lebih pendek dari Sidebar — ruang horizontalnya jauh lebih sempit.
 const NAV = [
@@ -14,14 +15,19 @@ const NAV = [
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
+/** Cuma dirender untuk role admin — sama seperti Sidebar. */
+const ADMIN_NAV_ITEM = { href: "/perangkat", label: "Device", icon: Cpu };
+
 export default function MobileNav() {
   const pathname = usePathname();
+  const user = useUser();
+  const navItems = user?.role === "admin" ? [...NAV, ADMIN_NAV_ITEM] : NAV;
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigasi utama"
     >
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {navItems.map(({ href, label, icon: Icon }) => {
         const active = isNavActive(pathname, href);
         return (
           <Link

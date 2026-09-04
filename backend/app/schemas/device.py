@@ -1,10 +1,25 @@
-"""Schema device (node IoT) untuk response topologi kolam."""
+"""Schema device (node IoT) untuk response topologi kolam & kelola admin."""
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.enums import DeviceType
+
+
+class DeviceCreateIn(BaseModel):
+    """Payload admin menambah device baru — pengganti INSERT manual ke DB.
+
+    device_code HARUS persis sama dengan yang dikirim firmware (case-sensitive,
+    lihat README) — device baru lahir belum terklaim kolam mana pun
+    (kolam_id null), baru terhubung lewat POST /kolam/:id/devices/:code.
+    """
+
+    device_code: str = Field(min_length=1, max_length=100)
+    device_type: DeviceType = DeviceType.SLAVE_NODE
+    level_number: int | None = None
+    rack_label: str | None = None
+    parent_device_id: int | None = None
 
 
 class DeviceOut(BaseModel):

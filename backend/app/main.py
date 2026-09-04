@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, health, ingest, kolam, notifications, quality, readings
+from app.routers import auth, devices, health, ingest, kolam, notifications, quality, readings
 from app.services.scheduler import shutdown_scheduler, start_scheduler
 
 # Root logger default-nya WARNING — tanpa ini logger.info() modul lain (scheduler) tidak tampil.
@@ -54,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
     app.include_router(kolam.router, prefix=settings.API_V1_PREFIX)
+    app.include_router(devices.router, prefix=settings.API_V1_PREFIX)
     app.include_router(ingest.router, prefix=settings.API_V1_PREFIX)
     app.include_router(readings.router, prefix=settings.API_V1_PREFIX)
     app.include_router(quality.router, prefix=settings.API_V1_PREFIX)

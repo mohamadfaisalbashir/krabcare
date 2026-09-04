@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.db.session import get_db
 from app.models import User
+from app.models.enums import UserRole
 from app.services import kolam_service
 
 
@@ -90,6 +91,16 @@ async def get_current_user(
             detail="Token tidak valid atau user tidak ditemukan/nonaktif",
         )
     return user
+
+
+async def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency endpoint khusus admin (kelola device): 403 kalau role bukan admin."""
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Butuh akses admin",
+        )
+    return current_user
 
 
 @dataclass

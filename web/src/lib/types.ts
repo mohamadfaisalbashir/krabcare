@@ -63,6 +63,15 @@ export interface Device {
   last_seen_at: string | null;
 }
 
+/** Payload POST /devices (schemas/device.py DeviceCreateIn) — form tambah device admin. */
+export interface DeviceCreateIn {
+  device_code: string;
+  device_type: Device["device_type"];
+  level_number?: number | null;
+  rack_label?: string | null;
+  parent_device_id?: number | null;
+}
+
 // ── Sensor Reading (schemas/sensor_reading.py) ──────────────────────
 
 /** SensorReadingOut */

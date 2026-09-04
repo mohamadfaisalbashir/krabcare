@@ -11,11 +11,13 @@ import {
   LogOut,
   Menu,
   ChevronDown,
+  Cpu,
 } from "lucide-react";
 import clsx from "clsx";
 import Logo from "./Logo";
 import { confirmLogout } from "@/lib/api";
 import { isNavActive } from "@/lib/nav";
+import { useUser } from "@/lib/user-store";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
 import { AMONIA_UI, LOG_PARAM_AMONIA, LogParam } from "@/lib/ammonia";
 import { AMONIA_ICON, PARAM_ICON } from "@/lib/param-icons";
@@ -65,6 +67,13 @@ const NAV = [
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
+/** Cuma dirender untuk role admin — lihat device belum diklaim & tambah device baru.
+ *  Diketik eksplisit ke elemen NAV: item-item dalam SATU array literal saling
+ *  "meminjamkan" properti opsional (children) satu sama lain lewat inferensi TS,
+ *  tapi ADMIN_NAV_ITEM dideklarasikan terpisah jadi tidak ikut kebagian itu —
+ *  tanpa anotasi ini destructuring `children` di NavGroup gagal type-check. */
+const ADMIN_NAV_ITEM: (typeof NAV)[number] = { href: "/perangkat", label: "Perangkat", icon: Cpu };
+
 /**
  * Label yang memudar, bukan menyusut.
  *
@@ -104,6 +113,8 @@ function CollapsingLabel({
 export default function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const user = useUser();
+  const navItems = user?.role === "admin" ? [...NAV, ADMIN_NAV_ITEM] : NAV;
 
   // Aman dari hydration mismatch tanpa trik: (app)/layout.tsx mengembalikan null
   // sampai `authorized` di-set di dalam useEffect, jadi komponen ini tidak pernah
@@ -175,7 +186,7 @@ export default function Sidebar({ className }: { className?: string }) {
         <div className="my-6 border-t border-border" />
 
         <nav className="space-y-1" aria-label="Navigasi utama">
-          {NAV.map(({ href, label, icon: Icon, children }) => {
+          {navItems.map(({ href, label, icon: Icon, children }) => {
             const active = isNavActive(pathname, href);
             return (
               <NavGroup
