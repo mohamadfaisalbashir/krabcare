@@ -1,7 +1,8 @@
 "use client";
 
-import { Droplets, Thermometer, FlaskConical, ChevronDown, Waves } from "lucide-react";
+import { Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind } from "lucide-react";
 import { KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
+import { formatFraksi } from "@/lib/ammonia";
 import clsx from "clsx";
 
 /** Lebar kartu SAAT MODE RAIL. Di layar 375px sisa ~100px kartu berikutnya
@@ -37,7 +38,7 @@ export default function PondCard({
   panelId: string;
   onSelect: (kolamId: number) => void;
 }) {
-  const { kolam, quality, latestReading } = item;
+  const { kolam, quality, latestReading, ammonia } = item;
 
   // null = belum ada klasifikasi (device belum diklaim / belum kirim data).
   // Jangan dipaksa jadi "Waspada" — itu bikin kolam kosong terlihat seperti anomali.
@@ -107,16 +108,20 @@ export default function PondCard({
           garis terang terbaca sebagai tepi lempeng, garis abu jadi kotor. */}
       <div className="mt-3 flex items-center justify-between gap-1 border-t border-white/70 pt-3 font-mono text-xs text-muted">
         <span className="inline-flex items-center gap-1">
-          <FlaskConical className="h-3.5 w-3.5 text-brand-500" />
+          <FlaskConical className="h-3.5 w-3.5 text-[#1C6970]" />
           {latestReading?.ph ?? "N/A"}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Thermometer className="h-3.5 w-3.5 text-brand-500" />
+          <Thermometer className="h-3.5 w-3.5 text-[#1C6970]" />
           {latestReading?.temperature_c ?? "N/A"}°
         </span>
         <span className="inline-flex items-center gap-1">
-          <Droplets className="h-3.5 w-3.5 text-brand-500" />
+          <Droplets className="h-3.5 w-3.5 text-[#1C6970]" />
           {latestReading?.salinity_ppt ?? "N/A"}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <Wind className="h-3.5 w-3.5 text-[#1C6970]" />
+          {ammonia?.fraction_nh3_pct != null ? `${formatFraksi(ammonia.fraction_nh3_pct)}%` : "N/A"}
         </span>
       </div>
     </button>

@@ -12,6 +12,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import {
+  AmmoniaRisk,
   Device,
   KolamDashboard,
   SensorReading,
@@ -89,6 +90,7 @@ export default function DashboardPage() {
           const quality = qualityList.find((q) => deviceIds.has(q.device_id)) ?? null;
 
           let latestReading: SensorReading | null = null;
+          let ammonia: AmmoniaRisk | null = null;
           if (devices[0]) {
             try {
               const rows = await api.getReadings({
@@ -99,9 +101,15 @@ export default function DashboardPage() {
             } catch {
               latestReading = null;
             }
+            try {
+              const ammoniaList = await api.getAmmoniaRisk(devices[0].id);
+              ammonia = ammoniaList[0]?.current ?? null;
+            } catch {
+              ammonia = null;
+            }
           }
 
-          return { kolam, devices, quality, latestReading };
+          return { kolam, devices, quality, latestReading, ammonia };
         })
       );
 
@@ -391,8 +399,8 @@ export default function DashboardPage() {
             </h2>
             <p className="max-w-sm text-sm text-muted">
               Buat kolam dulu lewat ubin <strong className="text-ink">+</strong> di
-              atas, lalu klaim device (mis. <code>54D660E9BFB4</code>) di panel detail rak
-              supaya data sensornya mulai masuk.
+              atas, lalu klaim device (mis. <code>54D660E9BFB4</code>) di panel detail
+              kolam supaya data sensornya mulai masuk.
             </p>
           </Card>
         )}
@@ -415,11 +423,11 @@ function TambahKolamTile({
       type="button"
       onClick={onClick}
       className={clsx(
-        "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-white/70 bg-white/30 py-8 text-sm font-semibold text-muted backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-white/55 hover:text-brand-700",
+        "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-white/70 bg-white/30 py-8 text-sm font-semibold text-[#1C6970] backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-white/55",
         variant === "rail" ? `${PONDCARD_WIDTH} shrink-0` : "w-full"
       )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/60 text-brand-600 transition-colors group-hover:bg-brand-50">
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/60 text-[#1C6970] transition-colors group-hover:bg-brand-50">
         <Plus className="h-5 w-5" strokeWidth={2.4} />
       </span>
       Tambah kolam

@@ -14,13 +14,21 @@ export default function NotifikasiPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .getNotifications()
-      .then(setNotifications)
-      .catch((err: unknown) =>
-        setError(err instanceof Error ? err.message : "Gagal memuat notifikasi.")
-      )
-      .finally(() => setLoading(false));
+    function load(silent = false) {
+      if (!silent) setLoading(true);
+      return api
+        .getNotifications()
+        .then(setNotifications)
+        .catch((err: unknown) =>
+          setError(err instanceof Error ? err.message : "Gagal memuat notifikasi.")
+        )
+        .finally(() => setLoading(false));
+    }
+    load();
+    // Refresh senyap, sama seperti dashboard: notifikasi baru muncul tanpa
+    // perlu reload manual.
+    const id = setInterval(() => load(true), 60_000);
+    return () => clearInterval(id);
   }, []);
 
   async function handleRead(id: number) {

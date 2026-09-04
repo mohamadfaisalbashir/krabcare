@@ -10,6 +10,9 @@ import { ParamKey, PARAM_KEYS, PARAM_UI, trendSentence } from "@/lib/parameter";
  *  backend menerima horizon tambahan yang belum perlu ditampilkan di sini. */
 const HORIZON_MINUTES = 60;
 
+/** Tiga horizon yang ditampilkan, satu baris per horizon. */
+const HORIZONS: readonly number[] = [15, 30, 60];
+
 const FIELD: Record<ParamKey, keyof FuzzyPrediction> = {
   ph: "predicted_ph",
   temperature_c: "predicted_temperature_c",
@@ -26,22 +29,13 @@ const ACCENT: Record<StatusLabel, string> = {
 };
 
 /**
- * Ramalan 15/30/60 menit ke depan, satu kolom per parameter.
+ * Ramalan 15/30/60 menit ke depan, satu kolom per parameter, TIGA baris per
+ * kolom (satu baris per horizon) — bukan satu kalimat tren gabungan.
  *
- * Bentuknya sengaja dibuat sama persis dengan ParameterStrip di atasnya —
- * nama parameter, status di pojok kanan, lalu isinya — supaya "keadaan
- * sekarang" dan "perkiraan nanti" terbaca sebagai dua baris dari satu
- * instrumen, bukan dua komponen yang kebetulan berdampingan.
- *
- * Yang hilang dari versi sebelumnya, dan alasannya:
- * - Grafik ramalan kecil: skalanya tidak bermakna di ruang setinggi 32px, jadi
- *   yang tersampaikan hanya lengkungan hiasan. Kalimatnya sudah menyebut arah
- *   dan angkanya, dan bentuk penuhnya ada di Grafik pemantauan.
- * - Tint pastel per status: itu ada untuk menambal kontras kalimat berwarna.
- *   Kalimatnya sekarang text-ink di atas latar polos, jadi tambalannya tidak
- *   punya pekerjaan lagi — status dibawa titik + kata di pojok.
- * - Chip panah + selisih: arahnya sudah ada di dalam kalimat, dan pojok kanan
- *   atas dipakai statusnya.
+ * Nama parameter TANPA status di pojok kanan (dihapus sengaja): dengan tiga
+ * horizon sekaligus, satu status ringkasan di pojok jadi tidak mewakili
+ * ketiganya. Garis aksen di bawah nama parameter masih membawa warna status
+ * (dari tren gabungan values), sebagai isyarat visual ringan tanpa kata.
  */
 export default function PredictionPanel({
   predictions,
@@ -68,27 +62,13 @@ export default function PredictionPanel({
           .map((p) => p[FIELD[param]])
           .filter((v): v is number => typeof v === "number");
 
-        // Tanpa data tidak ada status, jadi kolomnya tetap netral.
+        // Dipakai cuma untuk warna garis aksen (status keseluruhan kolom),
+        // BUKAN untuk teks — teks statusnya sudah dihapus dari sini.
         const hasil = values.length > 0 ? trendSentence(param, values) : null;
 
         return (
           <div key={param} className="px-1 py-4 sm:px-5 sm:py-3">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-medium text-ink">{cfg.label}</p>
-              <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs">
-                {hasil ? (
-                  <>
-                    <span
-                      aria-hidden
-                      className={clsx("h-2 w-2 rounded-full", ACCENT[hasil.status])}
-                    />
-                    <span className="font-semibold text-ink">{hasil.status}</span>
-                  </>
-                ) : (
-                  <span className="text-muted">Belum ada data</span>
-                )}
-              </span>
-            </div>
+            <p className="truncate text-sm font-medium text-ink">{cfg.label}</p>
 
             {/* Garis aksen: penanda kolom yang menyimpang, menggantikan tint
                 latar. Di ParameterStrip peran ini dipegang track rentang, yang
@@ -101,9 +81,23 @@ export default function PredictionPanel({
               )}
             />
 
-            <p className="mt-3 text-sm leading-relaxed text-ink">
-              {hasil ? hasil.text : "Belum ada data prediksi."}
-            </p>
+            {/* Satu baris per horizon (15/30/60 menit), bukan satu kalimat
+                gabungan — supaya angka tiap horizon kelihatan sendiri-sendiri. */}
+            <div className="mt-3 space-y-1.5">
+              {HORIZONS.map((horizon) => {
+                const value = window.find((p) => p.horizon_minutes === horizon)?.[
+                  FIELD[param]
+                ];
+                const baris =
+                  typeof value === "number" ? trendSentence(param, [value]) : null;
+                return (
+                  <p key={horizon} className="text-sm leading-relaxed text-ink">
+                    <span className="font-medium">{horizon} menit:</span>{" "}
+                    {baris ? baris.text : "Belum ada data prediksi."}
+                  </p>
+                );
+              })}
+            </div>
           </div>
         );
       })}

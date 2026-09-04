@@ -192,4 +192,6 @@ export interface KolamDashboard {
   devices: Device[];
   quality: LatestQuality | null;
   latestReading: SensorReading | null;
+  /** Risiko amonia terkini (horizon 0) device pertama kolam ini, untuk ikon+nilai di PondCard. */
+  ammonia: AmmoniaRisk | null;
 }

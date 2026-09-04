@@ -44,9 +44,9 @@ const SECTION = {
     note: AMONIA_DISCLAIMER,
   },
   prediksi: { title: "Prediksi 15/30/60 menit" },
-  pemantauan: { title: "Grafik pemantauan" },
-  gabungan: { title: "Grafik gabungan" },
-  pengaturan: { title: "Pengaturan rak" },
+  pemantauan: { title: "Grafik Pemantauan" },
+  gabungan: { title: "Grafik Gabungan" },
+  pengaturan: { title: "Pengaturan Rak" },
 } as const;
 
 /**
@@ -225,7 +225,7 @@ export default function RakDetail({
           berfoto, dan hero kedua akan jadi dua foto bertumpuk di satu layar. */}
       <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-brand-700">Detail rak</p>
+          <p className="text-sm font-semibold text-[#266B70]">Detail Kolam</p>
           {/* Nama rak buatan pengguna — panjangnya tidak terbatas, jadi dipotong
               alih-alih mendorong tombol Tutup keluar. */}
           <h2 className="mt-0.5 truncate font-display text-xl font-semibold text-ink">
@@ -244,7 +244,7 @@ export default function RakDetail({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Tutup detail rak"
+          aria-label="Tutup detail kolam"
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-white/70 hover:text-ink"
         >
           <X className="h-[18px] w-[18px]" strokeWidth={2.2} />
@@ -419,7 +419,7 @@ function Section({
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title && (
-              <h3 className="text-sm font-semibold text-ink">{title}</h3>
+              <h3 className="text-base font-semibold text-ink">{title}</h3>
             )}
             {note && <p className="mt-1 max-w-2xl text-xs text-muted">{note}</p>}
           </div>
