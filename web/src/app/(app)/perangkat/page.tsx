@@ -44,7 +44,6 @@ function DeviceRow({ d }: { d: DeviceAdmin }) {
         <p className="font-mono text-sm font-semibold text-ink">{d.device_code}</p>
         <p className="text-xs text-muted">
           {DEVICE_TYPE_LABEL[d.device_type]}
-          {d.rack_label ? ` · ${d.rack_label}` : ""}
           {d.kolam_nama ? ` · Kolam: ${d.kolam_nama}` : ""}
         </p>
       </div>
@@ -77,7 +76,6 @@ export default function PerangkatPage() {
 
   const [deviceCode, setDeviceCode] = useState("");
   const [deviceType, setDeviceType] = useState<Device["device_type"]>("slave_node");
-  const [rackLabel, setRackLabel] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<Message>(null);
 
@@ -104,7 +102,7 @@ export default function PerangkatPage() {
       const created = await api.createDevice({
         device_code: deviceCode.trim(),
         device_type: deviceType,
-        rack_label: rackLabel.trim() || null,
+        rack_label: null,
       });
       setDevices((list) =>
         [{ ...created, kolam_id: null, kolam_nama: null }, ...list].sort((a, b) =>
@@ -116,7 +114,6 @@ export default function PerangkatPage() {
         text: `Device '${created.device_code}' berhasil ditambahkan, siap diklaim ke kolam.`,
       });
       setDeviceCode("");
-      setRackLabel("");
     } catch (err) {
       setFormMessage({
         type: "err",
@@ -180,14 +177,7 @@ export default function PerangkatPage() {
                 ))}
               </select>
             </div>
-            <div className="sm:col-span-2">
-              <Input
-                label="Rak (opsional)"
-                value={rackLabel}
-                onChange={(e) => setRackLabel(e.target.value)}
-                placeholder="mis. Rak A"
-              />
-            </div>
+
             <div className="sm:col-span-2">
               <FormMessage message={formMessage} />
             </div>

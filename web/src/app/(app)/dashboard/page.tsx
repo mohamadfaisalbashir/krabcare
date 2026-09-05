@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Waves } from "lucide-react";
 import clsx from "clsx";
 import AccountChip from "@/components/layout/AccountChip";
@@ -21,6 +22,7 @@ import {
   categoryToLabel,
 } from "@/lib/types";
 import { api } from "@/lib/api";
+import { useUser } from "@/lib/user-store";
 
 /** id panel detail. Konstanta, bukan string yang diketik dua kali: PondCard
  *  menunjuk ke sini lewat aria-controls dan panelnya memakai id yang sama. */
@@ -38,6 +40,15 @@ function getStatusLabel(item: KolamDashboard): StatusLabel | null {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const user = useUser();
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      router.replace("/perangkat");
+    }
+  }, [user, router]);
+
   const [items, setItems] = useState<KolamDashboard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

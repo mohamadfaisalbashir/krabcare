@@ -21,7 +21,8 @@ class Notification(Base):
             "device_id",
             "source",
             "event_time",
-            name="notifications_device_id_source_event_time_key",
+            "parameter",
+            name="notifications_device_id_source_event_time_parameter_key",
         ),
         Index("idx_notifications_user", "user_id", sa_text("created_at DESC")),
     )
@@ -31,6 +32,7 @@ class Notification(Base):
     device_id: Mapped[int] = mapped_column(ForeignKey("devices.id", ondelete="CASCADE"), nullable=False)
     kolam_id: Mapped[int] = mapped_column(ForeignKey("kolam.id", ondelete="CASCADE"), nullable=False)
     source: Mapped[str] = mapped_column(Text, nullable=False)
+    parameter: Mapped[str | None] = mapped_column(Text, nullable=True)
     quality_category: Mapped[WaterQualityCategory] = mapped_column(
         SAEnum(
             WaterQualityCategory,

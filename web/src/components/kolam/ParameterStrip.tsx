@@ -72,7 +72,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
           kolom kanan alih-alih membaca tiga kali. */}
       <div className="flex items-center gap-2">
         <p className="truncate text-sm font-medium text-ink">{label}</p>
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs">
+        <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
           {status ? (
             <>
               {/* Titik yang membawa warna, KATA yang membawa makna. Kata status

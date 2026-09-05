@@ -11,6 +11,7 @@ class NotificationOut(BaseModel):
     device_code: str | None
     kolam_id: int
     source: str
+    parameter: str | None = None
     quality_category: str
     event_time: datetime
     message: str

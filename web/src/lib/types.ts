@@ -169,7 +169,8 @@ export interface Notification {
   device_id: number;
   device_code: string | null;
   kolam_id: number;
-  source: string; // "classification" | "prediction"
+  source: string; // "classification" | "prediction" | "parameter"
+  parameter?: string | null; // "ph" | "temperature_c" | "salinity_ppt" | "ammonia" | null
   quality_category: string; // WaterQualityCategory value
   event_time: string;
   message: string;

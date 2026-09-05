@@ -6,6 +6,14 @@ import clsx from "clsx";
 const SOURCE_LABEL: Record<string, string> = {
   classification: "Kondisi aktual",
   prediction: "Prediksi",
+  parameter: "Parameter",
+};
+
+const PARAM_LABELS: Record<string, string> = {
+  ph: "pH",
+  temperature_c: "Suhu",
+  salinity_ppt: "Salinitas",
+  ammonia: "Amonia",
 };
 
 const STATUS_STYLE: Record<
@@ -43,7 +51,7 @@ export default function NotificationItem({
     <div className={clsx("flex gap-4 px-5 py-4", !item.is_read && "bg-brand-50/40")}>
       <div
         className={clsx(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
           style.bg,
           style.text
         )}
@@ -58,6 +66,16 @@ export default function NotificationItem({
           <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
             {SOURCE_LABEL[item.source] ?? item.source}
           </span>
+          {item.parameter && PARAM_LABELS[item.parameter] && (
+            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+              {PARAM_LABELS[item.parameter]}
+            </span>
+          )}
+          {!item.parameter && item.source === "classification" && (
+            <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
+              Kualitas Kolam
+            </span>
+          )}
           {!item.is_read && (
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
           )}

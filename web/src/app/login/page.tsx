@@ -8,6 +8,7 @@ import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { api } from "@/lib/api";
+import { setUser } from "@/lib/user-store";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,13 @@ export default function LoginPage() {
       // TANPA user object — data user diambil terpisah lewat GET /auth/me.
       const { access_token } = await api.login(email, password);
       window.localStorage.setItem("access_token", access_token);
-      router.push("/dashboard");
+      const me = await api.getMe();
+      setUser(me);
+      if (me.role === "admin") {
+        router.push("/perangkat");
+      } else {
+        router.push("/dashboard");
+      }
     } catch (err) {
       setError(
         err instanceof Error

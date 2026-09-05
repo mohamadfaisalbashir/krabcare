@@ -5,14 +5,15 @@ CREATE TABLE IF NOT EXISTS notifications (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_id INTEGER NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
     kolam_id INTEGER NOT NULL REFERENCES kolam(id) ON DELETE CASCADE,
-    source TEXT NOT NULL CHECK (source IN ('classification', 'prediction')),
+    source TEXT NOT NULL CHECK (source IN ('classification', 'prediction', 'parameter')),
+    parameter TEXT,
     quality_category water_quality_category NOT NULL,
     event_time TIMESTAMPTZ NOT NULL,
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     is_pushed BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (device_id, source, event_time)
+    UNIQUE NULLS NOT DISTINCT (device_id, source, event_time, parameter)
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications (user_id, created_at DESC);
 

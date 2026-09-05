@@ -54,7 +54,7 @@ async def ingest_quality(
     # Notifikasi (in-app + push) dipicu di sini, dari kategori yang BARU diterima —
     # lihat docstring dispatch_from_quality_ingest untuk kenapa titiknya pindah ke sini.
     await notification_service.dispatch_from_quality_ingest(
-        db, payload.classifications, payload.predictions
+        db, payload.classifications, payload.predictions, payload.ammonia_risks
     )
 
     return QualityIngestResultOut(

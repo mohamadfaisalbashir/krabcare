@@ -15,8 +15,18 @@ import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/not
  *  log-historis (limit/offset diiris di database, bukan dipotong di klien). */
 const PAGE = 20;
 
+type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi";
+
+const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
+  { id: "semua", label: "Semua" },
+  { id: "kolam", label: "Kualitas Kolam" },
+  { id: "parameter", label: "Parameter" },
+  { id: "prediksi", label: "Prediksi" },
+];
+
 export default function NotifikasiPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<NotifFilter>("semua");
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -124,6 +134,13 @@ export default function NotifikasiPage() {
     }
   }
 
+  const filteredNotifications = notifications.filter((n) => {
+    if (filter === "kolam") return !n.parameter && n.source === "classification";
+    if (filter === "parameter") return n.source === "parameter" || Boolean(n.parameter);
+    if (filter === "prediksi") return n.source === "prediction";
+    return true;
+  });
+
   return (
     <>
       <Topbar
@@ -142,33 +159,52 @@ export default function NotifikasiPage() {
           </p>
         )}
 
-        <Card className="p-0">
-          {/* Aksi "Hapus semua" di kepala kartu — terpisah dari tiap baris
-              supaya tidak bersaing perhatian dengan tombol "Tandai dibaca"/
-              hapus per-item. */}
-          {!loading && notifications.length > 0 && (
-            <div className="flex items-center justify-end border-b border-border px-4 py-2.5">
+        {/* Filter bar & aksi hapus semua */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {FILTER_BUTTONS.map((btn) => (
               <button
+                key={btn.id}
                 type="button"
-                onClick={handleDeleteAll}
-                disabled={deletingAll}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-status-bahaya transition-colors duration-150 hover:bg-status-bahayaBg disabled:opacity-60"
+                onClick={() => setFilter(btn.id)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                  filter === btn.id
+                    ? "bg-brand-600 text-white shadow-sm"
+                    : "border border-border bg-surface text-muted hover:bg-bg hover:text-ink"
+                }`}
               >
-                <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-                {deletingAll ? "Menghapus..." : "Hapus semua"}
+                {btn.label}
               </button>
-            </div>
-          )}
+            ))}
+          </div>
 
+          {!loading && notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAll}
+              disabled={deletingAll}
+              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-status-bahaya transition-colors duration-150 hover:bg-status-bahayaBg disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+              {deletingAll ? "Menghapus..." : "Hapus semua"}
+            </button>
+          )}
+        </div>
+
+        <Card className="p-0">
           {loading ? (
             <NotifikasiSkeleton />
           ) : notifications.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted">
               Belum ada notifikasi.
             </p>
+          ) : filteredNotifications.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted">
+              Tidak ada notifikasi untuk kategori ini.
+            </p>
           ) : (
             <div className="divide-y divide-border">
-              {notifications.map((n) => (
+              {filteredNotifications.map((n) => (
                 <NotificationItem key={n.id} item={n} onRead={handleRead} onDelete={handleDelete} />
               ))}
             </div>

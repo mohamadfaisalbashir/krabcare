@@ -35,6 +35,7 @@ async def list_notifications(
             device_code=device_by_id[n.device_id].device_code if n.device_id in device_by_id else None,
             kolam_id=n.kolam_id,
             source=n.source,
+            parameter=n.parameter,
             quality_category=n.quality_category,
             event_time=n.event_time,
             message=n.message,

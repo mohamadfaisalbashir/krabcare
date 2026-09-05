@@ -57,7 +57,7 @@ export default function AmmoniaCell({
             kolom tetangganya di PredictionPanel — statusnya sekarang bulatan
             per horizon di dalam body. */}
         {mode === "terkini" && (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-xs">
+          <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
             {isi.status ? (
               <>
                 <span aria-hidden className={clsx("h-2 w-2 rounded-full", WARNA[isi.status])} />
