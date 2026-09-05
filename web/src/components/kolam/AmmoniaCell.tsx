@@ -100,11 +100,19 @@ function renderTerkini(risk: AmmoniaRisk | null): {
     status,
     body: (
       <>
+        {/* "%" polos, BUKAN AMONIA_UI.unit ("% dari TAN") -- unit penuh itu 5x
+            lebih lebar daripada "pH"/"°C"/"ppt" di tiga parameter tetangganya,
+            dan karena baris ini `justify-end` (rata kanan di mobile), unit
+            yang jauh lebih lebar mendorong ANGKA BESARNYA jauh lebih ke kiri
+            dibanding tiga parameter lain -- itulah kenapa keempat angka tidak
+            pernah sejajar satu kolom saat ditumpuk di layar sempit. Makna
+            "dari TAN"-nya tidak hilang: sudah ada di catatan/label bagian
+            "Parameter" (AMONIA_DISCLAIMER) dan di label pita 0-X% di bawah. */}
         <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
           <span className="font-mono text-3xl font-semibold leading-none text-ink">
             {nilai != null ? formatFraksi(nilai) : "N/A"}
           </span>
-          <span className="text-sm text-muted">{AMONIA_UI.unit}</span>
+          <span className="text-sm text-muted">%</span>
         </p>
 
         <div className="mt-4">

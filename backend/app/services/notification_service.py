@@ -25,6 +25,11 @@ logger = logging.getLogger("app.services.notification_service")
 #: pernah berubah.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
+#: Label Indonesia yang dipakai di pesan notifikasi & di seluruh frontend
+#: (categoryToLabel() di lib/types.ts) -- SALINAN yang harus tetap sinkron,
+#: sama seperti ANOMALY_CATEGORIES di atas.
+CATEGORY_LABEL: dict[str, str] = {"baik": "Aman", "sedang": "Waspada", "buruk": "Bahaya"}
+
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
     """Kategori pada notifikasi klasifikasi terakhir device ini — acuan transition-check."""
@@ -49,18 +54,38 @@ async def create_classification_notification(
 
     Tanpa transition-check ini, tiap siklus scheduler akan memberi notifikasi
     selama anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
+
+    Pesannya SELALU menyebut transisi eksplisit ("dari X ke Y") memakai label
+    yang sama dengan yang dilihat pengguna di dashboard (Aman/Waspada/Bahaya) --
+    bukan lagi "berstatus SEDANG/BURUK"/"kembali NORMAL" yang generik. Itu
+    otomatis mencakup keempat perpindahan yang diminta (aman<->waspada,
+    bahaya<->waspada), plus dua lompatan ekstrem aman<->bahaya kalau suatu saat
+    memang terjadi (fuzzy Mamdani interpolasi halus, jadi jarang, tapi bukan
+    berarti tidak mungkin) -- tanpa perlu daftar kasus khusus yang gampang
+    ketinggalan salah satu kombinasi.
     """
     previous = await _last_classification_category(db, device.id)
     if previous == category:
         return None
 
-    if category in ANOMALY_CATEGORIES:
-        message = f"Kualitas air {device.device_code} saat ini berstatus {category.upper()} (skor {quality_score:.1f})."
-    elif previous in ANOMALY_CATEGORIES:
-        message = f"Kualitas air {device.device_code} kembali NORMAL (baik)."
+    label_baru = CATEGORY_LABEL.get(category, category)
+
+    if previous is None:
+        # Belum ada pembanding -- ini bukan "perubahan", jadi diam kalau
+        # kondisi awalnya memang baik. Anomali di percobaan pertama device
+        # tetap diberitahu (bukan transisi, tapi tetap layak diketahui).
+        if category == "baik":
+            return None
+        message = (
+            f"Kualitas air {device.device_code} pertama kali tercatat "
+            f"{label_baru.upper()} (skor {quality_score:.1f})."
+        )
     else:
-        # Baik -> baik (atau notifikasi pertama & kondisinya baik): tidak perlu diberitahu.
-        return None
+        label_lama = CATEGORY_LABEL.get(previous, previous)
+        message = (
+            f"Kondisi kolam {device.device_code} berubah dari {label_lama} ke {label_baru} "
+            f"(skor {quality_score:.1f})."
+        )
 
     notification = Notification(
         user_id=kolam.owner_user_id,

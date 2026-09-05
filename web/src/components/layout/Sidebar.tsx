@@ -64,7 +64,7 @@ const NAV = [
       { param: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
     ],
   },
-  { href: "/notifikasi", label: "Notifikasi & prediksi", icon: BellRing },
+  { href: "/notifikasi", label: "Notifikasi", icon: BellRing },
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 

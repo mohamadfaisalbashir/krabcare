@@ -15,6 +15,7 @@ import {
   AmmoniaRisk,
   Device,
   KolamDashboard,
+  LatestQuality,
   SensorReading,
   StatusLabel,
   categoryToLabel,
@@ -127,6 +128,32 @@ export default function DashboardPage() {
     const id = setInterval(() => loadDashboard(true), 60_000);
     return () => clearInterval(id);
   }, [loadDashboard]);
+
+  // Dipanggil RakDetail setiap kali reading/kualitas/amonia device yang lagi
+  // dibuka baru dimuat (baik saat panel dibuka maupun putaran 60 detiknya
+  // sendiri). Kartu kolam DAN panel detail sebelumnya polling sendiri-sendiri
+  // tiap 60 detik, tapi mulai dari titik waktu yang berbeda (dashboard mulai
+  // saat halaman dimuat, panel mulai saat rak dipilih) — dua jam yang tidak
+  // pernah pas, itulah kenapa waktu di kartu terlihat "telat" dibanding di
+  // detail. Menempelkan angka yang SAMA PERSIS ke kartu di sini, alih-alih
+  // menunggu putaran polling kartu sendiri, membuat keduanya selalu
+  // menunjukkan reading yang identik dan bukan cuma "sama-sama sekitar 60
+  // detik terakhir".
+  const handleDetailData = useCallback(
+    (
+      kolamId: number,
+      data: { reading: SensorReading | null; quality: LatestQuality | null; ammonia: AmmoniaRisk | null }
+    ) => {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.kolam.id === kolamId
+            ? { ...item, latestReading: data.reading, quality: data.quality, ammonia: data.ammonia }
+            : item
+        )
+      );
+    },
+    []
+  );
 
   const selectedItem = useMemo(
     () => items.find((i) => i.kolam.id === selected) ?? null,
@@ -386,6 +413,7 @@ export default function DashboardPage() {
                 kolam={selectedItem.kolam}
                 onClose={() => setSelected(null)}
                 onChanged={() => loadDashboard(true)}
+                onDataUpdate={handleDetailData}
               />
             </div>
           )}

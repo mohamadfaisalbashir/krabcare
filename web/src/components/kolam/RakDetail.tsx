@@ -19,6 +19,7 @@ import {
   LatestQuality,
   FuzzyPrediction,
   DeviceAmmonia,
+  AmmoniaRisk,
   StatusLabel,
   categoryToLabel,
 } from "@/lib/types";
@@ -70,6 +71,7 @@ export default function RakDetail({
   kolam,
   onClose,
   onChanged,
+  onDataUpdate,
 }: {
   /** Datang dari daftar yang sudah dimuat dashboard — jadi judul panel langsung
    *  benar tanpa menunggu GET /kolam/:id kedua. */
@@ -78,6 +80,20 @@ export default function RakDetail({
   /** Dipanggil setelah nama diubah atau rak dihapus, supaya daftar kartu di
    *  dashboard ikut segar tanpa panel ini perlu tahu cara memuatnya. */
   onChanged: () => void;
+  /** Dipanggil setiap kali reading/kualitas/amonia device ini baru dimuat di
+   *  sini (buka panel maupun refresh 60 detiknya sendiri). Dashboard memakainya
+   *  untuk menempelkan angka yang SAMA PERSIS ke kartu di atas — tanpa ini kartu
+   *  cuma segar tiap putaran polling 60 detiknya SENDIRI (mulai dari saat
+   *  dashboard dimuat), yang jamnya tidak akan pernah pas dengan putaran panel
+   *  ini (mulai dari saat rak dipilih) — dua jam beda sumber, dua kali telat,
+   *  dan itulah kenapa waktu di kartu terlihat mundur dibanding di panel ini. */
+  onDataUpdate?: (
+    kolamId: number,
+    // AmmoniaRisk (bukan DeviceAmmonia) SENGAJA -- ini bentuk yang sama persis
+    // dipakai KolamDashboard.ammonia di dashboard (lihat lib/types.ts), yaitu
+    // `current` dari DeviceAmmonia yang diambil loadDeviceData di bawah.
+    data: { reading: SensorReading | null; quality: LatestQuality | null; ammonia: AmmoniaRisk | null }
+  ) => void;
 }) {
   const kolamId = kolam.id;
 
@@ -150,13 +166,20 @@ export default function RakDetail({
           api.getPredictions(deviceId),
           api.getAmmoniaRisk(deviceId),
         ]);
-        setQuality(qualityList[0] ?? null);
-        setReading(readings[0] ?? null);
+        const quality = qualityList[0] ?? null;
+        const reading = readings[0] ?? null;
+        const ammonia = ammoniaList[0] ?? null;
+        setQuality(quality);
+        setReading(reading);
         // Backend mengurutkan terbaru dulu (time DESC); grafik perlu urutan naik
         // supaya sumbu waktu tidak terbaca mundur.
         setHistory([...readings].reverse());
         setPredictions(predictionList[0]?.predictions ?? []);
-        setAmmonia(ammoniaList[0] ?? null);
+        setAmmonia(ammonia);
+        // Dorong angka yang SAMA PERSIS ke kartu dashboard — lihat komentar
+        // `onDataUpdate` di atas untuk alasannya. `.current`: KolamDashboard.ammonia
+        // adalah AmmoniaRisk polos, bukan pembungkus DeviceAmmonia ini.
+        onDataUpdate?.(kolamId, { reading, quality, ammonia: ammonia?.current ?? null });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat data sensor.");
       } finally {
@@ -173,7 +196,7 @@ export default function RakDetail({
     // baris parameter & grafik ter-update tanpa panel berkedip.
     const id = setInterval(() => loadDeviceData(deviceId), 60_000);
     return () => clearInterval(id);
-  }, [device]);
+  }, [device, onDataUpdate]);
 
   async function handleRenameRak(e: React.FormEvent) {
     e.preventDefault();

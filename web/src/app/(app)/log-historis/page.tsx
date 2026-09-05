@@ -39,6 +39,14 @@ const STATUS_QUERY: Record<StatusLabel, "aman" | "waspada" | "bahaya"> = {
 /** Satu permintaan = 25 baris, diiris di database (LIMIT/OFFSET). */
 const PAGE = 25;
 
+/** Jam bulat 00-23 untuk mode "jam" -- dua dropdown, bukan <input type="time">
+ *  bebas menit. Label pakai titik ("23.00") meniru notasi jam yang biasa
+ *  dipakai di sini, bukan titik dua ala ISO. */
+const HOUR_OPTIONS: string[] = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
+function jamLabel(h: string): string {
+  return `${h}.00`;
+}
+
 /**
  * Tiga cara melihat rentang waktu log:
  * - "hari": dua <input type="date">, granularitas satu hari penuh (perilaku lama).
@@ -55,6 +63,16 @@ const RANGE_MODES: Array<{ value: RangeMode; label: string }> = [
   { value: "gabungan", label: "Gabungan" },
 ];
 
+/** Param aktif dari `?param=` URL, dengan fallback "ph" untuk nilai yang tidak
+ *  dikenal -- dipisah dari komponen supaya dipakai baik untuk state awal
+ *  maupun untuk menyinkronkan balik saat URL berubah dari LUAR (link sidebar
+ *  desktop, tombol Back), lihat komentar di `param`/`useEffect` di bawah. */
+function resolveParam(raw: string | null): LogParam {
+  return raw === LOG_PARAM_AMONIA || PARAM_KEYS.includes(raw as ParamKey)
+    ? (raw as LogParam)
+    : "ph";
+}
+
 function FilterPill({
   active,
   onClick,
@@ -68,7 +86,7 @@ function FilterPill({
     <button
       onClick={onClick}
       className={clsx(
-        "whitespace-nowrap rounded-full border px-3.5 py-1.5 text-center text-xs font-semibold transition",
+        "whitespace-nowrap rounded-full border px-2 py-1.5 text-center text-[11px] font-semibold transition sm:px-3.5 sm:text-xs",
         active
           ? "border-brand-500 bg-brand-50 text-brand-700"
           : "border-border text-muted hover:bg-bg"
@@ -97,15 +115,32 @@ export default function LogHistorisPage() {
 function LogHistorisView() {
   const router = useRouter();
 
-  // URL adalah satu-satunya sumber kebenaran untuk parameter aktif, supaya
-  // halamannya bisa di-bookmark dan tombol Back bekerja. Divalidasi karena ini
-  // input dari URL: key tak dikenal akan membuat statusOf mengindeks
-  // RANGE[undefined] dan melempar.
+  // URL tetap sumber kebenaran untuk di-bookmark/tombol Back, TAPI parameter
+  // aktif yang dipakai render & fetch adalah STATE LOKAL, bukan langsung dari
+  // useSearchParams(). Sebelumnya klik pil parameter cuma router.replace(...),
+  // dan `param` menunggu Next.js selesai memutar navigasinya dulu sebelum
+  // pil aktif & data ikut berganti -- itu jeda yang terasa sebagai "lag"
+  // tiap pindah pH -> Suhu dkk, padahal pil status/rentang waktu di sebelahnya
+  // (state lokal murni) terasa instan. Klik di sini sekarang men-set state
+  // dulu (instan, memicu render & fetch di render yang sama), baru
+  // menyinkronkan URL di belakang layar lewat handleParamChange() di bawah.
   const rawParam = useSearchParams().get("param");
-  const param: LogParam =
-    rawParam === LOG_PARAM_AMONIA || PARAM_KEYS.includes(rawParam as ParamKey)
-      ? (rawParam as LogParam)
-      : "ph";
+  const [param, setParam] = useState<LogParam>(() => resolveParam(rawParam));
+
+  // Sinkron BALIK kalau URL berubah dari luar klik pil di halaman ini sendiri
+  // (tautan submenu sidebar di layar lg:, tombol Back/Forward browser).
+  useEffect(() => {
+    setParam((prev) => {
+      const next = resolveParam(rawParam);
+      return prev === next ? prev : next;
+    });
+  }, [rawParam]);
+
+  function handleParamChange(next: LogParam) {
+    setParam(next);
+    router.replace(`?param=${next}`, { scroll: false });
+  }
+
   // Amonia bukan kolom di sensor_readings — barisnya datang dari endpoint lain
   // (/quality/ammonia-risk/history), jadi seluruh halaman bercabang di sini.
   const isAmonia = param === LOG_PARAM_AMONIA;
@@ -120,9 +155,12 @@ function LogHistorisView() {
   // mode "hari" (dua-duanya) dan mode "jam" (cuma `dari`, sebagai tanggalnya).
   const [dari, setDari] = useState("");
   const [sampai, setSampai] = useState("");
-  // Mode "jam": jam mulai/selesai DALAM tanggal `dari`. Format <input type="time">: "HH:mm".
-  const [jamDari, setJamDari] = useState("00:00");
-  const [jamSampai, setJamSampai] = useState("23:59");
+  // Mode "jam": jam mulai/selesai DALAM tanggal `dari`, jam BULAT saja ("00".."23")
+  // lewat dropdown -- lihat HOUR_OPTIONS. Default "00" & "00" = satu hari penuh
+  // (aturan wraparound di rentangIso() membuat selesai<=mulai berarti hari
+  // berikutnya), padanan default lama "00:00"-"23:59".
+  const [jamDari, setJamDari] = useState("00");
+  const [jamSampai, setJamSampai] = useState("00");
   // Mode "gabungan": tanggal+jam bebas di kedua sisi. Format <input type="datetime-local">.
   const [datetimeDari, setDatetimeDari] = useState("");
   const [datetimeSampai, setDatetimeSampai] = useState("");
@@ -187,10 +225,15 @@ function LogHistorisView() {
       // Tanpa tanggal, "jam 08.00-17.00" tidak berarti apa-apa -- butuh `dari`
       // sebagai hari acuannya.
       if (!dari) return {};
-      return {
-        start: new Date(`${dari}T${jamDari}:00`).toISOString(),
-        end: new Date(`${dari}T${jamSampai}:00`).toISOString(),
-      };
+      const start = new Date(`${dari}T${jamDari}:00:00`);
+      let end = new Date(`${dari}T${jamSampai}:00:00`);
+      // Wraparound: jam selesai <= jam mulai berarti jendelanya melewati
+      // tengah malam ke hari berikutnya (mis. mulai 23.00 selesai 00.00 =
+      // satu jam semalam), BUKAN rentang kosong/terbalik.
+      if (end.getTime() <= start.getTime()) {
+        end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+      }
+      return { start: start.toISOString(), end: end.toISOString() };
     }
     // "gabungan": datetime-local sudah membawa tanggal & jam sekaligus, apa
     // adanya sebagai waktu LOKAL (perilaku bawaan `new Date(...)` untuk string
@@ -348,21 +391,36 @@ function LogHistorisView() {
                   className="input-field w-auto py-1.5"
                   aria-label="Tanggal"
                 />
-                <input
-                  type="time"
+                {/* Dual dropdown, JAM BULAT saja (00-23) -- lihat HOUR_OPTIONS.
+                    Selesai boleh lebih kecil/sama dengan mulai: itu artinya
+                    jendela melewati tengah malam (mis. 23.00 -> 00.00), bukan
+                    kombinasi tidak valid, jadi tidak ada validasi yang menolaknya
+                    di sini -- wraparound-nya ditangani rentangIso(). */}
+                <select
                   value={jamDari}
                   onChange={(e) => setJamDari(e.target.value)}
                   className="input-field w-auto py-1.5"
                   aria-label="Jam mulai"
-                />
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>
+                      {jamLabel(h)}
+                    </option>
+                  ))}
+                </select>
                 <span className="text-xs text-muted">s/d</span>
-                <input
-                  type="time"
+                <select
                   value={jamSampai}
                   onChange={(e) => setJamSampai(e.target.value)}
                   className="input-field w-auto py-1.5"
                   aria-label="Jam akhir"
-                />
+                >
+                  {HOUR_OPTIONS.map((h) => (
+                    <option key={h} value={h}>
+                      {jamLabel(h)}
+                    </option>
+                  ))}
+                </select>
               </>
             )}
             {rangeMode === "gabungan" && (
@@ -392,8 +450,8 @@ function LogHistorisView() {
                 onClick={() => {
                   setDari("");
                   setSampai("");
-                  setJamDari("00:00");
-                  setJamSampai("23:59");
+                  setJamDari("00");
+                  setJamSampai("00");
                   setDatetimeDari("");
                   setDatetimeSampai("");
                 }}
@@ -430,7 +488,7 @@ function LogHistorisView() {
             <FilterPill
               key={value}
               active={param === value}
-              onClick={() => router.replace(`?param=${value}`, { scroll: false })}
+              onClick={() => handleParamChange(value)}
             >
               {label}
             </FilterPill>

@@ -57,7 +57,19 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
     // atas grafik pada layar sempit — kolom selebar 7rem di layar 375px akan
     // memeras grafiknya jadi tidak terbaca.
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="h-64 w-full min-w-0 flex-1">
+      {/* h-64 (TETAP, bukan flex-1 tanpa syarat): pembungkus ini flex-col di
+          mobile dan baru jadi flex-row mulai sm:. `flex-1` polos berarti
+          `flex-basis:0%` pada SUMBU MANA PUN yang sedang jadi arah utama --
+          di flex-row itu cuma memengaruhi lebar (aman, h-64 tetap definitif),
+          tapi di flex-col (mobile) itu ikut menimpa TINGGI juga, dan karena
+          pembungkus luarnya sendiri tinggi otomatis (mengikuti isi, bukan
+          dipatok), flex-grow tidak punya ruang lebih untuk dibagi -- hasilnya
+          tinggi kepakai basis 0% itu, ResponsiveContainer mengukur 0px, dan
+          grafiknya "hilang" total di mobile. Itu sebabnya percobaan sebelumnya
+          (menambah w-full) tidak menolong: yang kolaps bukan lebar, tapi
+          tinggi. `sm:flex-1` menunda flex-basis:0% sampai flex-row aktif,
+          jadi h-64 selalu jadi acuan tinggi di mobile. */}
+      <div className="h-64 w-full min-w-0 sm:flex-1">
         {/* debounce: tanpa ini grafik digambar ulang tiap frame saat sidebar
             menguncup/membentang — penyebab utama transisinya tersendat. */}
         <ResponsiveContainer width="100%" height="100%" debounce={200}>

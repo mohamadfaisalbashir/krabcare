@@ -107,7 +107,7 @@ export default function NotifikasiPage() {
 
   async function handleDeleteAll() {
     if (notifications.length === 0) return;
-    if (!window.confirm("Hapus SEMUA notifikasi & prediksi? Tindakan ini tidak bisa dibatalkan.")) {
+    if (!window.confirm("Hapus SEMUA notifikasi? Tindakan ini tidak bisa dibatalkan.")) {
       return;
     }
     setDeletingAll(true);
@@ -127,7 +127,7 @@ export default function NotifikasiPage() {
   return (
     <>
       <Topbar
-        title="Notifikasi & prediksi"
+        title="Notifikasi"
         subtitle={
           unread
             ? `${formatUnreadBadge(unread)} notifikasi belum dibaca`
