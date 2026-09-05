@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PlusCircle, Cpu, Clock, CheckCircle2 } from "lucide-react";
+import { PlusCircle, Cpu, Clock, CheckCircle2, Trash2, Link2, Unlink } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -10,7 +10,7 @@ import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { useUser } from "@/lib/user-store";
-import { Device, DeviceAdmin } from "@/lib/types";
+import { Device, DeviceAdmin, TargetKolam } from "@/lib/types";
 
 type Message = { type: "ok" | "err"; text: string } | null;
 
@@ -36,23 +36,75 @@ function FormMessage({ message }: { message: Message }) {
   );
 }
 
-/** Baris satu device, dipakai di dua seksi (sudah diklaim & belum). */
-function DeviceRow({ d }: { d: DeviceAdmin }) {
+/** Baris satu device dengan aksi pasang, lepas, atau hapus. */
+function DeviceRow({
+  d,
+  onAssign,
+  onUnclaim,
+  onDelete,
+  busy,
+}: {
+  d: DeviceAdmin;
+  onAssign?: (d: DeviceAdmin) => void;
+  onUnclaim?: (d: DeviceAdmin) => void;
+  onDelete: (d: DeviceAdmin) => void;
+  busy: boolean;
+}) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 py-3">
-      <div className="min-w-0">
+    <div className="flex flex-wrap items-center justify-between gap-3 py-3.5">
+      <div className="min-w-0 flex-1">
         <p className="font-mono text-sm font-semibold text-ink">{d.device_code}</p>
         <p className="text-xs text-muted">
           {DEVICE_TYPE_LABEL[d.device_type]}
           {d.kolam_nama ? ` · Kolam: ${d.kolam_nama}` : ""}
+          {d.owner_nama ? ` (Milik: ${d.owner_nama})` : ""}
+        </p>
+        <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
+          <Clock className="h-3 w-3" />
+          {d.last_seen_at
+            ? `Terakhir aktif: ${new Date(d.last_seen_at).toLocaleString("id-ID")}`
+            : "Belum pernah kirim data"}
         </p>
       </div>
-      <span className="flex items-center gap-1.5 text-xs text-muted">
-        <Clock className="h-3.5 w-3.5" />
-        {d.last_seen_at
-          ? `Terakhir kirim data: ${new Date(d.last_seen_at).toLocaleString("id-ID")}`
-          : "Belum pernah kirim data"}
-      </span>
+
+      <div className="flex items-center gap-2">
+        {onAssign && (
+          <button
+            type="button"
+            onClick={() => onAssign(d)}
+            disabled={busy}
+            className="flex items-center gap-1 rounded-lg border border-brand-300 bg-brand-50/70 px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50"
+            title="Pasang ke kolam user"
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            <span>Pasang</span>
+          </button>
+        )}
+
+        {onUnclaim && (
+          <button
+            type="button"
+            onClick={() => onUnclaim(d)}
+            disabled={busy}
+            className="flex items-center gap-1 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-semibold text-muted transition hover:border-status-waspada hover:bg-status-waspadaBg hover:text-status-waspada disabled:opacity-50"
+            title="Lepaskan device dari kolam"
+          >
+            <Unlink className="h-3.5 w-3.5" />
+            <span>Lepas</span>
+          </button>
+        )}
+
+        <button
+          type="button"
+          onClick={() => onDelete(d)}
+          disabled={busy}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition hover:bg-status-bahayaBg hover:text-status-bahaya disabled:opacity-50"
+          title="Hapus device"
+          aria-label={`Hapus device ${d.device_code}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }
@@ -71,6 +123,7 @@ export default function PerangkatPage() {
   }, [user, router]);
 
   const [devices, setDevices] = useState<DeviceAdmin[]>([]);
+  const [targetKolams, setTargetKolams] = useState<TargetKolam[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -79,11 +132,20 @@ export default function PerangkatPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<Message>(null);
 
+  // State untuk modal pasang device ke kolam
+  const [assignModalDevice, setAssignModalDevice] = useState<DeviceAdmin | null>(null);
+  const [selectedKolamId, setSelectedKolamId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [busyDeviceId, setBusyDeviceId] = useState<number | null>(null);
+
   function loadDevices() {
     setLoadingList(true);
-    api
-      .listDevices()
-      .then(setDevices)
+    Promise.all([api.listDevices(), api.getTargetKolams().catch(() => [])])
+      .then(([devList, kolamList]) => {
+        setDevices(devList);
+        setTargetKolams(kolamList);
+      })
       .catch((err: unknown) =>
         setListError(err instanceof Error ? err.message : "Gagal memuat daftar device.")
       )
@@ -105,7 +167,7 @@ export default function PerangkatPage() {
         rack_label: null,
       });
       setDevices((list) =>
-        [{ ...created, kolam_id: null, kolam_nama: null }, ...list].sort((a, b) =>
+        [{ ...created, kolam_id: null, kolam_nama: null, owner_nama: null }, ...list].sort((a, b) =>
           a.device_code.localeCompare(b.device_code)
         )
       );
@@ -121,6 +183,64 @@ export default function PerangkatPage() {
       });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleDelete(d: DeviceAdmin) {
+    const konfirmasi = window.confirm(
+      `Hapus device '${d.device_code}' secara permanen?\n\nPerangkat dan seluruh riwayat pengukurannya akan dihapus dari sistem.`
+    );
+    if (!konfirmasi) return;
+
+    setBusyDeviceId(d.id);
+    try {
+      await api.deleteDevice(d.id);
+      loadDevices();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal menghapus device.");
+    } finally {
+      setBusyDeviceId(null);
+    }
+  }
+
+  async function handleUnclaim(d: DeviceAdmin) {
+    const konfirmasi = window.confirm(
+      `Lepaskan device '${d.device_code}' dari kolam '${d.kolam_nama}'?`
+    );
+    if (!konfirmasi) return;
+
+    setBusyDeviceId(d.id);
+    try {
+      await api.unclaimDevice(d.id);
+      loadDevices();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Gagal mencopot device dari kolam.");
+    } finally {
+      setBusyDeviceId(null);
+    }
+  }
+
+  function handleOpenAssign(d: DeviceAdmin) {
+    setAssignModalDevice(d);
+    setSelectedKolamId("");
+    setAssignError(null);
+  }
+
+  async function handleConfirmAssign(e: React.FormEvent) {
+    e.preventDefault();
+    if (!assignModalDevice || !selectedKolamId) return;
+
+    setAssigning(true);
+    setAssignError(null);
+    try {
+      await api.claimDeviceToKolam(assignModalDevice.id, Number(selectedKolamId));
+      setAssignModalDevice(null);
+      setSelectedKolamId("");
+      loadDevices();
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : "Gagal memasangkan device.");
+    } finally {
+      setAssigning(false);
     }
   }
 
@@ -149,8 +269,8 @@ export default function PerangkatPage() {
           <p className="mb-4 text-sm text-muted">
             Ganti INSERT manual ke database. device_code harus persis sama
             dengan yang dikirim firmware (case-sensitive). Device baru lahir
-            belum terklaim kolam mana pun; pemilik kolam yang klaim lewat kode
-            ini dari halaman Dashboard.
+            belum terklaim kolam mana pun; Anda dapat langsung memasangkannya
+            ke kolam pengguna dari panel di bawah.
           </p>
           <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
             <Input
@@ -217,7 +337,13 @@ export default function PerangkatPage() {
             ) : (
               <div className="divide-y divide-border">
                 {belumDiklaim.map((d) => (
-                  <DeviceRow key={d.id} d={d} />
+                  <DeviceRow
+                    key={d.id}
+                    d={d}
+                    onAssign={handleOpenAssign}
+                    onDelete={handleDelete}
+                    busy={busyDeviceId === d.id}
+                  />
                 ))}
               </div>
             )}
@@ -245,13 +371,91 @@ export default function PerangkatPage() {
             ) : (
               <div className="divide-y divide-border">
                 {sudahDiklaim.map((d) => (
-                  <DeviceRow key={d.id} d={d} />
+                  <DeviceRow
+                    key={d.id}
+                    d={d}
+                    onUnclaim={handleUnclaim}
+                    onDelete={handleDelete}
+                    busy={busyDeviceId === d.id}
+                  />
                 ))}
               </div>
             )}
           </div>
         </Card>
       </div>
+
+      {/* Modal Pasang Device ke Kolam User */}
+      {assignModalDevice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+            <div className="mb-2 flex items-center gap-2">
+              <Link2 className="h-5 w-5 text-brand" />
+              <h3 className="font-display text-lg font-semibold text-ink">
+                Pasang Device ke Kolam
+              </h3>
+            </div>
+            <p className="mb-4 text-xs text-muted leading-relaxed">
+              Hubungkan perangkat <span className="font-mono font-semibold text-ink">{assignModalDevice.device_code}</span> dengan kolam milik pengguna agar data sensornya mulai terekam di kolam tersebut.
+            </p>
+
+            <form onSubmit={handleConfirmAssign} className="space-y-4">
+              <div>
+                <label htmlFor="select-kolam-modal" className="label-field">
+                  Pilih Kolam Tujuan
+                </label>
+                <select
+                  id="select-kolam-modal"
+                  className="input-field"
+                  value={selectedKolamId}
+                  onChange={(e) => setSelectedKolamId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Pilih salah satu kolam --</option>
+                  {targetKolams.map((k) => (
+                    <option
+                      key={k.id}
+                      value={k.id}
+                      disabled={Boolean(k.current_device_code && k.current_device_id !== assignModalDevice.id)}
+                    >
+                      {k.nama} — {k.owner_name} ({k.owner_email})
+                      {k.current_device_code ? ` [Sudah ada: ${k.current_device_code}]` : " [Kosong / Siap]"}
+                    </option>
+                  ))}
+                </select>
+                {targetKolams.length === 0 && (
+                  <p className="mt-1.5 text-xs text-muted">
+                    Belum ada kolam yang dibuat oleh pengguna di sistem.
+                  </p>
+                )}
+              </div>
+
+              {assignError && (
+                <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-xs text-status-bahaya">
+                  {assignError}
+                </p>
+              )}
+
+              <div className="mt-6 flex items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setAssignModalDevice(null);
+                    setAssignError(null);
+                  }}
+                  disabled={assigning}
+                >
+                  Batal
+                </Button>
+                <Button type="submit" disabled={assigning || !selectedKolamId}>
+                  {assigning ? "Memasangkan..." : "Pasangkan Device"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

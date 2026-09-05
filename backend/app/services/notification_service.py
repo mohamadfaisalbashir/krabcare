@@ -78,7 +78,7 @@ async def create_classification_notification(
         if category == "baik":
             return None
         message = (
-            f"Kualitas air {device.device_code} pertama kali tercatat "
+            f"Kualitas air {device.device_code} tercatat dalam kondisi "
             f"{label_baru.upper()} (skor {quality_score:.1f})."
         )
     else:
@@ -181,7 +181,7 @@ async def create_parameter_notification(
         if category == "baik":
             return None
         message = (
-            f"Kondisi {param_label} {device.device_code} pertama kali tercatat "
+            f"Kondisi {param_label} {device.device_code} tercatat dalam kondisi "
             f"{label_baru.upper()} ({value_str})."
         )
     else:

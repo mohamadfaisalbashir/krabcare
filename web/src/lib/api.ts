@@ -214,11 +214,34 @@ export const api = {
   listDevices: () =>
     request<import("./types").DeviceAdmin[]>("/devices"),
 
+  /** GET /devices/target-kolams → TargetKolam[] — daftar kolam untuk pemasangan device. */
+  getTargetKolams: () =>
+    request<import("./types").TargetKolam[]>("/devices/target-kolams"),
+
   /** POST /devices → DeviceOut (201). Ganti INSERT manual ke DB. */
   createDevice: (payload: import("./types").DeviceCreateIn) =>
     request<import("./types").Device>("/devices", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+
+  /** POST /devices/:id/claim → Pasangkan device ke kolam tertentu. */
+  claimDeviceToKolam: (deviceId: number, kolamId: number) =>
+    request<import("./types").Device>(`/devices/${deviceId}/claim`, {
+      method: "POST",
+      body: JSON.stringify({ kolam_id: kolamId }),
+    }),
+
+  /** POST /devices/:id/unclaim → Copot device dari kolam yang sedang terhubung. */
+  unclaimDevice: (deviceId: number) =>
+    request<import("./types").Device>(`/devices/${deviceId}/unclaim`, {
+      method: "POST",
+    }),
+
+  /** DELETE /devices/:id → Hapus device dari database. */
+  deleteDevice: (deviceId: number) =>
+    request<void>(`/devices/${deviceId}`, {
+      method: "DELETE",
     }),
 
   // ── Readings (routers/readings.py) ────────────────────────────────

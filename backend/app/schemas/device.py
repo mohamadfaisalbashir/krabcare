@@ -41,3 +41,21 @@ class DeviceAdminOut(DeviceOut):
 
     kolam_id: int | None
     kolam_nama: str | None
+    owner_nama: str | None = None
+
+
+class DeviceClaimIn(BaseModel):
+    """Payload admin memasang device ke kolam."""
+
+    kolam_id: int
+
+
+class TargetKolamOut(BaseModel):
+    """Daftar kolam tujuan yang bisa dipilih admin untuk memasangkan device."""
+
+    id: int
+    nama: str
+    owner_name: str
+    owner_email: str
+    current_device_id: int | None = None
+    current_device_code: str | None = None

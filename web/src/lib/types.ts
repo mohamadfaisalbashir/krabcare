@@ -66,6 +66,17 @@ export interface Device {
 export interface DeviceAdmin extends Device {
   kolam_id: number | null;
   kolam_nama: string | null;
+  owner_nama?: string | null;
+}
+
+/** TargetKolamOut — Kolam tujuan untuk pemasangan device oleh admin. */
+export interface TargetKolam {
+  id: number;
+  nama: string;
+  owner_name: string;
+  owner_email: string;
+  current_device_id: number | null;
+  current_device_code: string | null;
 }
 
 /** Payload POST /devices (schemas/device.py DeviceCreateIn) — form tambah device admin. */
