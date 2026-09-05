@@ -17,11 +17,14 @@ router = APIRouter(prefix="/notifications", tags=["notifications"])
 async def list_notifications(
     unread_only: bool = False,
     limit: int = Query(default=50, gt=0, le=200),
+    offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[NotificationOut]:
     """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup."""
-    items = await notification_service.list_notifications(db, current_user, unread_only, limit)
+    items = await notification_service.list_notifications(
+        db, current_user, unread_only, limit, offset
+    )
     device_ids = {n.device_id for n in items}
     devices_result = await db.execute(select(Device).where(Device.id.in_(device_ids)))
     device_by_id = {d.id: d for d in devices_result.scalars().all()}
@@ -52,6 +55,28 @@ async def mark_notification_read(
     ok = await notification_service.mark_read(db, current_user, notification_id)
     if not ok:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notifikasi tidak ditemukan")
+
+
+@router.delete("/{notification_id}", status_code=204)
+async def delete_notification(
+    notification_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Hapus satu notifikasi."""
+    ok = await notification_service.delete_notification(db, current_user, notification_id)
+    if not ok:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Notifikasi tidak ditemukan")
+
+
+@router.delete("", status_code=200)
+async def delete_all_notifications(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Hapus SEMUA notifikasi milik user ini."""
+    jumlah = await notification_service.delete_all_notifications(db, current_user)
+    return {"deleted": jumlah}
 
 
 @router.post("/push-tokens", status_code=201)

@@ -21,6 +21,7 @@ import { useUser } from "@/lib/user-store";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
 import { AMONIA_UI, LOG_PARAM_AMONIA, LogParam } from "@/lib/ammonia";
 import { AMONIA_ICON, PARAM_ICON } from "@/lib/param-icons";
+import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
 const STORAGE_KEY = "sidebar_collapsed";
 
@@ -123,6 +124,10 @@ export default function Sidebar({ className }: { className?: string }) {
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
 
+  // null selama pengambilan pertama — badge sengaja tidak dirender sampai
+  // angkanya benar-benar diketahui, supaya tidak berkedip "0" lalu berubah.
+  const unread = useUnreadCount();
+
   // Aman dari hydration mismatch tanpa trik: (app)/layout.tsx mengembalikan null
   // sampai `authorized` di-set di dalam useEffect, jadi komponen ini tidak pernah
   // dirender di server maupun di render klien pertama. Lazy init karenanya hanya
@@ -205,6 +210,7 @@ export default function Sidebar({ className }: { className?: string }) {
                 collapsed={collapsed}
                 children_={children}
                 activeParam={activeParam}
+                badge={href === "/notifikasi" ? unread : null}
               />
             );
           })}
@@ -236,6 +242,7 @@ function NavGroup({
   collapsed,
   children_,
   activeParam,
+  badge,
 }: {
   href: string;
   label: string;
@@ -244,6 +251,8 @@ function NavGroup({
   collapsed: boolean;
   children_?: { param: LogParam; label: string }[];
   activeParam: LogParam;
+  /** Jumlah belum dibaca. null = belum diketahui (jangan dirender), 0 = kosong (jangan dirender juga). */
+  badge?: number | null;
 }) {
   // Sentinel, bukan useEffect sinkronisasi: grup terbuka sendiri saat halamannya
   // aktif, tetap bisa dibuka manual dari halaman lain, dan tidak ada state yang
@@ -292,10 +301,25 @@ function NavGroup({
             active ? "text-brand-700" : "text-ink"
           )}
         >
-          <span className={ICON_BOX}>
+          <span className={clsx(ICON_BOX, "relative")}>
             <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} />
+            {/* Kuncup: titik saja, angka tidak muat di rail 60px. */}
+            {collapsed && !!badge && (
+              <span
+                aria-hidden
+                className="absolute right-1 top-1 h-2 w-2 rounded-full bg-status-bahaya ring-2 ring-bg"
+              />
+            )}
           </span>
           <CollapsingLabel collapsed={collapsed}>{label}</CollapsingLabel>
+          {!collapsed && !!badge && (
+            <span
+              className="ml-auto mr-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-status-bahaya px-1.5 text-[11px] font-semibold text-white"
+              aria-label={`${badge} belum dibaca`}
+            >
+              {formatUnreadBadge(badge)}
+            </span>
+          )}
         </Link>
 
         {hasChildren && !collapsed && (

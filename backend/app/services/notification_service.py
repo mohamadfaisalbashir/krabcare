@@ -200,13 +200,13 @@ async def dispatch_from_quality_ingest(
 
 
 async def list_notifications(
-    db: AsyncSession, user: User, unread_only: bool, limit: int
+    db: AsyncSession, user: User, unread_only: bool, limit: int, offset: int = 0
 ) -> list[Notification]:
-    """Notifikasi milik `user`, terbaru dulu."""
+    """Notifikasi milik `user`, terbaru dulu. `offset` untuk paginasi "muat lebih banyak"."""
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
-    stmt = stmt.order_by(Notification.created_at.desc()).limit(limit)
+    stmt = stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 
@@ -224,6 +224,31 @@ async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
     notification.is_read = True
     await db.commit()
     return True
+
+
+async def delete_notification(db: AsyncSession, user: User, notification_id: int) -> bool:
+    """Hapus satu notifikasi. False = tidak ada / bukan milik user ini (router balas 404)."""
+    result = await db.execute(
+        select(Notification).where(
+            Notification.id == notification_id, Notification.user_id == user.id
+        )
+    )
+    notification = result.scalar_one_or_none()
+    if notification is None:
+        return False
+    await db.delete(notification)
+    await db.commit()
+    return True
+
+
+async def delete_all_notifications(db: AsyncSession, user: User) -> int:
+    """Hapus SEMUA notifikasi milik `user`. Kembalikan jumlah baris yang terhapus."""
+    result = await db.execute(select(Notification).where(Notification.user_id == user.id))
+    rows = list(result.scalars().all())
+    for row in rows:
+        await db.delete(row)
+    await db.commit()
+    return len(rows)
 
 
 async def register_push_token(db: AsyncSession, user: User, fcm_token: str, platform: str) -> None:

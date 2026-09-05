@@ -101,7 +101,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
 
       {/* Angka monospace: tiga kolom berdampingan, dan lebar digit yang tetap
           membuat koma ketiganya sejajar walau angkanya berganti tiap menit. */}
-      <p className="mt-3 flex items-baseline gap-1.5">
+      <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
         <span className="font-mono text-3xl font-semibold leading-none text-ink">
           {value != null ? formatValue(value) : "N/A"}
         </span>
@@ -136,10 +136,12 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
             />
           )}
         </div>
-        <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
-          <span>{formatValue(min)}</span>
-          <span className="text-status-aman">optimal</span>
-          <span>{formatValue(max)}</span>
+        <div className="mt-1 grid grid-cols-3 font-mono text-[10px] text-muted">
+          <span className="text-left">{formatValue(min)}</span>
+          <span className="text-center text-status-aman">
+            {formatValue(RANGE[param].optimal[0])}–{formatValue(RANGE[param].optimal[1])}
+          </span>
+          <span className="text-right">{formatValue(max)}</span>
         </div>
       </div>
     </div>

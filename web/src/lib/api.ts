@@ -304,10 +304,12 @@ export const api = {
   // ── Notifications (routers/notifications.py) ──────────────────────
 
   /** GET /notifications → NotificationOut[] */
-  getNotifications: (params?: { unread_only?: boolean; limit?: number }) => {
+  getNotifications: (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
     const qs = new URLSearchParams();
     if (params?.unread_only) qs.set("unread_only", "true");
     if (params?.limit) qs.set("limit", String(params.limit));
+    // != null, bukan cek falsy: offset=0 itu halaman pertama, bukan "tidak diisi".
+    if (params?.offset != null) qs.set("offset", String(params.offset));
     const query = qs.toString();
     return request<import("./types").Notification[]>(
       `/notifications${query ? `?${query}` : ""}`
@@ -317,4 +319,12 @@ export const api = {
   /** POST /notifications/:id/read → 204 */
   markNotificationRead: (notificationId: number) =>
     request<void>(`/notifications/${notificationId}/read`, { method: "POST" }),
+
+  /** DELETE /notifications/:id → 204 */
+  deleteNotification: (notificationId: number) =>
+    request<void>(`/notifications/${notificationId}`, { method: "DELETE" }),
+
+  /** DELETE /notifications → { deleted: number } */
+  deleteAllNotifications: () =>
+    request<{ deleted: number }>(`/notifications`, { method: "DELETE" }),
 };

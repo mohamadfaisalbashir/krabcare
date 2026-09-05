@@ -57,7 +57,7 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
     // atas grafik pada layar sempit — kolom selebar 7rem di layar 375px akan
     // memeras grafiknya jadi tidak terbaca.
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-      <div className="h-64 min-w-0 flex-1">
+      <div className="h-64 w-full min-w-0 flex-1">
         {/* debounce: tanpa ini grafik digambar ulang tiap frame saat sidebar
             menguncup/membentang — penyebab utama transisinya tersendat. */}
         <ResponsiveContainer width="100%" height="100%" debounce={200}>

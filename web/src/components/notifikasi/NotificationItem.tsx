@@ -1,4 +1,4 @@
-import { AlertOctagon, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertOctagon, AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
 import { Notification, StatusLabel, WaterQualityCategory, categoryToLabel } from "@/lib/types";
 import clsx from "clsx";
 
@@ -28,9 +28,12 @@ const STATUS_STYLE: Record<
 export default function NotificationItem({
   item,
   onRead,
+  onDelete,
 }: {
   item: Notification;
   onRead?: (id: number) => void;
+  /** Hapus satu notifikasi/prediksi ini saja. */
+  onDelete?: (id: number) => void;
 }) {
   const label = categoryToLabel(item.quality_category as WaterQualityCategory);
   const style = STATUS_STYLE[label];
@@ -73,6 +76,15 @@ export default function NotificationItem({
               className="py-1.5 text-xs font-semibold text-brand-600 hover:underline"
             >
               Tandai dibaca
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(item.id)}
+              aria-label="Hapus notifikasi ini"
+              className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-status-bahayaBg hover:text-status-bahaya"
+            >
+              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
             </button>
           )}
         </div>

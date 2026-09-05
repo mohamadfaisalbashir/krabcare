@@ -1,10 +1,13 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import { AmmoniaRisk, StatusLabel } from "@/lib/types";
 import {
   AMBANG,
   AMONIA_UI,
+  LOG_PARAM_AMONIA,
   SKALA_MAKS,
   formatFraksi,
   riskToStatus,
@@ -46,7 +49,7 @@ export default function AmmoniaCell({
       : renderPrediksi(forecast ?? []);
 
   return (
-    <div className="px-1 py-4 sm:px-5 sm:py-3">
+    <div className="group px-1 py-4 sm:px-5 sm:py-3">
       <div className="flex items-center gap-2">
         <p className="truncate text-sm font-medium text-ink">{AMONIA_UI.label}</p>
         {/* Badge status pojok kanan cuma untuk baris "Parameter" (terkini).
@@ -64,6 +67,15 @@ export default function AmmoniaCell({
               <span className="text-muted">Belum ada data</span>
             )}
           </span>
+        )}
+        {mode === "terkini" && (
+          <Link
+            href={`/log-historis?param=${LOG_PARAM_AMONIA}`}
+            aria-label={`Log historis ${AMONIA_UI.short}`}
+            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 transition hover:bg-white/60 hover:text-brand-700 focus-visible:opacity-100 group-hover:opacity-100"
+          >
+            <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
+          </Link>
         )}
       </div>
       {isi.body}
@@ -88,7 +100,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
     status,
     body: (
       <>
-        <p className="mt-3 flex items-baseline gap-1.5">
+        <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
           <span className="font-mono text-3xl font-semibold leading-none text-ink">
             {nilai != null ? formatFraksi(nilai) : "N/A"}
           </span>
@@ -118,10 +130,12 @@ function renderTerkini(risk: AmmoniaRisk | null): {
               />
             )}
           </div>
-          <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
-            <span>0</span>
-            <span className="text-status-aman">aman &lt; {AMBANG.perhatian}%</span>
-            <span>{SKALA_MAKS}</span>
+          <div className="mt-1 grid grid-cols-3 font-mono text-[10px] text-muted">
+            <span className="text-left">0</span>
+            <span className="text-center text-status-aman">
+              0–{formatFraksi(AMBANG.perhatian)}%
+            </span>
+            <span className="text-right">{SKALA_MAKS}</span>
           </div>
         </div>
 

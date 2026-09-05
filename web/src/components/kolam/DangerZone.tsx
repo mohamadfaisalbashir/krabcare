@@ -39,7 +39,7 @@ export default function DangerZone({
       await api.deleteKolam(kolamId);
       onDeleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menghapus rak.");
+      setError(err instanceof Error ? err.message : "Gagal menghapus kolam.");
       setMenghapus(false);
     }
   }
@@ -57,10 +57,10 @@ export default function DangerZone({
       </div>
 
       <p className="text-sm font-semibold text-ink">
-        Menghapus rak ini bersifat permanen dan tidak dapat dibatalkan.
+        Menghapus kolam ini bersifat permanen dan tidak dapat dibatalkan.
       </p>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        Tidak ada fitur pemulihan. Sekali dihapus, rak ini beserta notifikasinya
+        Tidak ada fitur pemulihan. Sekali dihapus, kolam ini beserta notifikasinya
         hilang selamanya. Yang <strong className="text-ink">tetap aman</strong>:
         seluruh riwayat pengukuran, klasifikasi, dan prediksi, karena semuanya
         menempel pada perangkat, bukan pada rak.
@@ -72,7 +72,7 @@ export default function DangerZone({
             diklaim ulang untuk membuka datanya lagi.
           </>
         ) : (
-          " Rak ini belum terhubung ke perangkat mana pun."
+          " Kolam ini belum terhubung ke perangkat mana pun."
         )}
       </p>
 
@@ -92,7 +92,7 @@ export default function DangerZone({
           disabled={!cocok || menghapus}
           className="btn-danger"
         >
-          {menghapus ? "Menghapus..." : "Hapus rak ini"}
+          {menghapus ? "Menghapus..." : "Hapus kolam ini"}
         </button>
       </div>
 

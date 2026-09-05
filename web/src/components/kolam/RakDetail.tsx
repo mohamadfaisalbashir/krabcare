@@ -46,10 +46,10 @@ const SECTION = {
   prediksi: { title: "Prediksi 15/30/60 menit" },
   pemantauan: {
     title: "Grafik Pemantauan",
-    note: "Warna hijau pada grafik adalah rentang nilai optimal.",
+    note: "Warna hijau pada grafik adalah rentang optimal dan garis putus-putus warna merah adalah batas ambang berbahaya.",
   },
   gabungan: { title: "Grafik Gabungan" },
-  pengaturan: { title: "Pengaturan Rak" },
+  pengaturan: { title: "Pengaturan Kolam" },
 } as const;
 
 /**
@@ -113,7 +113,7 @@ export default function RakDetail({
       const deviceList = await api.getKolamDevices(kolamId);
       setDevice(deviceList[0] ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memuat device rak.");
+      setError(err instanceof Error ? err.message : "Gagal memuat device kolam.");
     } finally {
       setLoading(false);
     }
@@ -181,10 +181,10 @@ export default function RakDetail({
     setSavingRak(true);
     try {
       await api.updateKolam(kolamId, namaRak.trim());
-      setRakMessage("Nama rak berhasil diperbarui.");
+      setRakMessage("Nama kolam berhasil diperbarui.");
       onChanged();
     } catch (err) {
-      setRakMessage(err instanceof Error ? err.message : "Gagal memperbarui rak.");
+      setRakMessage(err instanceof Error ? err.message : "Gagal memperbarui kolam.");
     } finally {
       setSavingRak(false);
     }
@@ -226,7 +226,7 @@ export default function RakDetail({
     <div className="glass overflow-hidden">
       {/* KEPALA. Sengaja TANPA foto: dashboard di atasnya sudah punya banner
           berfoto, dan hero kedua akan jadi dua foto bertumpuk di satu layar. */}
-      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
+      <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[#266B70]">Detail Kolam</p>
           {/* Nama rak buatan pengguna — panjangnya tidak terbatas, jadi dipotong
@@ -258,7 +258,7 @@ export default function RakDetail({
           titik/garis warna aman-waspada-bahaya di bawahnya (Parameter,
           Prediksi, amonia) supaya tidak perlu dijelaskan berulang di tiap
           bagian. */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-white/60 px-5 py-2.5 text-xs text-muted sm:px-6">
+      <div className="flex flex-col items-start gap-1 border-t border-white/60 px-5 py-2.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5 sm:px-6">
         <span className="font-medium text-ink">Warna kondisi:</span>
         <span className="flex items-center gap-1.5">
           <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
@@ -364,14 +364,14 @@ export default function RakDetail({
                 variant="ghost"
                 onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
               >
-                <Pencil className="h-4 w-4" /> Ubah nama rak
+                <Pencil className="h-4 w-4" /> Ubah nama kolam
               </Button>
               <button
                 type="button"
                 className="btn-danger"
                 onClick={() => setPanel((p) => (p === "hapus" ? null : "hapus"))}
               >
-                <Trash2 className="h-4 w-4" /> Hapus rak
+                <Trash2 className="h-4 w-4" /> Hapus Kolam
               </button>
             </div>
 
@@ -383,7 +383,7 @@ export default function RakDetail({
               >
                 <div className="sm:w-64">
                   <Input
-                    label="Nama rak"
+                    label="Nama kolam"
                     value={namaRak}
                     onChange={(e) => setNamaRak(e.target.value)}
                     required

@@ -6,6 +6,7 @@ import { LayoutDashboard, History, BellRing, UserRound, Cpu } from "lucide-react
 import clsx from "clsx";
 import { isNavActive } from "@/lib/nav";
 import { useUser } from "@/lib/user-store";
+import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
 // Label sengaja lebih pendek dari Sidebar — ruang horizontalnya jauh lebih sempit.
 const NAV = [
@@ -27,6 +28,7 @@ export default function MobileNav() {
     user?.role === "admin"
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
+  const unread = useUnreadCount();
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
@@ -55,7 +57,17 @@ export default function MobileNav() {
                 active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
               )}
             />
-            <Icon className="h-5 w-5" strokeWidth={2.2} />
+            <span className="relative">
+              <Icon className="h-5 w-5" strokeWidth={2.2} />
+              {href === "/notifikasi" && !!unread && (
+                <span
+                  className="absolute -right-2.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-bahaya px-1 text-[9px] font-semibold text-white"
+                  aria-label={`${unread} belum dibaca`}
+                >
+                  {formatUnreadBadge(unread)}
+                </span>
+              )}
+            </span>
             {label}
           </Link>
         );
