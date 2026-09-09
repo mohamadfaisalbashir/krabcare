@@ -30,6 +30,18 @@ class EmailBelumTerverifikasi(AuthError):
     """
 
 
+class EmailTidakTerkirim(AuthError):
+    """Server email belum dikonfigurasi. Salah server, bukan salah pengguna.
+
+    Kelas sendiri supaya router membalas 503 dan bukan 400: tidak ada yang bisa
+    diperbaiki pengguna dengan mengetik ulang apa pun.
+    """
+
+
+class AkunNonaktif(AuthError):
+    """Akun ada tapi dimatikan admin. Router membalas 403."""
+
+
 def _terbitkan_token_verifikasi(user: User) -> str:
     """Pasang token verifikasi baru ke `user`, kembalikan token MENTAH-nya.
 
@@ -73,28 +85,48 @@ async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
     terverifikasi seketika, dengan peringatan di log. Fiturnya hidup sendiri
     begitu SMTP_HOST diisi, tanpa mengubah kode.
     """
-    existing = await db.execute(select(User).where(func.lower(User.email) == payload.email))
-    if existing.scalar_one_or_none() is not None:
+    result = await db.execute(select(User).where(func.lower(User.email) == payload.email))
+    lama = result.scalar_one_or_none()
+
+    if lama is not None and lama.email_verified_at is not None:
         raise AuthError("Email sudah terdaftar")
 
-    user = User(
-        email=payload.email,
-        password_hash=await hash_password(payload.password),
-        nama=payload.nama,
-    )
+    if lama is not None:
+        # Pendaftaran yang belum pernah tuntas. Barisnya DIPERBARUI, bukan
+        # ditolak: sebelumnya orang yang link aktivasinya kedaluwarsa jadi buntu
+        # total, tidak bisa masuk karena belum aktif dan tidak bisa daftar lagi
+        # karena emailnya "sudah terdaftar".
+        #
+        # Menimpanya tidak mengambil apa pun dari siapa pun: akun yang belum
+        # terverifikasi belum terbukti milik siapa-siapa dan belum punya kolam
+        # maupun data. Penimpanya pun tetap tidak bisa mengaktifkannya tanpa
+        # akses ke kotak masuk email itu.
+        user = lama
+        user.password_hash = await hash_password(payload.password)
+        user.nama = payload.nama
+    else:
+        user = User(
+            email=payload.email,
+            password_hash=await hash_password(payload.password),
+            nama=payload.nama,
+        )
+        db.add(user)
 
     raw_token: str | None = None
     if settings.SMTP_HOST:
         raw_token = _terbitkan_token_verifikasi(user)
     else:
         user.email_verified_at = datetime.now(timezone.utc)
+        # Token sisa dari pendaftaran sebelumnya dihanguskan. Kalau dibiarkan,
+        # link lama masih bisa diklik pada akun yang sekarang sudah aktif.
+        user.verify_token_hash = None
+        user.verify_token_expires_at = None
         logger.warning(
             "SMTP_HOST kosong, verifikasi email DILEWATI untuk %s dan akunnya langsung "
             "aktif. Isi SMTP_HOST di .env supaya link aktivasi benar-benar dikirim.",
             payload.email,
         )
 
-    db.add(user)
     await db.commit()
     await db.refresh(user)
 
@@ -189,16 +221,36 @@ async def verify_email(db: AsyncSession, token: str) -> None:
 
 
 async def resend_verification(db: AsyncSession, email: str) -> None:
-    """Terbitkan ulang link aktivasi.
+    """Terbitkan ulang link aktivasi, dan SEBUTKAN alasannya kalau gagal.
 
-    Selalu "sukses" dari sisi pemanggil, sama seperti request_password_reset:
-    balasan yang berbeda untuk email terdaftar dan tidak akan membuat endpoint
-    ini jadi alat mendata siapa saja yang punya akun.
+    Berbeda dengan request_password_reset yang sengaja selalu diam. Dulu fungsi
+    ini juga diam untuk semua kegagalan, dan akibatnya pengguna melihat "link
+    sudah dikirim" padahal tidak ada apa pun yang terkirim, tanpa cara tahu
+    kenapa. Itu jalan buntu, bukan keamanan.
+
+    Membocorkan keberadaan email di sini juga tidak menambah apa-apa: endpoint
+    register sudah membalas "Email sudah terdaftar" sejak awal, jadi informasi
+    itu memang sudah bisa didapat. request_password_reset TETAP diam, karena di
+    sana tidak ada endpoint lain yang sudah membocorkannya.
     """
+    # Diperiksa lebih dulu, sebelum token diterbitkan: percuma membakar token
+    # untuk email yang mustahil dikirim, dan server yang salah konfigurasi harus
+    # mengaku salah, bukan pura-pura berhasil.
+    if not settings.SMTP_HOST:
+        raise EmailTidakTerkirim(
+            "Server email belum dikonfigurasi, jadi link aktivasi tidak bisa dikirim. "
+            "Hubungi admin."
+        )
+
     result = await db.execute(select(User).where(func.lower(User.email) == email.strip().lower()))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active or user.email_verified_at is not None:
-        return
+
+    if user is None:
+        raise AuthError("Email belum terdaftar.")
+    if not user.is_active:
+        raise AkunNonaktif("Akun ini dinonaktifkan. Hubungi admin.")
+    if user.email_verified_at is not None:
+        raise AuthError("Akun ini sudah aktif, silakan langsung masuk.")
 
     raw_token = _terbitkan_token_verifikasi(user)
     await db.commit()

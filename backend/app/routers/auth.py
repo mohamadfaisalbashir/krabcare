@@ -20,7 +20,12 @@ from app.schemas.user import (
     VerifyEmailIn,
 )
 from app.services import auth_service
-from app.services.auth_service import AuthError, EmailBelumTerverifikasi
+from app.services.auth_service import (
+    AkunNonaktif,
+    AuthError,
+    EmailBelumTerverifikasi,
+    EmailTidakTerkirim,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -63,9 +68,24 @@ async def verify_email(payload: VerifyEmailIn, db: AsyncSession = Depends(get_db
 async def resend_verification(
     payload: ResendVerificationIn, db: AsyncSession = Depends(get_db)
 ) -> dict:
-    """Kirim ulang link aktivasi. Respons sama saja terdaftar atau tidak (anti-enumeration)."""
-    await auth_service.resend_verification(db, payload.email)
-    return {"detail": "Kalau email terdaftar dan belum aktif, link aktivasi sudah dikirim ulang."}
+    """Kirim ulang link aktivasi, dan sebutkan alasannya kalau gagal.
+
+    Sengaja TIDAK anti-enumeration, tidak seperti /forgot-password. Alasannya
+    ada di docstring auth_service.resend_verification: balasan seragam di sini
+    membuat pengguna melihat "terkirim" padahal tidak ada yang dikirim, dan
+    endpoint register sudah membocorkan keberadaan email sejak awal.
+    """
+    try:
+        await auth_service.resend_verification(db, payload.email)
+    except EmailTidakTerkirim as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    except AkunNonaktif as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
+    except AuthError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return {"detail": "Link aktivasi baru sudah dikirim. Cek kotak masuk Anda."}
 
 
 @router.get("/me", response_model=UserOut)

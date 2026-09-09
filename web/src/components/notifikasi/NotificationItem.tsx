@@ -36,7 +36,31 @@ const STATUS_STYLE: Record<
 };
 
 /**
- * Warnai kata Aman/Waspada/Bahaya di mana pun ia muncul di dalam pesan.
+ * Kata status -> label warna. DUA kosakata dipetakan ke tiga warna yang sama.
+ *
+ * "Aman/Waspada/Bahaya" itu istilah tampilan, dan itu yang dipakai pesan yang
+ * dibuat sekarang. "Baik/Sedang/Buruk" istilah database (quality_category), dan
+ * pernah ikut tercetak ke dalam pesan prediksi sebelum diperbaiki. Keduanya
+ * dikenali supaya baris lama maupun baru sama-sama berwarna.
+ *
+ * ponytail: pencocokan kata polos. "Sedang" juga kata biasa dalam bahasa
+ * Indonesia ("sedang memuat"), jadi kalau suatu hari ada template pesan yang
+ * memakainya sebagai keterangan waktu, kata itu ikut jadi kuning. Aman untuk
+ * sekarang karena seluruh pesan lahir dari empat template di
+ * notification_service.py dan tidak satu pun memakainya begitu. Kalau template
+ * bertambah, persempit ke pola HURUF BESAR saja.
+ */
+const KATA_STATUS: Record<string, StatusLabel> = {
+  aman: "Aman",
+  baik: "Aman",
+  waspada: "Waspada",
+  sedang: "Waspada",
+  bahaya: "Bahaya",
+  buruk: "Bahaya",
+};
+
+/**
+ * Warnai kata status di mana pun ia muncul di dalam pesan.
  *
  * Pesan backend menyebut statusnya di tengah kalimat ("berubah dari Aman ke
  * Waspada"), jadi satu badge di pinggir tidak cukup: kalimat yang menyebut DUA
@@ -51,14 +75,11 @@ const STATUS_STYLE: Record<
  * sama dengan ikon di sebelah kiri, supaya kata dan ikon tidak bisa berbeda.
  */
 function PesanBerwarna({ teks }: { teks: string }) {
-  const bagian = teks.split(/(Aman|Waspada|Bahaya)/gi);
+  const bagian = teks.split(/(Aman|Waspada|Bahaya|Baik|Sedang|Buruk)/gi);
   return (
     <>
       {bagian.map((b, i) => {
-        // Normalkan ke bentuk kunci STATUS_STYLE ("WASPADA" -> "Waspada").
-        const kunci = (b.charAt(0).toUpperCase() +
-          b.slice(1).toLowerCase()) as StatusLabel;
-        const gaya = STATUS_STYLE[kunci];
+        const gaya = STATUS_STYLE[KATA_STATUS[b.toLowerCase()]];
         return gaya ? (
           <span key={i} className={clsx("font-semibold", gaya.text)}>
             {b}

@@ -8,6 +8,7 @@ import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { api } from "@/lib/api";
+import FormMessage, { type Message } from "@/components/ui/FormMessage";
 
 // Link aktivasi dari email berbentuk {FRONTEND_VERIFY_EMAIL_URL}?token=<raw>
 // (backend: auth_service.register_user -> _kirim_email_verifikasi).
@@ -29,7 +30,10 @@ function VerifikasiEmail() {
   // Kirim ulang link, untuk token kedaluwarsa/terlanjur dipakai.
   const [email, setEmail] = useState("");
   const [mengirim, setMengirim] = useState(false);
-  const [terkirim, setTerkirim] = useState<string | null>(null);
+  // Message, bukan string: backend sekarang membedakan berhasil dan gagal
+  // (sudah aktif / belum terdaftar / SMTP mati), jadi keduanya tidak boleh
+  // tampil dengan gaya yang sama seperti sebelumnya.
+  const [terkirim, setTerkirim] = useState<Message>(null);
 
   // React 18 StrictMode memanggil efek dua kali di dev. Token ini SEKALI PAKAI:
   // panggilan kedua pasti gagal dan menimpa hasil sukses panggilan pertama
@@ -59,9 +63,12 @@ function VerifikasiEmail() {
     setTerkirim(null);
     try {
       const res = await api.resendVerification(email);
-      setTerkirim(res.detail);
+      setTerkirim({ type: "ok", text: res.detail });
     } catch (err) {
-      setTerkirim(err instanceof Error ? err.message : "Gagal mengirim ulang.");
+      setTerkirim({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal mengirim ulang.",
+      });
     } finally {
       setMengirim(false);
     }
@@ -104,7 +111,7 @@ function VerifikasiEmail() {
         </Button>
       </form>
 
-      {terkirim && <p className="text-sm text-muted">{terkirim}</p>}
+      <FormMessage message={terkirim} />
     </div>
   );
 }
