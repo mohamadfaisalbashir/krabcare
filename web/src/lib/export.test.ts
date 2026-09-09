@@ -158,6 +158,22 @@ test("namaBerkas memakai ekstensi sesuai format", () => {
   // Ketiga parameter ikut -> segmen parameter dibuang.
   const semua = namaBerkas("semua", ["ph", "temperature_c", "salinity_ppt"], "a", "b", "csv");
   assert.equal(semua, "log-sensor_semua_a_b.csv");
+  // Daftar kosong = pilihan "Amonia saja". Tanpa cabang khusus, namanya jadi
+  // "log-sensor_semua__a_b.csv" dengan garis bawah ganda.
+  assert.equal(namaBerkas("semua", [], "a", "b", "csv"), "log-sensor_semua_amonia_a_b.csv");
+});
+
+test("toCsv tanpa parameter sensor tetap membawa kolom amonia", () => {
+  // Inilah bentuk berkas saat pengguna memilih "Amonia saja".
+  const csv = toCsv([baris(0)], [], {}, amoniaUntuk(0, 4.2, "perhatian"));
+  const [header, isi] = csv.split("\n");
+  assert.equal(
+    header,
+    "waktu_lokal,waktu_diterima,latensi_detik,device_code,kolam,amonia_nh3_persen,amonia_risiko"
+  );
+  const sel = isi.split(",");
+  assert.equal(sel[5], "4.2");
+  assert.equal(sel[6], "perhatian");
 });
 
 test("format tanggal dd-mm-yyyy, tanggal & bulan satu digit tetap dipad", () => {

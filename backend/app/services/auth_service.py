@@ -204,19 +204,39 @@ async def request_password_reset(db: AsyncSession, email: str) -> None:
 
 
 async def verify_email(db: AsyncSession, token: str) -> None:
-    """Aktifkan akun kalau token cocok & belum kedaluwarsa; token lalu dihanguskan."""
+    """Aktifkan akun dari token email. IDEMPOTEN: link yang sama boleh diklik lagi.
+
+    Dulu token langsung dihanguskan begitu berhasil, dan klik kedua atas link
+    yang SAMA berakhir "tidak valid atau sudah pernah dipakai" walau akunnya
+    baru saja aktif. Itu bukan kasus langka:
+
+    - pemindai tautan di Gmail/antivirus kerap membuka link duluan, jadi klik
+      pertama pengguna sudah jadi klik KEDUA;
+    - orang menekan dua kali, atau memuat ulang tab setelah aktivasi.
+
+    Sekarang tokennya dibiarkan hidup sampai kedaluwarsa sendiri, dan akun yang
+    sudah aktif dianggap sukses. Risikonya kecil dan terbatas waktu: token cuma
+    berlaku beberapa menit, dan satu-satunya yang bisa dilakukan pemegangnya
+    adalah mengaktifkan akun yang memang sudah aktif.
+    """
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     result = await db.execute(select(User).where(User.verify_token_hash == token_hash))
     user = result.scalar_one_or_none()
 
     if user is None or user.verify_token_expires_at is None:
         raise AuthError("Link verifikasi tidak valid atau sudah pernah dipakai")
+
+    # Sudah aktif -> sukses, bukan galat. Diperiksa SEBELUM kedaluwarsa: link
+    # yang sudah terpakai lalu dibuka lagi setelah lewat batas waktu tetap
+    # menceritakan hal yang benar, yaitu akunnya aktif.
+    if user.email_verified_at is not None:
+        return
+
     if user.verify_token_expires_at < datetime.now(timezone.utc):
         raise AuthError("Link verifikasi sudah kedaluwarsa. Minta kirim ulang.")
 
+    # Token TIDAK dihanguskan di sini, biar kedaluwarsa yang menutupnya.
     user.email_verified_at = datetime.now(timezone.utc)
-    user.verify_token_hash = None
-    user.verify_token_expires_at = None
     await db.commit()
 
 

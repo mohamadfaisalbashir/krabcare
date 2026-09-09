@@ -208,7 +208,11 @@ export function namaBerkas(
   format: ExportFormat
 ): string {
   // Segmen parameter dihilangkan kalau ketiganya ikut, namanya sudah panjang.
-  const paramPart = params.length === 3 ? "" : `_${params.join("-")}`;
+  // Daftar KOSONG berarti pengguna memilih "Amonia saja": kolom amonia selalu
+  // ikut tanpa bergantung pilihan ini, jadi tidak ada parameter sensor yang
+  // perlu disebut, dan tanpa cabang ini namanya berakhir dengan garis bawah ganda.
+  const paramPart =
+    params.length === 0 ? "_amonia" : params.length === 3 ? "" : `_${params.join("-")}`;
   return `log-sensor_${deviceLabel}${paramPart}_${from}_${to}.${format}`;
 }
 

@@ -376,10 +376,11 @@ export default function DashboardPage() {
               pojoknya, yang tidak pernah menyebut apa yang akan terjadi.
               Hilang begitu ada kolam terpilih (variant "rail"), saat itu
               pengguna sudah membuktikan sendiri kartunya bisa diklik. */}
-          {/* brass-300, warna yang sama dengan eyebrow "Monitoring kualitas air"
-              di banner tepat di atasnya. Paragraf ini duduk di pembungkus -mt-20
-              yang menindih banner gelap itu, jadi keduanya memang satu bidang. */}
-          <p className="mb-3 text-sm font-semibold text-brass-300 sm:text-base">
+          {/* #F5F5F5, putih pudar. Paragraf ini duduk di pembungkus -mt-20 yang
+              menindih banner gelap, jadi warnanya memang harus dari keluarga
+              terang. Nilai lugas, bukan token tailwind, karena memang tidak ada
+              token yang persis di angka ini. */}
+          <p className="mb-3 text-sm font-semibold text-[#F5F5F5] sm:text-base">
             Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>

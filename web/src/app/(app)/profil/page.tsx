@@ -234,19 +234,22 @@ export default function ProfilPage() {
               </form>
             </Card>
 
-            {/* Zona berbahaya, paling bawah dan terpisah. Pola yang sama dengan
-                DangerZone kolam: tint merah, ketik ulang untuk konfirmasi,
-                tombol mati sampai ketikannya cocok.
+            {/* Kartu NETRAL, tidak lagi bertint merah. Merahnya sekarang hanya
+                pada tombolnya, persis sebobot tombol "Keluar akun" di atas yang
+                memakai kelas warna yang sama (border-status-bahaya/30 +
+                bg-status-bahayaBg + text-status-bahaya). Sebelumnya seluruh
+                kartu ikut merah, sehingga tindakan paling jarang dipakai di
+                halaman ini justru jadi yang paling menyita perhatian.
 
                 TIDAK dirender untuk admin. Backend sudah menolaknya dengan 403
                 (routers/auth.py: akun admin adalah satu-satunya pintu ke panel
                 /perangkat, menghapusnya mengunci pendaftaran device untuk semua
                 orang), jadi menampilkan tombol yang pasti gagal cuma menjebak. */}
             {user && user.role !== "admin" && (
-              <Card className="border border-status-bahaya/30 bg-status-bahayaBg/50">
+              <Card>
                 <div className="mb-2 flex items-center gap-2.5">
-                  <Trash2 className="h-5 w-5 text-status-bahaya" />
-                  <h3 className="font-display text-base font-semibold text-status-bahaya">
+                  <Trash2 className="h-5 w-5 text-muted" />
+                  <h3 className="font-display text-base font-semibold text-ink">
                     Hapus akun
                   </h3>
                 </div>

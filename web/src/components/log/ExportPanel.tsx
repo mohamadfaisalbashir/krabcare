@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
+import { AMONIA_UI } from "@/lib/ammonia";
 import { AmmoniaRiskLog, Sensor } from "@/lib/types";
 import { api } from "@/lib/api";
 import {
@@ -65,7 +66,10 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
   const [from, setFrom] = useState(isoDay(weekAgo));
   const [to, setTo] = useState(isoDay(today));
-  const [paramSel, setParamSel] = useState<ParamKey | "semua">("semua");
+  // "amonia" = amonia SAJA. Kolom amonia sebenarnya selalu ikut di berkas apa
+  // pun, tapi tanpa pilihan ini keberadaannya tidak pernah kelihatan di layar
+  // dan orang menyangka amonia tidak bisa diunduh.
+  const [paramSel, setParamSel] = useState<ParamKey | "semua" | "amonia">("semua");
   const [format, setFormat] = useState<ExportFormat>("csv");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -113,7 +117,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
         return;
       }
 
-      const params = paramSel === "semua" ? PARAM_KEYS : [paramSel];
+      const params =
+        paramSel === "semua" ? PARAM_KEYS : paramSel === "amonia" ? [] : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
       const amonia = petaAmoniaDari(await ambilAmonia(start, end));
 
@@ -181,7 +186,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           <select
             id="unduh-parameter"
             value={paramSel}
-            onChange={(e) => setParamSel(e.target.value as ParamKey | "semua")}
+            onChange={(e) => setParamSel(e.target.value as ParamKey | "semua" | "amonia")}
             className="input-field"
           >
             <option value="semua">Semua parameter</option>
@@ -190,6 +195,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
                 {PARAM_UI[p].short}
               </option>
             ))}
+            <option value="amonia">{AMONIA_UI.short} saja</option>
           </select>
         </div>
 
