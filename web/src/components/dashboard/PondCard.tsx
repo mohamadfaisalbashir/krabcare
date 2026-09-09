@@ -6,12 +6,12 @@ import { formatFraksi } from "@/lib/ammonia";
 import clsx from "clsx";
 
 /** Lebar kartu SAAT MODE RAIL. Di layar 375px sisa ~100px kartu berikutnya
- *  masih terlihat — itu satu-satunya petunjuk bahwa barisnya bisa digeser, jadi
+ *  masih terlihat, itu satu-satunya petunjuk bahwa barisnya bisa digeser, jadi
  *  jangan dibuat selebar layar. Mode grid memakai lebar kolomnya sendiri. */
 export const PONDCARD_WIDTH = "w-[17rem]";
 
 /** Ubin ikon + titik status: dua-duanya ikut warna status, tapi label teksnya
- *  tetap ada di bawah — maknanya tidak pernah bergantung pada warna saja. */
+ *  tetap ada di bawah, maknanya tidak pernah bergantung pada warna saja. */
 const TONE: Record<StatusLabel, { tile: string; dot: string; text: string }> = {
   Aman: { tile: "bg-status-amanBg text-status-aman", dot: "bg-status-aman", text: "text-status-aman" },
   Waspada: { tile: "bg-status-waspadaBg text-status-waspada", dot: "bg-status-waspada", text: "text-status-waspada" },
@@ -33,7 +33,7 @@ export default function PondCard({
    *  detailnya terbuka di bawah. */
   variant: "grid" | "rail";
   selected: boolean;
-  /** id panel detail, untuk aria-controls — tanpa itu hubungan tombol ke panel
+  /** id panel detail, untuk aria-controls, tanpa itu hubungan tombol ke panel
    *  yang dibukanya tidak ada sama sekali bagi pembaca layar. */
   panelId: string;
   onSelect: (kolamId: number) => void;
@@ -41,7 +41,7 @@ export default function PondCard({
   const { kolam, quality, latestReading, ammonia } = item;
 
   // null = belum ada klasifikasi (device belum diklaim / belum kirim data).
-  // Jangan dipaksa jadi "Waspada" — itu bikin kolam kosong terlihat seperti anomali.
+  // Jangan dipaksa jadi "Waspada", itu bikin kolam kosong terlihat seperti anomali.
   const statusLabel: StatusLabel | null = quality?.classification
     ? categoryToLabel(quality.classification.quality_category)
     : null;
@@ -63,9 +63,9 @@ export default function PondCard({
       onClick={() => onSelect(kolam.id)}
       aria-expanded={selected}
       aria-controls={panelId}
-      // aria-expanded sendirian cuma berbunyi "diciutkan"; pembaca layar tidak
+      // aria-expanded sendirian cuma berbunyi "diciutkan". Pembaca layar tidak
       // tahu apa yang akan terbentang. Label ini yang menyebutnya.
-      aria-label={`${kolam.nama} — ${selected ? "tutup" : "buka"} detail kolam`}
+      aria-label={`${kolam.nama}, ${selected ? "tutup" : "buka"} detail kolam`}
       // Dipakai dashboard untuk menggulirkan kartu terpilih ke tengah rail.
       data-pondcard={kolam.id}
       className={clsx(

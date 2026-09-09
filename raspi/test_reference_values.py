@@ -1,4 +1,4 @@
-"""Angka acuan buat ammonia_nh3.py dan fuzzy_quality.py di folder ini — port dari
+"""Angka acuan buat ammonia_nh3.py dan fuzzy_quality.py di folder ini, port dari
 backend/tests/test_ammonia_speciation.py (harus tetap identik angkanya, karena
 rumusnya sengaja diduplikasi persis, bukan diimpor).
 
@@ -15,7 +15,7 @@ from fuzzy_quality import classify_water_quality  # noqa: E402
 
 
 def test_kondisi_khas_kolam():
-    """pH 8.0 / 28.5 C / 19 ppt — kondisi operasi normal rak kepiting."""
+    """pH 8.0 / 28.5 C / 19 ppt, kondisi operasi normal rak kepiting."""
     r = assess_ammonia_risk(ph=8.0, temperature_c=28.5, salinity_ppt=19.0)
     assert abs(r.fraction_nh3_pct - 5.999) < 0.01, r.fraction_nh3_pct
     assert r.in_valid_range is True

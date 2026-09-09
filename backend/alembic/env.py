@@ -7,10 +7,10 @@ from sqlalchemy import pool
 from alembic import context
 
 # JANGAN meng-import app.main di sini: dia memicu scheduler dan meng-import
-# ml.fuzzy secara transitif — tidak dibutuhkan migrasi dan bisa bikin gagal.
+# ml.fuzzy secara transitif, tidak dibutuhkan migrasi dan bisa bikin gagal.
 from app.core.config import settings
 from app.db.base import Base
-import app.models  # noqa: F401 — wajib, supaya semua tabel terdaftar di metadata
+import app.models  # noqa: F401, wajib, supaya semua tabel terdaftar di metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,7 +31,7 @@ def include_object(object, name, type_, reflected, compare_to):
     """Saring objek yang bukan bikinan kita supaya autogenerate tidak menawarkan DROP.
 
     Index `*_time_idx` dibuat otomatis create_hypertable() TimescaleDB, jadi
-    sengaja tidak dideklarasikan di model — kalau dideklarasikan malah bentrok.
+    sengaja tidak dideklarasikan di model, kalau dideklarasikan malah bentrok.
     """
     if type_ == "index" and reflected and name and name.endswith("_time_idx"):
         return False
@@ -45,7 +45,7 @@ def compare_type(context, inspected_column, metadata_column, inspected_type, met
     SAEnum(native_enum=False) dirender jadi VARCHAR(n) + CHECK. Di Postgres
     keduanya identik, jadi tidak perlu migrasi kosmetik.
 
-    Sengaja sesempit mungkin — kombinasi lain balik None (default Alembic) supaya
+    Sengaja sesempit mungkin, kombinasi lain balik None (default Alembic) supaya
     perubahan tipe yang sungguhan tetap terdeteksi.
     """
     if (

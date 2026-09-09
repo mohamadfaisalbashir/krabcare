@@ -7,13 +7,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { fetchAllReadings, toCsv, headerFor, latensiDetik, namaBerkas } from "./export.ts";
+import {
+  fetchAllReadings,
+  toCsv,
+  headerFor,
+  latensiDetik,
+  namaBerkas,
+  petaAmoniaDari,
+} from "./export.ts";
 import { formatTanggal, formatWaktu, formatWaktuDetik } from "./tanggal.ts";
 import type { SensorReading } from "./types.ts";
 
 const CHUNK = 1000;
 
-/** Baris palsu. `time` naik seiring index; received_at default +2 detik. */
+/** Baris palsu. `time` naik seiring index. Received_at default +2 detik. */
 function baris(i: number, latensiDtk = 2): SensorReading {
   const t = new Date(Date.UTC(2026, 8, 9, 0, 0, 0) + i * 60_000);
   return {
@@ -26,6 +33,15 @@ function baris(i: number, latensiDtk = 2): SensorReading {
     salinity_ppt: 20,
   };
 }
+
+/** Peta amonia berisi satu entri, untuk baris index `i`. */
+function amoniaUntuk(i: number, pct: number | null, risk: string | null) {
+  return petaAmoniaDari([
+    { device_id: 1, time: baris(i).time, fraction_nh3_pct: pct, risk_level: risk },
+  ]);
+}
+
+const TANPA_AMONIA = petaAmoniaDari([]);
 
 test("fetchAllReadings mengembalikan baris TERLAMA dulu", async () => {
   // Server membalas terbaru-dulu. Halaman 1 = index 1999..1000,
@@ -66,12 +82,13 @@ test("fetchAllReadings membuang tepat satu duplikat di batas halaman", async () 
 
 test("toCsv: header dan latensi_detik", () => {
   const params = ["ph", "temperature_c", "salinity_ppt"] as const;
-  const csv = toCsv([baris(0, 3)], [...params], { 1: "Kolam A" });
+  const csv = toCsv([baris(0, 3)], [...params], { 1: "Kolam A" }, TANPA_AMONIA);
   const [header, baris1] = csv.split("\n");
 
   assert.equal(
     header,
-    "waktu_lokal,waktu_diterima,latensi_detik,device_code,kolam,ph,temperature_c,salinity_ppt"
+    "waktu_lokal,waktu_diterima,latensi_detik,device_code,kolam," +
+      "ph,temperature_c,salinity_ppt,amonia_nh3_persen,amonia_risiko"
   );
   assert.deepEqual(headerFor([...params]), header.split(","));
 
@@ -80,18 +97,49 @@ test("toCsv: header dan latensi_detik", () => {
   assert.equal(sel[3], "AAA");
   assert.equal(sel[4], "Kolam A");
   // Nilai mentah, bukan hasil formatValue.
-  assert.deepEqual(sel.slice(5), ["7.5", "29", "20"]);
+  assert.deepEqual(sel.slice(5, 8), ["7.5", "29", "20"]);
 });
 
 test("toCsv: nilai null jadi sel kosong, bukan '0' atau 'null'", () => {
   const r = { ...baris(0), ph: null };
-  const csv = toCsv([r], ["ph"], {});
+  const csv = toCsv([r], ["ph"], {}, TANPA_AMONIA);
   assert.equal(csv.split("\n")[1].split(",")[5], "");
 });
 
 test("toCsv: nama kolam bertanda koma dibungkus kutip", () => {
-  const csv = toCsv([baris(0)], ["ph"], { 1: 'Kolam A, Rak "1"' });
+  const csv = toCsv([baris(0)], ["ph"], { 1: 'Kolam A, Rak "1"' }, TANPA_AMONIA);
   assert.ok(csv.includes('"Kolam A, Rak ""1"""'));
+});
+
+test("toCsv: amonia terpasang ke baris sensor berwaktu sama", () => {
+  const csv = toCsv([baris(0)], ["ph"], {}, amoniaUntuk(0, 3.7, "perhatian"));
+  const sel = csv.split("\n")[1].split(",");
+  // ...ph, amonia_nh3_persen, amonia_risiko
+  assert.equal(sel[5], "7.5");
+  assert.equal(sel[6], "3.7");
+  assert.equal(sel[7], "perhatian");
+});
+
+test("toCsv: baris tanpa pasangan amonia jadi sel KOSONG, bukan 0", () => {
+  // Petanya berisi amonia untuk baris(5), sedangkan yang diekspor baris(0).
+  // Sel kosong dibaca pandas sebagai NaN. "0" akan terbaca sebagai "amonianya
+  // nol persen", klaim yang tidak pernah diukur.
+  const csv = toCsv([baris(0)], ["ph"], {}, amoniaUntuk(5, 3.7, "perhatian"));
+  const sel = csv.split("\n")[1].split(",");
+  assert.equal(sel[6], "");
+  assert.equal(sel[7], "");
+});
+
+test("petaAmoniaDari: kunci memisahkan device, bukan cuma waktu", () => {
+  // Dua device bisa punya pembacaan pada detik yang sama persis. Kalau kuncinya
+  // cuma `time`, salah satunya menimpa yang lain diam-diam.
+  const peta = petaAmoniaDari([
+    { device_id: 1, time: baris(0).time, fraction_nh3_pct: 1.1, risk_level: "normal" },
+    { device_id: 2, time: baris(0).time, fraction_nh3_pct: 9.9, risk_level: "berbahaya" },
+  ]);
+  assert.equal(peta.size, 2);
+  const r2 = { ...baris(0), device_id: 2, device_code: "BBB" };
+  assert.equal(toCsv([r2], ["ph"], {}, peta).split("\n")[1].split(",")[6], "9.9");
 });
 
 test("latensiDetik boleh negatif kalau jam device lebih cepat dari server", () => {
@@ -101,7 +149,11 @@ test("latensiDetik boleh negatif kalau jam device lebih cepat dari server", () =
 
 test("namaBerkas memakai ekstensi sesuai format", () => {
   const p = ["ph"] as const;
-  assert.ok(namaBerkas("semua", [...p], "2026-09-01", "2026-09-09", "csv").endsWith("_ph_2026-09-01_2026-09-09.csv"));
+  assert.ok(
+    namaBerkas("semua", [...p], "2026-09-01", "2026-09-09", "csv").endsWith(
+      "_ph_2026-09-01_2026-09-09.csv"
+    )
+  );
   assert.ok(namaBerkas("semua", [...p], "2026-09-01", "2026-09-09", "xlsx").endsWith(".xlsx"));
   // Ketiga parameter ikut -> segmen parameter dibuang.
   const semua = namaBerkas("semua", ["ph", "temperature_c", "salinity_ppt"], "a", "b", "csv");

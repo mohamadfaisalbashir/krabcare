@@ -1,6 +1,6 @@
 """Ambang Tabel 2.1 (Bab 2.2.1) untuk menyaring log historis di SQL.
 
-SALINAN KEDUA dari angka yang sama — satunya lagi di web/src/lib/parameter.ts
+SALINAN KEDUA dari angka yang sama, satunya lagi di web/src/lib/parameter.ts
 (RANGE + statusOf). Python dan TypeScript tidak bisa berbagi konstanta, jadi
 kalau ambang di sini diubah, parameter.ts WAJIB diubah dengan angka yang sama:
 kalau melenceng, satu pembacaan bisa tampil "aman" di kartu tapi ikut tersaring
@@ -28,7 +28,7 @@ class ParamKey(str, enum.Enum):
 
 
 class StatusFilter(str, enum.Enum):
-    """Status ambang per pembacaan — BUKAN kategori Mamdani (lihat WaterQualityCategory)."""
+    """Status ambang per pembacaan, BUKAN kategori Mamdani (lihat WaterQualityCategory)."""
 
     AMAN = "aman"
     WASPADA = "waspada"

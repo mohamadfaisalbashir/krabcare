@@ -10,7 +10,7 @@ const config: Config = {
         surface: "#FFFFFF",
         ink: "#122B26",
         // Namanya masih "muted", warnanya TIDAK lagi abu-abu. #5C7A72 yang lama
-        // hanya 4,69:1 di atas putih — lolos AA di atas kertas, tapi 52 tempat
+        // hanya 4,69:1 di atas putih, lolos AA di atas kertas, tapi 52 tempat
         // memakainya dan sebagian besar duduk di atas kartu `.glass` (putih 55%
         // di atas foto), sehingga kontras efektifnya turun lagi dan teksnya
         // terbaca pudar. #1E332D = 13,4:1, praktis hitam, dan tetap sehelai
@@ -26,7 +26,7 @@ const config: Config = {
         // Warna dominan aplikasi: #19A8B2 (brand-500).
         //
         // Step 600/700 SENGAJA lebih gelap, bukan sekadar variasi: teks putih di
-        // atas #19A8B2 hanya 2.88:1 — gagal WCAG AA (butuh 4.5:1) dan bahkan
+        // atas #19A8B2 hanya 2.88:1, gagal WCAG AA (butuh 4.5:1) dan bahkan
         // gagal ambang 3:1 untuk komponen UI. Jadi #19A8B2 dipakai untuk isian
         // dan aksen (pil nav, logo, ikon), sedangkan tombol, wordmark, dan
         // outline fokus memakai 600/700 yang terukur lolos:
@@ -62,7 +62,7 @@ const config: Config = {
           bahayaBg: "#FBE7E2",
         },
       },
-      // WinUI 3 memakai SATU keluarga huruf untuk seluruh UI — judul dan isi.
+      // WinUI 3 memakai SATU keluarga huruf untuk seluruh UI, judul dan isi.
       // Ini font bawaan sistem, bukan Google Font, jadi tidak ada yang diunduh:
       // Segoe UI Variable di Windows, dan system-ui menutup OS lain.
       fontFamily: {
@@ -85,7 +85,7 @@ const config: Config = {
       },
       // SATU kurva untuk semua gerakan yang mengubah tata letak (lebar sidebar,
       // label yang menyusut, submenu yang membuka, indikator segmented control).
-      // Sebelumnya tiap elemen memakai durasi & kurva sendiri — itu yang membuat
+      // Sebelumnya tiap elemen memakai durasi & kurva sendiri, itu yang membuat
       // buka/tutup sidebar terbaca patah-patah, bukan durasinya yang kurang.
       transitionTimingFunction: {
         smooth: "cubic-bezier(0.32, 0.72, 0, 1)",
@@ -103,8 +103,8 @@ const config: Config = {
       },
       borderRadius: {
         // Dua radius standar WinUI 3. `lg` SENGAJA menimpa bawaan Tailwind
-        // (0.5rem): 26 pemakaian rounded-lg — tombol, input, item nav, ubin
-        // ikon — ikut jadi 4px tanpa satu pun berkas TSX disentuh.
+        // (0.5rem): 26 pemakaian rounded-lg, tombol, input, item nav, ubin
+        // ikon, ikut jadi 4px tanpa satu pun berkas TSX disentuh.
         lg: "0.25rem",
         xl2: "0.5rem",
       },

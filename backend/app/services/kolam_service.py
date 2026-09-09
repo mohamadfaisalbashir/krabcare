@@ -1,4 +1,4 @@
-"""Manajemen kolam & klaim device — dasar isolasi kepemilikan data."""
+"""Manajemen kolam & klaim device, dasar isolasi kepemilikan data."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,7 @@ async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) ->
 
     flush() dulu supaya `kolam.id` terisi tanpa commit; commit-nya baru terjadi
     di dalam claim_device. Jadi kalau device_code salah atau sudah dipakai,
-    rollback membatalkan kolamnya juga — tidak ada kolam yatim yang tertinggal
+    rollback membatalkan kolamnya juga, tidak ada kolam yatim yang tertinggal
     karena langkah kedua gagal.
     """
     kolam = Kolam(owner_user_id=owner.id, nama=payload.nama)
@@ -50,7 +50,7 @@ async def list_kolam(db: AsyncSession, owner: User) -> list[Kolam]:
 
 
 async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam | None:
-    """None kalau kolam tidak ada ATAU bukan milik `owner` — sengaja tidak dibedakan,
+    """None kalau kolam tidak ada ATAU bukan milik `owner`, sengaja tidak dibedakan,
     supaya router balas 404 seragam tanpa membocorkan keberadaan kolam orang lain."""
     result = await db.execute(
         select(Kolam).where(Kolam.id == kolam_id, Kolam.owner_user_id == owner.id)
@@ -99,7 +99,7 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
     if device.kolam_id is not None and device.kolam_id != kolam.id:
         raise DeviceAlreadyClaimedError(f"Device '{device_code}' sudah diklaim kolam lain")
 
-    # Klaim ulang device yang sama tetap idempoten; yang ditolak cuma device kedua.
+    # Klaim ulang device yang sama tetap idempoten. Yang ditolak cuma device kedua.
     occupant_result = await db.execute(select(Device).where(Device.kolam_id == kolam.id))
     occupant = occupant_result.scalars().first()
     if occupant is not None and occupant.id != device.id:

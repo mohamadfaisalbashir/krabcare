@@ -1,4 +1,4 @@
-"""Wrapper tipis firebase-admin untuk push notification — graceful kalau belum dikonfigurasi."""
+"""Wrapper tipis firebase-admin untuk push notification, graceful kalau belum dikonfigurasi."""
 
 import logging
 
@@ -27,7 +27,7 @@ def send_push(token: str, title: str, body: str) -> bool:
     """Kirim satu push ke satu token FCM. False = tidak terkirim (tidak pernah raise)."""
     app = _get_firebase_app()
     if app is None:
-        logger.warning("FIREBASE_CREDENTIALS_PATH belum diset — push dilewati.")
+        logger.warning("FIREBASE_CREDENTIALS_PATH belum diset, push dilewati.")
         return False
     try:
         message = messaging.Message(

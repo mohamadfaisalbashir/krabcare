@@ -1,19 +1,19 @@
-# WLR forecast — Raspberry Pi 5 (edge)
+# WLR forecast: Raspberry Pi 5 (edge)
 
 Forecast WLR 15/30/60 menit yang jalan LANGSUNG di Raspi (gateway), bukan di backend cloud.
 `raspi/` itu kode produksi yang beneran dikirim ke hardware.
 
 ## Isi
 
-- `wlr_forecast.py` — forecast WLR 15/30/60 menit (ph, suhu, salinitas).
-- `fuzzy_quality.py` — klasifikasi Mamdani (baik/sedang/buruk), berdiri sendiri.
-- `ammonia_nh3.py` — estimasi fraksi risiko amonia (NH3), duplikat dari
+- `wlr_forecast.py`, forecast WLR 15/30/60 menit (ph, suhu, salinitas).
+- `fuzzy_quality.py`, klasifikasi Mamdani (baik/sedang/buruk), berdiri sendiri.
+- `ammonia_nh3.py`, estimasi fraksi risiko amonia (NH3), duplikat dari
   backend/app/services/ammonia_speciation.py.
-- `edge_pipeline.py` — satu titik masuk yang menyatukan tiga di atas: dari satu reading
+- `edge_pipeline.py`, satu titik masuk yang menyatukan tiga di atas: dari satu reading
   mentah, hasilkan payload lengkap siap POST ke `/api/v1/ingest/quality`.
-- `test_reference_values.py` — angka acuan (sama seperti backend/tests/test_ammonia_speciation.py)
+- `test_reference_values.py`, angka acuan (sama seperti backend/tests/test_ammonia_speciation.py)
   buat memastikan dua salinan (di sini vs backend) tetap identik hasilnya.
-- `krabcare-wlr.service.example` — contoh unit systemd, kalau nanti mau dijalankan sebagai
+- `krabcare-wlr.service.example`, contoh unit systemd, kalau nanti mau dijalankan sebagai
   service yang auto-start & auto-restart.
 
 Kelima file `.py` **satu paket, berdiri sendiri** (tidak bergantung file lain di repo ini),
@@ -32,10 +32,10 @@ Body: payload dari EdgePipeline.process(...) (buang key "_anomaly_now"/"_anomaly
       itu cuma info tambahan buat kalian, backend tidak menerimanya)
 ```
 
-Endpoint `/api/v1/ingest/readings` (raw sensor) TIDAK BERUBAH — tetap kirim seperti biasa,
+Endpoint `/api/v1/ingest/readings` (raw sensor) TIDAK BERUBAH, tetap kirim seperti biasa,
 INI TAMBAHAN, bukan pengganti. Jadi tiap siklus baca sensor sekarang mengirim DUA request:
-1. `POST /ingest/readings` — data mentah (seperti sekarang)
-2. `POST /ingest/quality` — hasil `EdgePipeline.process(...)` (BARU)
+1. `POST /ingest/readings`, data mentah (seperti sekarang)
+2. `POST /ingest/quality`, hasil `EdgePipeline.process(...)` (BARU)
 
 ## Cara pakai cepat (tanpa hardware, buat ngetes dulu)
 
@@ -43,7 +43,7 @@ INI TAMBAHAN, bukan pengganti. Jadi tiap siklus baca sensor sekarang mengirim DU
 python3 wlr_forecast.py
 ```
 Ini jalanin simulasi 75 menit data + print forecast tiap 15 menit. Kalau ini jalan tanpa
-error, artinya file-nya siap dipakai — tinggal disambung ke pembacaan sensor asli.
+error, artinya file-nya siap dipakai, tinggal disambung ke pembacaan sensor asli.
 
 ## Cara integrasi ke script gateway kalian yang sudah ada
 
@@ -75,7 +75,7 @@ def post(path: str, payload: dict) -> None:
 
 while True:
     # GANTI bagian ini dengan cara Raspi kalian baca data dari ESP32
-    # (serial/UART, LoRa, MQTT, dst — apa pun yang sudah jalan sekarang)
+    # (serial/UART, LoRa, MQTT, dst, apa pun yang sudah jalan sekarang)
     ph, suhu, sal = baca_sensor()  # <- fungsi kalian sendiri
 
     waktu = datetime.now(timezone.utc)  # HARUS timezone-aware
@@ -98,19 +98,19 @@ while True:
 ```
 
 Kalau gateway kalian sudah pakai library `requests`, ganti fungsi `post()` di atas dengan
-`requests.post(url, json=payload, headers={...})` — sama saja, cuma lebih ringkas.
+`requests.post(url, json=payload, headers={...})`, sama saja, cuma lebih ringkas.
 
 `WLRForecaster` (dipakai `EdgePipeline` di dalam) tetap bisa dipakai sendirian kalau kalian
-cuma butuh forecast tanpa klasifikasi/amonia — lihat bagian bawah `wlr_forecast.py`.
+cuma butuh forecast tanpa klasifikasi/amonia, lihat bagian bawah `wlr_forecast.py`.
 
 ## Kenapa cuma 3 horizon ini (15/30/60 menit), dan kenapa window-nya segitu
 
-`HORIZONS_MINUTES = (15, 30, 60)` di-hardcode sesuai permintaan — bukan parameter yang bisa
+`HORIZONS_MINUTES = (15, 30, 60)` di-hardcode sesuai permintaan, bukan parameter yang bisa
 diubah dari luar tanpa edit kode (sengaja, biar jelas & tidak "diam-diam" berubah).
 
 Tiap horizon punya `window_minutes`/`half_life_minutes` sendiri di `DEFAULT_HORIZON_CONFIG`
 (heuristik: window = horizon, half-life = window/3). Ini BELUM divalidasi dengan data
-riil berjam-jam — begitu data kalian sudah lebih panjang dari yang di `data/` sekarang
+riil berjam-jam, begitu data kalian sudah lebih panjang dari yang di `data/` sekarang
 (~105 menit), validasi ulang kombinasi window/half-life mana yang RMSE-nya paling kecil
 per horizon, baru sesuaikan angkanya di `DEFAULT_HORIZON_CONFIG` sini kalau perlu.
 
@@ -128,9 +128,9 @@ per horizon, baru sesuaikan angkanya di `DEFAULT_HORIZON_CONFIG` sini kalau perl
 
 ## Batasan yang perlu diketahui
 
-- Forecast pakai ekstrapolasi garis lurus dari tren terakhir — kalau kondisi air berubah
+- Forecast pakai ekstrapolasi garis lurus dari tren terakhir, kalau kondisi air berubah
   MENDADAK (bukan tren halus), prediksi 60 menit ke depan bisa jauh meleset. Ini batasan
   metode, bukan bug.
-- Belum ada validasi kalibrasi (`d_min`/`d_max` semacam di FTS) — WLR nggak butuh universe
+- Belum ada validasi kalibrasi (`d_min`/`d_max` semacam di FTS), WLR nggak butuh universe
   tetap kaya FTS, tapi tetap butuh histori riil buat window/half-life di atas supaya masuk
   akal buat kondisi air kolam kalian.

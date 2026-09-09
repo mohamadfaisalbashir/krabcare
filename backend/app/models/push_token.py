@@ -8,7 +8,7 @@ from app.db.base import Base
 
 
 class PushToken(Base):
-    """Token FCM per perangkat mobile milik user — tujuan dispatch push."""
+    """Token FCM per perangkat mobile milik user, tujuan dispatch push."""
 
     __tablename__ = "push_tokens"
     # Lihat catatan index di device.py.

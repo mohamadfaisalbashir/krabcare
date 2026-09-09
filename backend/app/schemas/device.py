@@ -8,10 +8,10 @@ from app.models.enums import DeviceType
 
 
 class DeviceCreateIn(BaseModel):
-    """Payload admin menambah device baru — pengganti INSERT manual ke DB.
+    """Payload admin menambah device baru, pengganti INSERT manual ke DB.
 
     device_code HARUS persis sama dengan yang dikirim firmware (case-sensitive,
-    lihat README) — device baru lahir belum terklaim kolam mana pun
+    lihat README), device baru lahir belum terklaim kolam mana pun
     (kolam_id null), baru terhubung lewat POST /kolam/:id/devices/:code.
     """
 
@@ -36,7 +36,7 @@ class DeviceOut(BaseModel):
 
 
 class DeviceAdminOut(DeviceOut):
-    """DeviceOut + status klaim — dipakai panel admin (GET /devices) supaya
+    """DeviceOut + status klaim, dipakai panel admin (GET /devices) supaya
     device yang sudah diklaim dan yang belum bisa ditampilkan dalam satu list."""
 
     kolam_id: int | None

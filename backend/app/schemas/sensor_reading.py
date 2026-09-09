@@ -16,7 +16,7 @@ class SensorReadingIn(BaseModel):
 
 
 class SensorReadingBatchIn(BaseModel):
-    """Payload ingest dari gateway — satu push bisa berisi banyak level sekaligus."""
+    """Payload ingest dari gateway, satu push bisa berisi banyak level sekaligus."""
 
     readings: list[SensorReadingIn] = Field(min_length=1)
 
@@ -34,7 +34,7 @@ class SkippedDuplicateOut(BaseModel):
 
 
 class IngestResultOut(BaseModel):
-    """Ringkasan hasil ingest — gateway pakai ini untuk tahu apa yang tidak masuk."""
+    """Ringkasan hasil ingest, gateway pakai ini untuk tahu apa yang tidak masuk."""
 
     received: int
     inserted: int

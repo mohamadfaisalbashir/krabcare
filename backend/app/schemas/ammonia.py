@@ -1,4 +1,4 @@
-"""Schema indeks risiko toksisitas amonia — FRAKSI NH3, bukan konsentrasi mg/L."""
+"""Schema indeks risiko toksisitas amonia, FRAKSI NH3, bukan konsentrasi mg/L."""
 
 from datetime import datetime
 
@@ -19,7 +19,7 @@ class AmmoniaRiskOut(BaseModel):
 
     Dihitung dari pH, suhu, dan salinitas menggunakan persamaan kesetimbangan
     kimia (Bower & Bidwell 1978 / Spotte & Adams 1983). Tidak memerlukan dan
-    tidak menghasilkan nilai TAN — lihat catatan `disclaimer`.
+    tidak menghasilkan nilai TAN, lihat catatan `disclaimer`.
     """
 
     time: datetime
@@ -46,7 +46,7 @@ class AmmoniaRiskOut(BaseModel):
 
 
 class AmmoniaRiskLogOut(AmmoniaRiskOut):
-    """Satu baris log historis — sama seperti di atas plus identitas device."""
+    """Satu baris log historis, sama seperti di atas plus identitas device."""
 
     device_id: int
     device_code: str | None
@@ -56,7 +56,7 @@ class AmmoniaRiskIn(BaseModel):
     """Payload ingest satu baris risiko amonia, dihitung & dikirim Raspi (edge_pipeline.py).
 
     Bentuknya sengaja sejajar field demi field dengan AmmoniaRiskOut/tabel
-    ammonia_risks — backend di sini cuma menyimpan, tidak menghitung ulang."""
+    ammonia_risks, backend di sini cuma menyimpan, tidak menghitung ulang."""
 
     device_code: str
     time: datetime

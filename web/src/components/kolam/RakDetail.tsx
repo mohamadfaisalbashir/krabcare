@@ -32,7 +32,7 @@ import { formatWaktu } from "@/lib/tanggal";
  * Judul & catatan tiap bagian, ditulis SEKALI.
  *
  * Kerangka (DetailSkeleton) memakai `Section` dengan judul yang sama persis
- * dengan versi termuatnya — itu yang membuat tinggi kepala tiap bagian cocok
+ * dengan versi termuatnya, itu yang membuat tinggi kepala tiap bagian cocok
  * tanpa disetel tangan, dan itu pula yang menahan tinggi panel saat berganti
  * rak. Kalau teksnya ditulis dua kali, salah satunya pasti ketinggalan dan
  * kerangkanya pelan-pelan lepas dari tata letak yang ditirunya.
@@ -62,7 +62,7 @@ const SECTION = {
  * pengguna ke dashboard hanya untuk membuka rak berikutnya.
  *
  * SATU lembar kaca, bukan tumpukan kartu. Sebelumnya tiap bagian punya
- * pembungkus `.glass` sendiri di dalam pembungkus `.glass` panel — dan itu dua
+ * pembungkus `.glass` sendiri di dalam pembungkus `.glass` panel, dan itu dua
  * masalah sekaligus: terbaca seperti komponen yang ditumpuk-tumpuk, dan setiap
  * lapisan `backdrop-filter` bersarang menambah biaya cat yang terasa saat baris
  * kartu di atasnya diseret. Di sini pemisah antar bagian cuma garis rambut dan
@@ -74,7 +74,7 @@ export default function RakDetail({
   onChanged,
   onDataUpdate,
 }: {
-  /** Datang dari daftar yang sudah dimuat dashboard — jadi judul panel langsung
+  /** Datang dari daftar yang sudah dimuat dashboard, jadi judul panel langsung
    *  benar tanpa menunggu GET /kolam/:id kedua. */
   kolam: Kolam;
   onClose: () => void;
@@ -83,10 +83,10 @@ export default function RakDetail({
   onChanged: () => void;
   /** Dipanggil setiap kali reading/kualitas/amonia device ini baru dimuat di
    *  sini (buka panel maupun refresh 60 detiknya sendiri). Dashboard memakainya
-   *  untuk menempelkan angka yang SAMA PERSIS ke kartu di atas — tanpa ini kartu
+   *  untuk menempelkan angka yang SAMA PERSIS ke kartu di atas, tanpa ini kartu
    *  cuma segar tiap putaran polling 60 detiknya SENDIRI (mulai dari saat
    *  dashboard dimuat), yang jamnya tidak akan pernah pas dengan putaran panel
-   *  ini (mulai dari saat rak dipilih) — dua jam beda sumber, dua kali telat,
+   *  ini (mulai dari saat rak dipilih), dua jam beda sumber, dua kali telat,
    *  dan itulah kenapa waktu di kartu terlihat mundur dibanding di panel ini. */
   onDataUpdate?: (
     kolamId: number,
@@ -108,7 +108,7 @@ export default function RakDetail({
   const [activeParam, setActiveParam] = useState<ParamKey>("ph");
   const [loading, setLoading] = useState(true);
   // Terpisah dari `loading`, yang cuma menutup pengambilan device. Ini yang
-  // membedakan "bacaan belum sampai" dari "rak ini memang belum punya bacaan" —
+  // membedakan "bacaan belum sampai" dari "rak ini memang belum punya bacaan",
   // tanpa itu bagian grafik tidak bisa memesan tempat setinggi grafiknya, dan
   // panel tumbuh sekali lagi saat data akhirnya masuk.
   const [dataLoading, setDataLoading] = useState(true);
@@ -141,7 +141,7 @@ export default function RakDetail({
   // menyimpan nama baru membuat prop itu berubah, dan efek yang ikut berjalan
   // akan menutup panel "Ubah nama rak" tepat saat pesan berhasilnya muncul.
   // Reset antar-rak sendiri sudah dijamin `key` di dashboard yang me-remount
-  // komponen ini; efek ini cukup mengambil device-nya.
+  // komponen ini. Efek ini cukup mengambil device-nya.
   useEffect(() => {
     loadDevice();
   }, [loadDevice]);
@@ -172,12 +172,12 @@ export default function RakDetail({
         const ammonia = ammoniaList[0] ?? null;
         setQuality(quality);
         setReading(reading);
-        // Backend mengurutkan terbaru dulu (time DESC); grafik perlu urutan naik
+        // Backend mengurutkan terbaru dulu (time DESC). Grafik perlu urutan naik
         // supaya sumbu waktu tidak terbaca mundur.
         setHistory([...readings].reverse());
         setPredictions(predictionList[0]?.predictions ?? []);
         setAmmonia(ammonia);
-        // Dorong angka yang SAMA PERSIS ke kartu dashboard — lihat komentar
+        // Dorong angka yang SAMA PERSIS ke kartu dashboard, lihat komentar
         // `onDataUpdate` di atas untuk alasannya. `.current`: KolamDashboard.ammonia
         // adalah AmmoniaRisk polos, bukan pembungkus DeviceAmmonia ini.
         onDataUpdate?.(kolamId, { reading, quality, ammonia: ammonia?.current ?? null });
@@ -193,7 +193,7 @@ export default function RakDetail({
 
     const deviceId = device.id;
     loadDeviceData(deviceId);
-    // Refresh senyap — loadDeviceData tidak menyentuh state `loading`, jadi
+    // Refresh senyap, loadDeviceData tidak menyentuh state `loading`, jadi
     // baris parameter & grafik ter-update tanpa panel berkedip.
     const id = setInterval(() => loadDeviceData(deviceId), 60_000);
     return () => clearInterval(id);
@@ -250,11 +250,11 @@ export default function RakDetail({
       <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-[#266B70]">Detail Kolam</p>
-          {/* Nama rak buatan pengguna — panjangnya tidak terbatas, jadi dipotong
+          {/* Nama rak buatan pengguna, panjangnya tidak terbatas, jadi dipotong
               alih-alih mendorong tombol Tutup keluar. */}
           {/* brand-700 (#0F7078), bukan `ink`: mencolok dan langsung menandai
               "ini judul panelnya", tapi 5.82:1 di atas putih dan masih warna
-              merek — bukan kontras keras yang berkelahi dengan tema. */}
+              merek, bukan kontras keras yang berkelahi dengan tema. */}
           <h2 className="mt-0.5 truncate font-display text-2xl font-semibold text-brand-700 sm:text-3xl">
             {kolam.nama}
           </h2>
@@ -288,7 +288,7 @@ export default function RakDetail({
             </p>
           )}
 
-          {/* Pembacaan terkini — satu baris, bukan empat kartu. */}
+          {/* Pembacaan terkini, satu baris, bukan empat kartu. */}
           <Section {...SECTION.terkini}>
             <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
             <WarnaKondisiLegend />
@@ -302,7 +302,7 @@ export default function RakDetail({
             <WarnaKondisiLegend />
           </Section>
 
-          {/* Klaim device — satu rak hanya boleh satu device, jadi bagian ini
+          {/* Klaim device, satu rak hanya boleh satu device, jadi bagian ini
               hilang begitu raknya sudah terhubung. */}
           {!device && (
             <Section>
@@ -327,7 +327,7 @@ export default function RakDetail({
             </Section>
           )}
 
-          {/* Digerbang `device`, BUKAN `history.length` — dan itu yang menahan
+          {/* Digerbang `device`, BUKAN `history.length`, dan itu yang menahan
               tinggi panel. Digerbang panjang riwayat, kedua bagian ini absen
               selama bacaan belum sampai, lalu muncul serentak setinggi 2×256px
               dan mendorong seluruh isi halaman ke bawah. Sekarang tempatnya
@@ -339,7 +339,7 @@ export default function RakDetail({
                 aside={<ParamSwitch value={activeParam} onChange={setActiveParam} />}
               >
                 {/* Legenda warna grafik ini. Cuma satu parameter tergambar,
-                    jadi satu chip sudah cukup — tapi tanpa itu warna garisnya
+                    jadi satu chip sudah cukup, tapi tanpa itu warna garisnya
                     tidak pernah dijelaskan sama sekali. */}
                 <ParamChip param={activeParam} />
                 {dataLoading ? (
@@ -351,7 +351,7 @@ export default function RakDetail({
                 )}
               </Section>
 
-              {/* Ketiga parameter sekaligus — untuk melihat apakah lonjakan satu
+              {/* Ketiga parameter sekaligus, untuk melihat apakah lonjakan satu
                   parameter berbarengan dengan yang lain. */}
               <Section {...SECTION.gabungan}>
                 {dataLoading ? (
@@ -432,7 +432,7 @@ export default function RakDetail({
 
 /**
  * Satu bagian di dalam lembar. Pemisahnya garis rambut + judul kecil, BUKAN
- * kartu berbingkai — itulah bedanya "satu lembar informasi" dengan "tumpukan
+ * kartu berbingkai, itulah bedanya "satu lembar informasi" dengan "tumpukan
  * komponen".
  */
 function Section({
@@ -466,7 +466,7 @@ function Section({
 
 /**
  * Legenda warna kondisi, dirender DI DALAM tiap bagian yang memakai warnanya
- * (Parameter & Prediksi) — bukan sekali di kepala panel.
+ * (Parameter & Prediksi), bukan sekali di kepala panel.
  *
  * Sebelumnya ia satu blok di paling atas, jauh dari titik-titik warna yang
  * dijelaskannya: saat pengguna sampai ke Prediksi, keterangannya sudah
@@ -494,7 +494,7 @@ function WarnaKondisiLegend() {
 }
 
 /** Keterangan warna garis satu parameter. Warnanya dari PARAM_UI, sumber yang
- *  sama dengan stroke grafiknya — jadi tidak bisa berbeda. */
+ *  sama dengan stroke grafiknya, jadi tidak bisa berbeda. */
 function ParamChip({ param }: { param: ParamKey }) {
   const cfg = PARAM_UI[param];
   return (
@@ -527,7 +527,7 @@ function DetailPill({
 
 /**
  * Pemilih parameter grafik. Indikatornya SATU span yang bergeser, bukan latar
- * yang berpindah dari tombol ke tombol — perpindahannya jadi terbaca sebagai
+ * yang berpindah dari tombol ke tombol, perpindahannya jadi terbaca sebagai
  * gerakan, dan matanya ikut ke tujuan alih-alih mengedip ke sana.
  *
  * Lebar indikator dihitung dari jumlah parameter, jadi menambah parameter
@@ -599,11 +599,11 @@ function ChartEmpty() {
  * Kerangka lembar.
  *
  * Menirukan SELURUH tata letak, bukan cuma dua bloknya seperti dulu, dan
- * memakai `Section` yang sama persis — bukan div dengan padding yang disalin.
+ * memakai `Section` yang sama persis, bukan div dengan padding yang disalin.
  * Alasannya bukan kerapian: berganti rak me-remount panel ini lewat `key` di
  * dashboard, jadi tinggi kerangka adalah tinggi panel selama data rak baru
  * dijemput. Kerangka lama ~700px sementara isinya ~1400px, sehingga tiap
- * perpindahan rak meruntuhkan panel lalu menumbuhkannya lagi — itu yang
+ * perpindahan rak meruntuhkan panel lalu menumbuhkannya lagi, itu yang
  * terbaca patah. Dengan `Section` dan judul yang sama, keduanya cocok dengan
  * sendirinya dan tetap cocok walau bagiannya nanti bertambah.
  *

@@ -1,4 +1,4 @@
-"""GET endpoint — histori reading sensor, difilter waktu & dibatasi hak akses."""
+"""GET endpoint, histori reading sensor, difilter waktu & dibatasi hak akses."""
 
 from datetime import datetime
 
@@ -32,7 +32,7 @@ async def list_readings(
     `param` + `limit`/`offset` dipakai halaman Log Historis: satu halaman = satu
     parameter, 25 baris, diiris di database. Respons tetap list polos (bukan
     {items, total}) supaya dashboard, detail rak, dan ekspor CSV tidak ikut
-    berubah — "masih ada lagi" cukup dibaca dari jumlah baris == limit.
+    berubah, "masih ada lagi" cukup dibaca dari jumlah baris == limit.
     """
     if status is not None and param is None:
         raise HTTPException(

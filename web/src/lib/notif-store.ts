@@ -11,7 +11,7 @@ import { api } from "./api";
  * turun begitu notifikasi ditandai dibaca/dihapus di halaman, tanpa menunggu
  * polling 60 detik masing-masing komponen.
  *
- * Dibatasi 200 (batas keras backend, lihat routers/notifications.py) — kalau
+ * Dibatasi 200 (batas keras backend, lihat routers/notifications.py), kalau
  * memang ada >200 belum dibaca, badge menampilkan "200+", bukan angka pasti.
  */
 const BATAS_HITUNG = 200;
@@ -40,7 +40,7 @@ export async function refreshUnreadCount(): Promise<void> {
     count = list.length;
     beritahu();
   } catch {
-    // Diam saja — badge cuma tampilan sekunder, jangan sampai error di sini
+    // Diam saja, badge cuma tampilan sekunder, jangan sampai error di sini
     // ikut memunculkan pesan galat di layar.
   } finally {
     sedangMemuat = false;

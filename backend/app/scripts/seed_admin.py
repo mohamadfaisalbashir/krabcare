@@ -1,4 +1,4 @@
-"""Seed akun admin awal — sekali jalan, idempoten.
+"""Seed akun admin awal, sekali jalan, idempoten.
 
 Sistem auth di aplikasi ini login pakai EMAIL (bukan username terpisah, lihat
 schemas/user.py), jadi "SuperKrab" dipakai sebagai bagian depan alamat email:
@@ -9,7 +9,7 @@ Jalankan sekali dari container backend:
         exec backend python -m app.scripts.seed_admin
 
 Aman dijalankan berkali-kali: kalau akunnya sudah ada, cuma dipastikan
-role-nya admin & aktif — password TIDAK ditimpa supaya password yang sudah
+role-nya admin & aktif, password TIDAK ditimpa supaya password yang sudah
 diganti manual lewat /auth/me/change-password tidak balik ke nilai awal ini.
 """
 
@@ -37,7 +37,7 @@ async def seed_admin() -> None:
                 user.role = UserRole.ADMIN
                 user.is_active = True
                 await db.commit()
-                print(f"Akun '{ADMIN_EMAIL}' sudah ada — role/status disamakan ke admin aktif.")
+                print(f"Akun '{ADMIN_EMAIL}' sudah ada, role/status disamakan ke admin aktif.")
             else:
                 print(f"Akun '{ADMIN_EMAIL}' sudah ada dan sudah admin. Tidak ada perubahan.")
             return

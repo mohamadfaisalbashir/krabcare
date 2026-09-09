@@ -1,5 +1,5 @@
 """Satu titik masuk: dari satu reading mentah, hasilkan payload lengkap siap
-POST ke backend (POST /api/v1/ingest/quality) — klasifikasi kondisi sekarang,
+POST ke backend (POST /api/v1/ingest/quality), klasifikasi kondisi sekarang,
 forecast 15/30/60 menit, dan risiko amonia untuk kondisi sekarang + tiap horizon.
 
 Backend TIDAK LAGI menghitung ketiganya. VPS cuma menyimpan apa yang dikirim
@@ -15,7 +15,7 @@ CARA PAKAI:
     # payload sudah dict siap json.dumps() lalu POST ke /api/v1/ingest/quality
     # (header X-API-Key: GATEWAY_API_KEY, sama seperti /ingest/readings)
 
-Murni stdlib — tidak butuh `pip install` apa pun.
+Murni stdlib, tidak butuh `pip install` apa pun.
 """
 
 from datetime import datetime, timedelta
@@ -25,11 +25,11 @@ from ammonia_nh3 import assess_ammonia_risk
 from fuzzy_quality import ANOMALY_CATEGORIES, classify_water_quality
 from wlr_forecast import HORIZONS_MINUTES, WLRForecaster
 
-#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan) — SAMA dengan
+#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan), SAMA dengan
 #: ammonia_service.HORIZON_TERUKUR di backend, WAJIB tetap 0 di dua sisi.
 HORIZON_TERUKUR = 0
 
-#: Tag model_version yang dikirim ke backend — beda dari versi lama backend
+#: Tag model_version yang dikirim ke backend, beda dari versi lama backend
 #: ("fuzzy-logic"/"fts") supaya baris lama vs baru gampang dibedakan di DB
 #: kalau suatu saat perlu ditelusuri. Amonia SENGAJA tidak diberi tag "-edge":
 #: rumusnya identik, cuma pindah tempat jalannya (lihat ammonia_nh3.py).
@@ -94,7 +94,7 @@ class EdgePipeline:
         """Satu reading masuk -> payload lengkap {classifications, predictions, ammonia_risks}.
 
         `time` HARUS timezone-aware. Kalau salah satu parameter None (sensor mati),
-        klasifikasi/amonia kondisi-sekarang dilewati (bukan diisi nilai palsu) —
+        klasifikasi/amonia kondisi-sekarang dilewati (bukan diisi nilai palsu),
         tapi reading tetap ditambahkan ke buffer forecast kalau nilainya ada.
         """
         classifications: list[dict] = []
@@ -141,7 +141,7 @@ class EdgePipeline:
             "classifications": classifications,
             "predictions": predictions,
             "ammonia_risks": ammonia_risks,
-            # Info tambahan buat kalian putuskan sendiri (mis. nyalain buzzer lokal) —
+            # Info tambahan buat kalian putuskan sendiri (mis. nyalain buzzer lokal),
             # backend tetap dapat kategori mentahnya dari classifications/predictions
             # di atas dan memutuskan notifikasi push sendiri, bagian ini tidak dikirim.
             "_anomaly_now": anomaly_categories_now,
@@ -153,9 +153,9 @@ if __name__ == "__main__":
     import json
     from datetime import timezone
 
-    print("=== Demo EdgePipeline — satu reading, payload lengkap ===\n")
+    print("=== Demo EdgePipeline, satu reading, payload lengkap ===\n")
     pipeline = EdgePipeline(device_code="54D660E9BFB4")
     waktu = datetime.now(timezone.utc)
     payload = pipeline.process(waktu, ph=6.9, temperature_c=28.4, salinity_ppt=15.2)
     print(json.dumps({k: v for k, v in payload.items() if not k.startswith("_")}, indent=2, default=str))
-    print("\n(forecast di atas semua None karena baru 1 reading — normal, histori belum cukup)")
+    print("\n(forecast di atas semua None karena baru 1 reading, normal, histori belum cukup)")

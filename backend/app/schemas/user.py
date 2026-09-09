@@ -22,7 +22,7 @@ def _rapikan_email(nilai: object) -> object:
     """Buang spasi & samakan ke huruf kecil SEBELUM pola & keunikan diuji.
 
     Tanpa ini `A@x.com` dan `a@x.com` lolos sebagai dua akun berbeda melawan
-    UNIQUE di database/init/05_users.sql — dan pemiliknya sendiri tidak akan
+    UNIQUE di database/init/05_users.sql, dan pemiliknya sendiri tidak akan
     tahu yang mana yang punya datanya. Pencarian user di auth_service ikut
     dibuat case-insensitive supaya akun lama yang terlanjur ber-huruf besar
     tetap bisa login.
@@ -30,7 +30,7 @@ def _rapikan_email(nilai: object) -> object:
     return nilai.strip().lower() if isinstance(nilai, str) else nilai
 
 
-#: Satu definisi untuk semua kolom email — register, login, dan lupa-sandi harus
+#: Satu definisi untuk semua kolom email, register, login, dan lupa-sandi harus
 #: menormalkan dengan aturan yang sama, kalau tidak login gagal untuk alamat
 #: yang justru baru saja berhasil didaftarkan.
 Email = Annotated[
@@ -76,6 +76,14 @@ class PasswordChangeIn(BaseModel):
 
 
 class ForgotPasswordIn(BaseModel):
+    email: Email
+
+
+class VerifyEmailIn(BaseModel):
+    token: str
+
+
+class ResendVerificationIn(BaseModel):
     email: Email
 
 

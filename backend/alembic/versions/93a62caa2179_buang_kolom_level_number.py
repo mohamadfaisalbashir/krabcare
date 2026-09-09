@@ -1,13 +1,13 @@
 """buang kolom devices.level_number
 
 Produk disederhanakan: satu kolam = satu rak = TEPAT SATU slave device (lihat
-kolam_service.claim_device — klaim device kedua ke kolam yang sama sudah
+kolam_service.claim_device, klaim device kedua ke kolam yang sama sudah
 ditolak sejak migrasi b3f1c7a9d204). Konsep "tingkat" di dalam satu rak tidak
-lagi dipakai di mana pun pada kode aplikasi (model/schema/UI) — kolom ini
+lagi dipakai di mana pun pada kode aplikasi (model/schema/UI), kolom ini
 sisa desain lama yang membayangkan banyak slave per level dalam satu rak.
 
 Nilai kolom ini untuk baris yang sudah ada (kalau ada) IKUT HILANG saat
-downgrade dijalankan mundur lagi — cuma strukturnya yang bisa dikembalikan,
+downgrade dijalankan mundur lagi, cuma strukturnya yang bisa dikembalikan,
 bukan datanya (nullable, jadi downgrade menaruhnya kembali sebagai NULL).
 
 Revision ID: 93a62caa2179

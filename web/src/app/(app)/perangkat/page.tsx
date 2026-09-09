@@ -22,14 +22,14 @@ const DEVICE_TYPE_LABEL: Record<Device["device_type"], string> = {
 };
 
 /**
- * Tipe yang boleh DIPILIH saat mendaftarkan device baru — gateway TIDAK ikut.
+ * Tipe yang boleh DIPILIH saat mendaftarkan device baru, gateway TIDAK ikut.
  *
  * Gateway (Raspberry Pi) bukan device yang diklaim ke kolam: ia yang MENGIRIM
  * data device lain lewat /ingest/* dengan X-API-Key, dan didaftarkan lewat
  * seed SQL, bukan lewat panel ini. Menawarkannya di dropdown cuma mengundang
  * baris yang tidak akan pernah punya pembacaan sensor.
  *
- * DEVICE_TYPE_LABEL di atas TETAP memuat gateway — ia dipakai sebagai label
+ * DEVICE_TYPE_LABEL di atas TETAP memuat gateway, ia dipakai sebagai label
  * baris untuk gateway yang memang sudah terdaftar, dan enum backend
  * (models/enums.py) juga tidak disentuh supaya device lama tidak jadi tertolak.
  */
@@ -114,7 +114,7 @@ export default function PerangkatPage() {
 
   // Halaman ini cuma buat admin. Item nav-nya sudah disembunyikan untuk role
   // lain (Sidebar/MobileNav), tapi URL tetap bisa diketik langsung, jadi
-  // dijaga juga di sini — begitu user diketahui BUKAN admin, tendang balik.
+  // dijaga juga di sini, begitu user diketahui BUKAN admin, tendang balik.
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/dashboard");
@@ -137,7 +137,7 @@ export default function PerangkatPage() {
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [busyDeviceId, setBusyDeviceId] = useState<number | null>(null);
-  /** Hasil aksi pada BARIS device (pasang/lepas/hapus) — terpisah dari
+  /** Hasil aksi pada BARIS device (pasang/lepas/hapus), terpisah dari
    *  formMessage yang milik form "Tambah device" di atasnya. */
   const [aksiMessage, setAksiMessage] = useState<Message>(null);
 
@@ -270,7 +270,7 @@ export default function PerangkatPage() {
     }
   }
 
-  // Belum ketahuan role-nya (store masih memuat /auth/me) — jangan render
+  // Belum ketahuan role-nya (store masih memuat /auth/me), jangan render
   // apa pun dulu, sama seperti guard di (app)/layout.tsx.
   if (!user || user.role !== "admin") return null;
 
@@ -336,7 +336,7 @@ export default function PerangkatPage() {
         </Card>
 
         {/* Hasil pasang/lepas/hapus. Di ATAS kedua daftar, karena aksinya
-            memindahkan barisnya antar daftar — pesan yang menempel di barisnya
+            memindahkan barisnya antar daftar, pesan yang menempel di barisnya
             sendiri akan ikut hilang bersama baris itu. */}
         <FormMessage message={aksiMessage} />
 
@@ -449,7 +449,7 @@ export default function PerangkatPage() {
                       value={k.id}
                       disabled={Boolean(k.current_device_code && k.current_device_id !== assignModalDevice.id)}
                     >
-                      {k.nama} — {k.owner_name} ({k.owner_email})
+                      {k.nama}, {k.owner_name} ({k.owner_email})
                       {k.current_device_code ? ` [Sudah ada: ${k.current_device_code}]` : " [Kosong / Siap]"}
                     </option>
                   ))}

@@ -1,6 +1,6 @@
 """Baca indeks risiko toksisitas amonia (tabel ammonia_risks).
 
-Perhitungannya TIDAK LAGI di sini — sekarang dihitung di edge (Raspi,
+Perhitungannya TIDAK LAGI di sini, sekarang dihitung di edge (Raspi,
 raspi/ammonia_nh3.py) dan disimpan lewat quality_ingest_service.ingest_ammonia_risks.
 Modul ini murni QUERY, dipakai routers/quality.py untuk menampilkan hasilnya.
 """
@@ -105,7 +105,7 @@ async def get_history(
 ) -> list[Row]:
     """Log historis risiko amonia + device_code, terbaru dulu.
 
-    ponytail: paginasi OFFSET, sama seperti reading_service.get_readings — baris
+    ponytail: paginasi OFFSET, sama seperti reading_service.get_readings, baris
     baru yang masuk di antara dua halaman bisa membuat satu baris terlihat dua
     kali. Bisa diterima untuk log kronologis.
     """

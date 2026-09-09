@@ -22,7 +22,7 @@ type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi";
  *
  * Penyaringannya WAJIB lewat sini, bukan .filter() di klien. Satu halaman cuma
  * 20 baris: menyaring sisa halaman yang sudah dipotong LIMIT membuat tab
- * "Parameter" tampak kosong padahal barisnya ada di halaman berikutnya — dan
+ * "Parameter" tampak kosong padahal barisnya ada di halaman berikutnya, dan
  * "Muat lebih banyak" pun tetap mengambil halaman yang tidak tersaring, jadi
  * datanya terlihat seperti tidak pernah tersimpan.
  */
@@ -50,7 +50,7 @@ export default function NotifikasiPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Badge sidebar/bottom-nav pakai store bersama supaya turun SEKETIKA di
-  // semua tempat, bukan cuma di halaman ini — lihat lib/notif-store.ts.
+  // semua tempat, bukan cuma di halaman ini, lihat lib/notif-store.ts.
   const unread = useUnreadCount();
 
   const muatHalaman = useCallback(
@@ -80,7 +80,7 @@ export default function NotifikasiPage() {
     }
 
     loadPertama();
-    // Refresh senyap tiap 60 detik, sama seperti dashboard — notifikasi baru
+    // Refresh senyap tiap 60 detik, sama seperti dashboard, notifikasi baru
     // muncul tanpa reload manual. Sengaja memuat ulang HALAMAN PERTAMA saja
     // (bukan seluruh yang sudah di-scroll): notifikasi baru selalu muncul di
     // atas, dan mengganti seluruh daftar tiap menit akan membuang posisi
@@ -91,7 +91,7 @@ export default function NotifikasiPage() {
       clearInterval(id);
     };
     // muatHalaman ikut berubah tiap `filter` berganti, jadi efek ini otomatis
-    // memuat ulang dari offset 0 — persis yang dibutuhkan saat ganti tab.
+    // memuat ulang dari offset 0, persis yang dibutuhkan saat ganti tab.
   }, [muatHalaman]);
 
   async function handleMuatLagi() {
@@ -109,7 +109,7 @@ export default function NotifikasiPage() {
   }
 
   async function handleRead(id: number) {
-    // Optimistis: tandai lokal dulu supaya UI langsung merespons; kalau request
+    // Optimistis: tandai lokal dulu supaya UI langsung merespons. Kalau request
     // gagal, kembalikan ke belum dibaca.
     setNotifications((list) =>
       list.map((n) => (n.id === id ? { ...n, is_read: true } : n))

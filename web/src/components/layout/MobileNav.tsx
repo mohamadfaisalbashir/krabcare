@@ -8,7 +8,7 @@ import { isNavActive } from "@/lib/nav";
 import { useUser } from "@/lib/user-store";
 import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
-// Label sengaja lebih pendek dari Sidebar — ruang horizontalnya jauh lebih sempit.
+// Label sengaja lebih pendek dari Sidebar, ruang horizontalnya jauh lebih sempit.
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/log-historis", label: "Log", icon: History },
@@ -16,7 +16,7 @@ const NAV = [
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
-/** Cuma dirender untuk role admin — sama seperti Sidebar. */
+/** Cuma dirender untuk role admin, sama seperti Sidebar. */
 const ADMIN_NAV_ITEM = { href: "/perangkat", label: "Device", icon: Cpu };
 
 export default function MobileNav() {

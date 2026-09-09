@@ -10,7 +10,7 @@ import { api } from "@/lib/api";
  *
  * Halaman detail rak menyembunyikan panel ini sampai tombol "Hapus rak" ditekan,
  * tapi wujudnya tetap INLINE, bukan overlay. Modal buatan sendiri butuh focus
- * trap, penanganan Escape, dan portal untuk hasil yang sama — alasan yang sama
+ * trap, penanganan Escape, dan portal untuk hasil yang sama, alasan yang sama
  * yang membuat confirmLogout memilih window.confirm (lib/api.ts). window.confirm
  * sendiri tak bisa dipakai di sini karena butuh kolom isian.
  */
@@ -23,7 +23,7 @@ export default function DangerZone({
   kolamId: number;
   nama: string;
   deviceCode: string | null;
-  /** Dipanggil setelah hapus berhasil; halaman yang memutuskan mau ke mana. */
+  /** Dipanggil setelah hapus berhasil. Halaman yang memutuskan mau ke mana. */
   onDeleted: () => void;
 }) {
   const [ketikan, setKetikan] = useState("");
@@ -35,7 +35,7 @@ export default function DangerZone({
   async function handleHapus() {
     // Peringatan TERAKHIR, di atas ketik-ulang-nama. Keduanya menjaga hal yang
     // berbeda: mengetik nama menjaga dari salah KOLAM, dialog ini menjaga dari
-    // salah TEKAN — nama yang benar bisa saja sudah terlanjur diketik lalu
+    // salah TEKAN, nama yang benar bisa saja sudah terlanjur diketik lalu
     // tombolnya tersenggol. Sengaja window.confirm, sama seperti tiga
     // konfirmasi destruktif lain di aplikasi ini (lihat lib/api.ts:69).
     if (

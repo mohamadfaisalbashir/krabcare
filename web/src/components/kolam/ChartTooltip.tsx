@@ -8,7 +8,7 @@ import { formatWaktu } from "@/lib/tanggal";
  * Tooltip bersama kedua grafik halaman detail rak.
  *
  * Sebelumnya `contentStyle` + `labelFormatter` yang identik disalin di
- * HistoryChart dan CombinedChart — dua tempat yang harus diingat berbarengan
+ * HistoryChart dan CombinedChart, dua tempat yang harus diingat berbarengan
  * setiap kali gayanya diubah. Satu komponen menggantikan keduanya.
  *
  * Nilainya tidak cuma diangkakan: statusnya ikut dihitung dengan statusOf(),
@@ -52,7 +52,7 @@ export default function ChartTooltip({
                 </span>
               </span>
               {/* Titik status, bukan kata: barisnya sudah padat. Maknanya tetap
-                  tidak bergantung warna saja — title-nya terbaca pembaca layar
+                  tidak bergantung warna saja, title-nya terbaca pembaca layar
                   dan muncul saat kursor berhenti di atasnya. */}
               <span
                 title={status}

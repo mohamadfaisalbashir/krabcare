@@ -16,7 +16,7 @@ async def ingest_readings(
 
     Device yang belum terdaftar dilewati (tidak auto-registrasi) dan dilaporkan.
     Insert idempoten pada PK device_id+time supaya retry gateway tidak menimpa
-    data lama — yang duplikat dilaporkan, bukan ditulis ulang diam-diam.
+    data lama, yang duplikat dilaporkan, bukan ditulis ulang diam-diam.
     """
     device_map = await find_devices_by_code(db, [r.device_code for r in readings])
     unknown = sorted({r.device_code for r in readings if r.device_code not in device_map})
@@ -50,12 +50,12 @@ async def ingest_readings(
             for row in skipped_rows
         ]
 
-        # Risiko amonia TIDAK lagi dihitung di sini — edge (Raspi, edge_pipeline.py)
+        # Risiko amonia TIDAK lagi dihitung di sini, edge (Raspi, edge_pipeline.py)
         # yang menghitung & mengirimkannya sendiri lewat POST /ingest/quality
         # (ammonia_risks), bersamaan dengan klasifikasi & prediksi. Lihat
         # quality_ingest_service.ingest_ammonia_risks.
 
-        # Bukti device masih hidup — dipakai dashboard untuk status online/offline.
+        # Bukti device masih hidup, dipakai dashboard untuk status online/offline.
         device_ids = list({row["device_id"] for row in rows})
         await db.execute(
             update(Device).where(Device.id.in_(device_ids)).values(last_seen_at=func.now())

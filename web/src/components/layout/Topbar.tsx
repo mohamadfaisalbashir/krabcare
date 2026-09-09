@@ -19,7 +19,7 @@ export default function Topbar({
     // piksel setiap kali berpindah halaman di layar HP.
     <header className="flex items-start justify-between px-5 pb-2 pt-6 sm:px-8">
       <div className="min-w-0">
-        {/* Judul halaman detail adalah nama rak buatan pengguna — panjangnya
+        {/* Judul halaman detail adalah nama rak buatan pengguna, panjangnya
             tidak terbatas, jadi dipotong alih-alih mendorong avatar keluar. */}
         <h1 className="truncate font-display text-xl font-semibold text-ink sm:text-2xl">
           {title}
@@ -27,7 +27,7 @@ export default function Topbar({
         {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
       </div>
       {/* Blok profil yang SAMA dengan yang dipakai banner dashboard, cuma beda
-          warna — sekaligus membuat halaman ini punya jalan ke /profil, yang
+          warna, sekaligus membuat halaman ini punya jalan ke /profil, yang
           dulu cuma dimiliki dashboard. */}
       <AccountChip tone="terang" />
     </header>

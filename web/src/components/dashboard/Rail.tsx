@@ -12,7 +12,7 @@ const DRAG_SLOP = 5;
  *  melempar baris dari ujung ke ujung dalam tiga-empat frame. */
 const MAX_V = 60;
 
-/** Sisa laju tiap frame. 0.94 ≈ berhenti dalam ~0,7 detik dari laju penuh —
+/** Sisa laju tiap frame. 0.94 ≈ berhenti dalam ~0,7 detik dari laju penuh,
  *  cukup panjang untuk terbaca sebagai luncuran, cukup pendek untuk baris tidak
  *  terasa lepas kendali. Ini knob-nya kalau luncurannya terasa terlalu jauh. */
 const FRICTION = 0.94;
@@ -52,24 +52,24 @@ function pushGlide(el: HTMLDivElement, g: Glide, v: number) {
 
 /**
  * Container utama baris kartu rak: menempatkan, menggeser, dan memberi petunjuk
- * arah — semuanya di satu tempat.
+ * arah, semuanya di satu tempat.
  *
- * Barisnya digeser dengan SERET (klik-tahan) atau wheel; scrollbar-nya
+ * Barisnya digeser dengan SERET (klik-tahan) atau wheel. Scrollbar-nya
  * disembunyikan lewat kelas `.rail` (globals.css). Elemen scroll-nya tetap
  * `overflow-x-auto`, bukan `hidden`, supaya dua jalur geser yang tidak
  * melibatkan mouse tetap hidup: sentuhan (dengan momentum native-nya) dan
- * keyboard — browser menggulir container sendiri ketika Tab memindahkan fokus
+ * keyboard, browser menggulir container sendiri ketika Tab memindahkan fokus
  * ke kartu yang berada di luar layar. Karena itu jangan menambahkan tabIndex,
  * overflow-hidden, atau transform pada scroller ini.
  *
  * Seretan mouse dan wheel bermuara ke SATU peluncur rAF (`glide`). Sebelumnya
  * keduanya menulis scrollLeft langsung: baris berhenti mendadak begitu tombol
- * dilepas, dan melompat sekali per notch wheel — itu yang terbaca kaku.
- * Sentuhan sengaja TIDAK lewat sini; iOS/Android sudah punya momentumnya
+ * dilepas, dan melompat sekali per notch wheel, itu yang terbaca kaku.
+ * Sentuhan sengaja TIDAK lewat sini. IOS/Android sudah punya momentumnya
  * sendiri dan dua momentum yang bertumpuk terasa licin.
  *
  * Scroll-snap sengaja TIDAK dipakai. `snap-x` proximity menyentak baris ke
- * batas kartu terdekat tepat saat luncuran melambat — persis membatalkan
+ * batas kartu terdekat tepat saat luncuran melambat, persis membatalkan
  * momentum yang baru saja dibangun.
  */
 export default function Rail({ children }: { children: React.ReactNode }) {
@@ -107,7 +107,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Sengaja TANPA array dependensi: jumlah kartu berubah saat data masuk, dan
-  // itu mengubah scrollWidth tanpa mengubah ukuran satu elemen pun — jadi tidak
+  // itu mengubah scrollWidth tanpa mengubah ukuran satu elemen pun, jadi tidak
   // ada ResizeObserver yang bisa menangkapnya. Aman berkat bail-out di atas.
   useEffect(measure);
 
@@ -132,7 +132,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
     function onWheel(e: WheelEvent) {
       const node = ref.current;
       if (!node) return;
-      // Trackpad yang menggeser mendatar sudah ditangani browser — jangan
+      // Trackpad yang menggeser mendatar sudah ditangani browser, jangan
       // digandakan.
       if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
 
@@ -152,7 +152,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
     }
 
     el.addEventListener("wheel", onWheel, { passive: false });
-    // Lebar panel konten berubah saat sidebar menguncup/membentang — itu
+    // Lebar panel konten berubah saat sidebar menguncup/membentang, itu
     // mengubah jawaban `measure` tanpa ada scroll maupun render.
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -164,14 +164,14 @@ export default function Rail({ children }: { children: React.ReactNode }) {
   }, [measure]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // Sentuhan baru selalu menang atas luncuran lama — termasuk sentuhan jari,
+    // Sentuhan baru selalu menang atas luncuran lama, termasuk sentuhan jari,
     // yang punya momentum native sendiri dan tidak boleh bertumpuk dengan milik
     // kita. Karena itu penghentian ini di ATAS penyaringan pointerType.
     if (glide.current.raf) cancelAnimationFrame(glide.current.raf);
     glide.current = { v: 0, raf: 0 };
 
     // Sentuhan & pena punya geseran native yang lebih baik (momentum,
-    // overscroll) — jangan diambil alih.
+    // overscroll), jangan diambil alih.
     if (e.pointerType !== "mouse" || e.button !== 0) return;
     const el = ref.current;
     if (!el) return;
@@ -185,8 +185,8 @@ export default function Rail({ children }: { children: React.ReactNode }) {
       v: 0,
     };
     // TIDAK setPointerCapture di sini. Pointer capture ikut mengalihkan
-    // compatibility mouse event, jadi `click` akan dilepas di scroller ini —
-    // bukan di <button> kartu rak — dan menekan kartu tidak melakukan apa pun.
+    // compatibility mouse event, jadi `click` akan dilepas di scroller ini,
+    // bukan di <button> kartu rak, dan menekan kartu tidak melakukan apa pun.
     // Capture-nya dipasang di onPointerMove, setelah jelas ini seretan.
   }
 
@@ -198,7 +198,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
 
     if (!drag.current.moved) {
       // Di bawah ambang ini gerakannya masih mungkin sekadar getaran jari saat
-      // mengklik — jangan sentuh scroll, dan jangan ambil pointernya.
+      // mengklik, jangan sentuh scroll, dan jangan ambil pointernya.
       if (Math.abs(dx) <= DRAG_SLOP) return;
       drag.current.moved = true;
       // Baru sekarang: ini seretan sungguhan. Capture menjaga geseran tetap
@@ -238,7 +238,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
 
   // Tanpa penjaga ini, melepas seretan di atas kartu ikut membuka detail
   // raknya. Capture phase supaya klik dihentikan sebelum sampai ke <button>
-  // kartu, dan flag-nya dibersihkan di sini juga — kalau tidak, klik berikutnya
+  // kartu, dan flag-nya dibersihkan di sini juga, kalau tidak, klik berikutnya
   // masih ikut tertelan.
   function onClickCapture(e: React.MouseEvent<HTMLDivElement>) {
     // detail === 0 = klik yang dibangkitkan keyboard (Enter di atas kartu yang
@@ -268,7 +268,7 @@ export default function Rail({ children }: { children: React.ReactNode }) {
           "rail flex gap-4 overflow-x-auto px-5 py-2 sm:px-8",
           // py-2 wajib: begitu overflow-x bukan visible, sumbu Y ikut jadi auto
           // dan bayangan kartu akan terpotong.
-          // px ada DI DALAM scroller, bukan di pembungkusnya — kartu pertama
+          // px ada DI DALAM scroller, bukan di pembungkusnya, kartu pertama
           // jadi sejajar konten lain, sementara kartu terakhir tetap boleh
           // terpotong tepi panel.
           dragging ? "cursor-grabbing select-none" : "cursor-grab"

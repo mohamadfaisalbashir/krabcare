@@ -75,7 +75,7 @@ class FuzzyPredictionIn(BaseModel):
     horizon_minutes: int = Field(gt=0)
     predicted_quality_score: float | None = Field(default=None, ge=0, le=100)
     predicted_category: WaterQualityCategory | None = None
-    # Ramalan per parameter — opsional supaya payload lama tetap diterima.
+    # Ramalan per parameter, opsional supaya payload lama tetap diterima.
     predicted_ph: float | None = None
     predicted_temperature_c: float | None = None
     predicted_salinity_ppt: float | None = None
@@ -84,7 +84,7 @@ class FuzzyPredictionIn(BaseModel):
 
 class QualityIngestIn(BaseModel):
     """Batch ingest dari edge (Raspi, raspi/edge_pipeline.py): klasifikasi, prediksi,
-    risiko amonia — boleh isi salah satu, sebagian, atau semuanya."""
+    risiko amonia, boleh isi salah satu, sebagian, atau semuanya."""
 
     classifications: list[FuzzyClassificationIn] = Field(default_factory=list)
     predictions: list[FuzzyPredictionIn] = Field(default_factory=list)
@@ -99,7 +99,7 @@ class QualityIngestIn(BaseModel):
 
 
 class QualityIngestResultOut(BaseModel):
-    """Ringkasan ingest kualitas air — dipisah per jenis karena semuanya masuk satu request."""
+    """Ringkasan ingest kualitas air, dipisah per jenis karena semuanya masuk satu request."""
 
     received_classifications: int
     received_predictions: int

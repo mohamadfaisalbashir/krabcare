@@ -70,7 +70,7 @@ def walk_forward(
     """Replay satu grup (device_code, kolam) ke satu WLRForecaster (simulasi produksi),
     cocokkan tiap prediksi ke aktualnya. Return {(horizon, parameter): [(waktu_target, aktual, prediksi), ...]}."""
     forecaster = WLRForecaster()
-    # pending: (target_time, horizon, {param: predicted_value}) — disimpan satu baris
+    # pending: (target_time, horizon, {param: predicted_value}), disimpan satu baris
     # LENGKAP per horizon (bukan per parameter) supaya ph+suhu+salinitas hasil forecast
     # yang SAMA bisa dipakai bareng buat hitung prediksi amonia.
     pending: list[tuple[datetime, int, dict[str, float]]] = []

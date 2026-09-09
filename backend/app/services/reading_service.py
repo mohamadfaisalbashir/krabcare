@@ -24,15 +24,15 @@ async def get_readings(
     """Histori reading + device_code, terbaru dulu.
 
     `allowed_device_ids=None` = tidak dibatasi (gateway/admin). Kalau diisi, device
-    di luar himpunan itu menghasilkan list kosong — bukan 404, ini endpoint list.
+    di luar himpunan itu menghasilkan list kosong, bukan 404, ini endpoint list.
 
     `param` membuang baris yang parameternya NULL supaya tidak menghabiskan jatah
-    halaman, `status` menyaring pakai ambang Tabel 2.1 — keduanya WAJIB di SQL,
+    halaman, `status` menyaring pakai ambang Tabel 2.1, keduanya WAJIB di SQL,
     bukan di klien: filter yang jalan setelah LIMIT membuat halaman 25 baris bisa
     menyisakan 2 baris.
 
     ponytail: paginasi OFFSET. Kalau ada reading baru masuk di antara dua halaman,
-    satu baris bisa terlihat dua kali atau terlewat — bisa diterima untuk log
+    satu baris bisa terlihat dua kali atau terlewat, bisa diterima untuk log
     kronologis. Kalau kelak butuh ketepatan penuh, pola keyset cursor-nya sudah
     ada di web/src/lib/export.ts (fetchAllReadings).
     """

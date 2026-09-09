@@ -31,7 +31,7 @@ const PANEL_ID = "detail-rak";
 /**
  * Label status UI dari klasifikasi fuzzy terbaru.
  * `null` = device kolam ini belum pernah mengirim data, jadi statusnya belum
- * bisa disimpulkan — sengaja TIDAK di-default ke "Waspada" supaya jumlah pada
+ * bisa disimpulkan, sengaja TIDAK di-default ke "Waspada" supaya jumlah pada
  * ringkasan tidak menghitung kolam kosong sebagai anomali.
  */
 function getStatusLabel(item: KolamDashboard): StatusLabel | null {
@@ -74,12 +74,12 @@ export default function DashboardPage() {
   // 4. GET /readings?device_id=&limit=1 → reading terbaru device itu
   //
   // Reading DIAMBIL PER DEVICE, bukan sekali untuk semua. Endpoint /readings
-  // mengurutkan time DESC lalu memotong `limit` secara global — sekali fetch
+  // mengurutkan time DESC lalu memotong `limit` secara global, sekali fetch
   // membuat device yang jeda kirimnya lebih lama dari jendela itu tampak kosong
   // padahal datanya ada.
   //
   // ponytail: N+1 request (1 devices + 1 readings per kolam). Wajar untuk
-  // belasan kolam; kalau jumlahnya tumbuh, minta endpoint batch ke backend.
+  // belasan kolam. Kalau jumlahnya tumbuh, minta endpoint batch ke backend.
   // `silent` dipakai refresh berkala: tanpa itu daftar kolam berkedip jadi
   // "Memuat data kolam..." tiap satu menit.
   const loadDashboard = useCallback(async (silent = false) => {
@@ -145,7 +145,7 @@ export default function DashboardPage() {
   // dibuka baru dimuat (baik saat panel dibuka maupun putaran 60 detiknya
   // sendiri). Kartu kolam DAN panel detail sebelumnya polling sendiri-sendiri
   // tiap 60 detik, tapi mulai dari titik waktu yang berbeda (dashboard mulai
-  // saat halaman dimuat, panel mulai saat rak dipilih) — dua jam yang tidak
+  // saat halaman dimuat, panel mulai saat rak dipilih), dua jam yang tidak
   // pernah pas, itulah kenapa waktu di kartu terlihat "telat" dibanding di
   // detail. Menempelkan angka yang SAMA PERSIS ke kartu di sini, alih-alih
   // menunggu putaran polling kartu sendiri, membuat keduanya selalu
@@ -196,7 +196,7 @@ export default function DashboardPage() {
     // Kartu terpilih: `nearest` + TANPA smooth, dan itu disengaja. `center`
     // yang beranimasi berarti selalu ada gulir rail yang masih berjalan setelah
     // kartu ditekan, dan gulir itu terus menimpa scrollLeft yang sedang
-    // diseret pengguna — persis keluhan "berat digeser". `nearest` tidak
+    // diseret pengguna, persis keluhan "berat digeser". `nearest` tidak
     // bergerak sama sekali kalau kartunya memang sudah terlihat.
     document
       .querySelector(`[data-pondcard="${selected}"]`)
@@ -231,7 +231,7 @@ export default function DashboardPage() {
 
   const variant = selected === null ? "grid" : "rail";
 
-  // Dirakit sekali, dipakai dua tata letak — kalau tidak, daftar kartunya
+  // Dirakit sekali, dipakai dua tata letak, kalau tidak, daftar kartunya
   // ditulis dua kali dan yang satu pasti ketinggalan saat kartunya berubah.
   const cards = loading ? (
     <KolamSkeleton variant={variant} />
@@ -254,7 +254,7 @@ export default function DashboardPage() {
     // isolate: lapisan wallpaper di bawah punya z-index sendiri dan tidak boleh
     // bocor ke luar halaman (sidebar & bar nav bawah ada di luar sini).
     <div className="relative isolate flex-1 lg:rounded-tl-xl2">
-      {/* WALLPAPER — dasar "Mica" halaman ini. Semua kartu di atasnya adalah
+      {/* WALLPAPER, dasar "Mica" halaman ini. Semua kartu di atasnya adalah
           kaca (.glass), dan tanpa sesuatu yang berwarna di belakangnya, kaca
           cuma terlihat seperti kartu putih pucat.
 
@@ -270,21 +270,21 @@ export default function DashboardPage() {
 
             TANPA bg-fixed. `background-attachment: fixed` memang membuat foto
             diam seperti wallpaper jendela, tapi ia memaksa repaint seluruh
-            latar di setiap frame gulir — itu penyebab baris kartu terasa berat
+            latar di setiap frame gulir, itu penyebab baris kartu terasa berat
             diseret saat panel detail terbuka. Efek diamnya tidak sepadan. */}
         <div className="absolute inset-0 bg-[url('/kepiting_belakang.png')] bg-cover bg-center" />
         {/* Peredam putih. 0.80 BUKAN angka selera: kartu kaca di atasnya
-            bg-white/55, jadi latar efektif kartu ≈ 91% putih — text-ink ≈ 14:1
+            bg-white/55, jadi latar efektif kartu ≈ 91% putih, text-ink ≈ 14:1
             dan text-muted ≈ 4.9:1 (lolos AA). Menurunkannya menembus ambang
             itu. Jangan diubah tanpa mengukur ulang. */}
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.80)_45%,rgba(255,255,255,0.84)_100%)]" />
-        {/* Dua bulatan warna merek — sumber warna yang merembes lewat kaca.
+        {/* Dua bulatan warna merek, sumber warna yang merembes lewat kaca.
             Ini yang membuat efeknya terbaca "cair", bukan sekadar tembus. */}
         <div className="absolute -left-24 top-1/3 h-80 w-80 rounded-full bg-brand-300/25 blur-3xl" />
         <div className="absolute -right-20 top-2/3 h-72 w-72 rounded-full bg-brass-300/20 blur-3xl" />
       </div>
 
-      {/* BANNER — mentok ke atas dan ke sidebar: pembungkusnya sengaja tanpa
+      {/* BANNER, mentok ke atas dan ke sidebar: pembungkusnya sengaja tanpa
           padding, dan sudut kiri-atasnya mengikuti lekuk panel konten di
           (app)/layout.tsx. Judul halaman ada di sini, jadi halaman ini TIDAK
           merender Topbar (halaman lain masih memakainya). */}
@@ -299,13 +299,13 @@ export default function DashboardPage() {
             cerah. Nilai eksplisit tidak bisa gagal seperti itu, sekaligus
             memberi kendali posisi henti yang memang dibutuhkan di sini. */}
 
-        {/* 1. Foto — aset, scale, dan blur yang sama persis dengan panel kiri
+        {/* 1. Foto, aset, scale, dan blur yang sama persis dengan panel kiri
                halaman login, supaya keduanya tidak lepas sinkron. */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 scale-105 bg-[url('/kepiting.png')] bg-cover bg-left blur-[2px]"
         />
-        {/* 2. Sapuan merek — pengganti "swoosh" biru pada rujukan, memakai warna
+        {/* 2. Sapuan merek, pengganti "swoosh" biru pada rujukan, memakai warna
                brand sendiri. Sengaja DI BAWAH peredam: kalau di atasnya, ia
                justru menerangkan sudut kanan atas, tepat tempat profil duduk. */}
         <div
@@ -315,7 +315,7 @@ export default function DashboardPage() {
         {/* 3. Peredam gelap. VERTIKAL, bukan mendatar: profil akun duduk di
                kanan atas, dan gradien mendatar meninggalkan sisi itu terlalu
                terang. Dua henti pertama (0.90 & 0.86) menutup seluruh zona teks;
-               angkanya diturunkan dari pengukuran kontras, bukan dikira-kira —
+               angkanya diturunkan dari pengukuran kontras, bukan dikira-kira,
                langit paling cerah di foto ini butuh alpha ≥0.70 supaya teks
                putih tetap ≥4.5:1. Jangan diturunkan tanpa mengukur ulang. */}
         <div
@@ -325,7 +325,7 @@ export default function DashboardPage() {
         {/* 4. Dasar banner meleleh ke wallpaper di baliknya. Dulu lapisan ini
                putih PEKAT (#FFFFFF) supaya kartu muncul dari daerah terang;
                sekarang halamannya berkaca, dan putih pekat justru menutup
-               wallpaper tepat di tempat kartu duduk. Cukup separuh transparan —
+               wallpaper tepat di tempat kartu duduk. Cukup separuh transparan,
                zona teks di atas tetap aman karena gradiennya berhenti di 55%. */}
         <div
           aria-hidden
@@ -355,7 +355,7 @@ export default function DashboardPage() {
               itu selebar ~300px, dan sebagai kolom kanan yang shrink-0 mereka
               memeras judul jadi "Dash…" di layar 375px. Sebagai baris sendiri
               yang rata kanan mulai sm:, hasil akhirnya tetap duduk di bawah
-              profil di layar lebar — sekaligus muat di layar sempit. */}
+              profil di layar lebar, sekaligus muat di layar sempit. */}
           <div className="mt-3 flex flex-wrap gap-1.5 sm:mt-2 sm:justify-end">
             <SummaryPill label="Aman" value={summary.aman} tone="aman" />
             <SummaryPill label="Waspada" value={summary.waspada} tone="waspada" />
@@ -364,7 +364,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* KARTU RAK — dua tata letak, satu daftar.
+      {/* KARTU RAK, dua tata letak, satu daftar.
           Belum ada rak dipilih: grid 2 kolom yang mengisi halaman, supaya
           bagian bawah tidak menganga kosong.
           Ada yang dipilih: menyusut jadi satu baris yang bisa digeser, dan
@@ -374,9 +374,9 @@ export default function DashboardPage() {
           {/* Petunjuk sekali di sini, bukan tooltip di tiap kartu: satu-satunya
               isyarat bahwa kartu bisa diklik selama ini cuma chevron kecil di
               pojoknya, yang tidak pernah menyebut apa yang akan terjadi.
-              Hilang begitu ada kolam terpilih (variant "rail") — saat itu
+              Hilang begitu ada kolam terpilih (variant "rail"), saat itu
               pengguna sudah membuktikan sendiri kartunya bisa diklik. */}
-          <p className="mb-3 text-xs text-muted">
+          <p className="mb-3 text-sm font-semibold text-brand-700 sm:text-base">
             Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>
@@ -400,7 +400,7 @@ export default function DashboardPage() {
             <form onSubmit={handleCreateKolam} className="space-y-4">
               <Input
                 label="Nama kolam"
-                placeholder="Kolam A - Rak 1"
+                placeholder="Kolam A Rak 1"
                 value={nama}
                 onChange={(e) => setNama(e.target.value)}
                 required
@@ -408,7 +408,7 @@ export default function DashboardPage() {
               {/* Device ditentukan di sini juga, bukan langkah kedua di panel
                   detail: satu kolam = satu rak = tepat satu device, jadi kolam
                   tanpa device adalah baris yang belum berfungsi. Backend
-                  mengerjakan keduanya dalam SATU transaksi — kode yang salah
+                  mengerjakan keduanya dalam SATU transaksi, kode yang salah
                   berarti kolamnya tidak jadi dibuat, bukan kolam kosong yang
                   harus dihapus manual. */}
               <Input
@@ -435,7 +435,7 @@ export default function DashboardPage() {
           </p>
         )}
 
-        {/* DETAIL RAK — dulu halaman /kolam/[id], sekarang terbuka di sini,
+        {/* DETAIL RAK, dulu halaman /kolam/[id], sekarang terbuka di sini,
             di bawah kartunya, tanpa pindah halaman. Di-key pada id rak supaya
             berganti rak me-reset seluruh state panel (grafik, form, panel
             pengaturan) alih-alih membawa sisa rak sebelumnya. */}
@@ -443,8 +443,8 @@ export default function DashboardPage() {
           {selectedItem && (
             // Pembungkus animasi, SENGAJA tanpa `key`: ia mount sekali saat
             // panel dibuka dan bertahan saat pengguna melompat dari satu rak ke
-            // rak lain. Kalau animasinya menempel pada RakDetail — yang memang
-            // di-remount tiap ganti rak — panel setinggi layar berkedip dari
+            // rak lain. Kalau animasinya menempel pada RakDetail, yang memang
+            // di-remount tiap ganti rak, panel setinggi layar berkedip dari
             // opacity 0 di setiap perpindahan.
             <div className="animate-rise motion-reduce:animate-none">
               <RakDetail
@@ -536,7 +536,7 @@ const DOT: Record<"aman" | "waspada" | "bahaya", string> = {
  *
  * Latarnya putih transparan + cincin, bukan `status-*Bg` yang terang: tiga blok
  * pastel berjejer di atas foto akan menabrak banner alih-alih menyatu. Titik
- * berwarnanya hanya aksen — angka dan labelnya tetap tertulis, jadi maknanya
+ * berwarnanya hanya aksen, angka dan labelnya tetap tertulis, jadi maknanya
  * tidak pernah bergantung pada warna saja.
  */
 function SummaryPill({

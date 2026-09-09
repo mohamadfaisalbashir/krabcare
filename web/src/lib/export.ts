@@ -6,7 +6,7 @@
 // apa pun. write-excel-file karenanya di-import DINAMIS di dalam downloadXlsx,
 // bukan di kepala berkas: ia satu-satunya bagian yang butuh DOM + bundler, dan
 // import statis di sini akan mematikan seluruh berkas tesnya. Efek sampingnya
-// kebetulan menguntungkan — pustakanya baru diunduh browser saat pengguna
+// kebetulan menguntungkan, pustakanya baru diunduh browser saat pengguna
 // benar-benar memilih XLSX.
 import type { SensorReading } from "./types";
 import type { ParamKey } from "./parameter";
@@ -14,10 +14,20 @@ import { formatWaktuDetik } from "./tanggal.ts";
 
 /** RFC 4180 + default pandas. Ganti ";" kalau Excel-ID jadi konsumen utama. */
 export const CSV_SEP = ",";
-/** Excel butuh BOM untuk membaca UTF-8; pandas pakai encoding="utf-8-sig". */
-export const CSV_BOM = "﻿";
+/**
+ * BOM UTF-8 di depan berkas CSV. Tanpa ini Excel membaca berkasnya sebagai
+ * ANSI dan huruf beraksen jadi mojibake. Padanannya di pandas:
+ * encoding="utf-8-sig".
+ *
+ * Ditulis sebagai escape \uFEFF, BUKAN karakternya langsung. Nilainya
+ * persis sama saat dijalankan, tapi di dalam berkas sumber karakter itu
+ * tidak terlihat sama sekali: pembaca kode mengira string kosong, dan
+ * pemindai karakter tersembunyi melaporkannya sebagai penanda mencurigakan.
+ * Escape-nya menyebutkan diri sendiri.
+ */
+export const CSV_BOM = "\uFEFF";
 
-/** Batas keras backend — backend/app/routers/readings.py:22 (le=1000). */
+/** Batas keras backend, backend/app/routers/readings.py:22 (le=1000). */
 const CHUNK = 1000;
 /** 20 x 1000 = 20.000 baris per sensor, kira-kira 200 hari pada interval 15 menit. */
 export const MAX_PAGES = 20;
@@ -25,7 +35,7 @@ export const MAX_PAGES = 20;
 /**
  * `<input type="date">` memberi "2026-09-01". `new Date("2026-09-01")` itu
  * tengah malam UTC, sedangkan `new Date("2026-09-01T00:00:00")` tengah malam
- * LOKAL — di WIB selisihnya 7 jam, di kedua ujung rentang. Bentuk kedua yang
+ * LOKAL, di WIB selisihnya 7 jam, di kedua ujung rentang. Bentuk kedua yang
  * benar: pengguna memilih tanggal menurut jamnya sendiri.
  */
 export function dayRangeToIso(from: string, to: string) {
@@ -50,14 +60,14 @@ export type GetPage = (p: {
  * <= cursor, lalu cursor digeser ke baris tertua yang baru didapat.
  *
  * WAJIB per device. PK sensor_readings adalah (device_id, time), jadi `time`
- * unik hanya DI DALAM satu device — jaminan itulah yang membuat duplikat di
+ * unik hanya DI DALAM satu device, jaminan itulah yang membuat duplikat di
  * batas halaman selalu tepat satu baris dan selalu di posisi pertama. Query
  * lintas device tidak punya jaminan itu dan akan menggandakan atau menghilangkan
  * baris di tiap batas.
  *
  * Hasilnya DIBALIK sebelum dikembalikan: paging jalan mundur (terbaru dulu),
  * sedangkan berkas ekspor harus mulai dari data TERLAMA. Dibalik di sini, satu
- * tempat, bukan di pemanggil — supaya urutannya tidak bisa beda antar pemakai.
+ * tempat, bukan di pemanggil, supaya urutannya tidak bisa beda antar pemakai.
  */
 export async function fetchAllReadings(
   getPage: GetPage,
@@ -80,7 +90,7 @@ export async function fetchAllReadings(
     if (page.length < CHUNK) return { rows: rows.reverse(), truncated: false };
 
     // Verbatim, jangan lewat Date: `time` punya presisi mikrodetik dan
-    // toISOString() memotongnya ke milidetik — cursor jadi bergeser lebih awal
+    // toISOString() memotongnya ke milidetik, cursor jadi bergeser lebih awal
     // dan baris di celah itu hilang diam-diam.
     cursor = page[page.length - 1].time;
   }
@@ -97,12 +107,40 @@ function cell(s: string): string {
  * Selisih jam device (`time`) dan jam backend (`received_at`), dalam detik.
  *
  * Inilah latensi gateway->backend yang jadi tujuan kolom ini. Bisa NEGATIF
- * kalau jam Raspberry Pi berjalan lebih cepat dari jam server — dan itu justru
+ * kalau jam Raspberry Pi berjalan lebih cepat dari jam server, dan itu justru
  * yang perlu terlihat, jadi JANGAN dijepit ke 0: angka negatif adalah bukti
  * jamnya perlu disinkronkan, bukan noise yang harus disembunyikan.
  */
 export function latensiDetik(r: SensorReading): number {
   return (new Date(r.received_at).getTime() - new Date(r.time).getTime()) / 1000;
+}
+
+/**
+ * Amonia per baris sensor, dikunci `${device_id}|${time}`.
+ *
+ * Amonia hidup di tabel lain (`ammonia_risks`) dan diambil lewat endpoint lain,
+ * tapi dihitung DARI pembacaan sensor yang sama, jadi `time`-nya identik dan
+ * bisa dipasangkan tepat. Baris sensor yang tidak punya pasangan meninggalkan
+ * sel kosong, sama seperti parameter yang null.
+ */
+export type PetaAmonia = Map<string, { fraction_nh3_pct: number | null; risk_level: string | null }>;
+
+export function kunciAmonia(device_id: number, time: string): string {
+  return `${device_id}|${time}`;
+}
+
+/** Susun peta amonia dari hasil /quality/ammonia-risk/history. */
+export function petaAmoniaDari(
+  rows: { device_id: number; time: string; fraction_nh3_pct: number | null; risk_level: string | null }[]
+): PetaAmonia {
+  const peta: PetaAmonia = new Map();
+  for (const a of rows) {
+    peta.set(kunciAmonia(a.device_id, a.time), {
+      fraction_nh3_pct: a.fraction_nh3_pct,
+      risk_level: a.risk_level,
+    });
+  }
+  return peta;
 }
 
 /** Nama kolom, satu definisi untuk CSV maupun XLSX. */
@@ -114,6 +152,8 @@ export function headerFor(params: ParamKey[]): string[] {
     "device_code",
     "kolam",
     ...params,
+    "amonia_nh3_persen",
+    "amonia_risiko",
   ];
 }
 
@@ -124,7 +164,11 @@ export function headerFor(params: ParamKey[]): string[] {
 export function toCsv(
   rows: SensorReading[],
   params: ParamKey[],
-  kolamByDevice: Record<number, string>
+  kolamByDevice: Record<number, string>,
+  // Wajib, bukan opsional berdefault Map kosong. Kalau boleh dilewat, pemanggil
+  // yang lupa akan menghasilkan berkas dengan dua kolom amonia yang kosong
+  // semua, dan itu terbaca seperti "tidak ada data amonia", bukan seperti bug.
+  amonia: PetaAmonia
 ): string {
   const lines = [headerFor(params).join(CSV_SEP)];
 
@@ -135,6 +179,7 @@ export function toCsv(
       // presisi penuh. null jadi sel kosong (dibaca pandas sebagai NaN).
       return v == null ? "" : String(v);
     });
+    const a = amonia.get(kunciAmonia(r.device_id, r.time));
     lines.push(
       [
         formatWaktuDetik(r.time),
@@ -143,6 +188,8 @@ export function toCsv(
         cell(r.device_code),
         cell(kolamByDevice[r.device_id] ?? ""),
         ...values,
+        a?.fraction_nh3_pct == null ? "" : String(a.fraction_nh3_pct),
+        a?.risk_level ? cell(a.risk_level) : "",
       ].join(CSV_SEP)
     );
   }
@@ -150,7 +197,7 @@ export function toCsv(
   return lines.join("\n");
 }
 
-/** "csv" | "xlsx" — dipilih pengguna di ExportPanel. */
+/** "csv" | "xlsx", dipilih pengguna di ExportPanel. */
 export type ExportFormat = "csv" | "xlsx";
 
 export function namaBerkas(
@@ -160,7 +207,7 @@ export function namaBerkas(
   to: string,
   format: ExportFormat
 ): string {
-  // Segmen parameter dihilangkan kalau ketiganya ikut — namanya sudah panjang.
+  // Segmen parameter dihilangkan kalau ketiganya ikut, namanya sudah panjang.
   const paramPart = params.length === 3 ? "" : `_${params.join("-")}`;
   return `log-sensor_${deviceLabel}${paramPart}_${from}_${to}.${format}`;
 }
@@ -169,7 +216,7 @@ function unduh(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: filename });
   a.click();
-  // Revoke langsung pernah membatalkan unduhan di Safari; tunda satu tick.
+  // Revoke langsung pernah membatalkan unduhan di Safari. Tunda satu tick.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
@@ -178,7 +225,7 @@ export function downloadCsv(csv: string, filename: string): void {
 }
 
 /**
- * XLSX lewat write-excel-file v4 (import dinamis — lihat catatan di kepala berkas).
+ * XLSX lewat write-excel-file v4 (import dinamis, lihat catatan di kepala berkas).
  *
  * Subpath `/browser` WAJIB: paketnya tidak punya export root ".", cuma
  * "./browser", "./node", "./universal". `import("write-excel-file")` polos
@@ -194,6 +241,7 @@ export async function downloadXlsx(
   rows: SensorReading[],
   params: ParamKey[],
   kolamByDevice: Record<number, string>,
+  amonia: PetaAmonia,
   filename: string
 ): Promise<void> {
   const writeXlsxFile = (await import("write-excel-file/browser")).default;
@@ -239,10 +287,26 @@ export async function downloadXlsx(
     ...params.map((p) => ({
       header: header(p),
       // undefined, BUKAN null: sel kosong harus benar-benar kosong supaya
-      // Excel tidak membacanya sebagai 0 — pembacaan sensor yang hilang
+      // Excel tidak membacanya sebagai 0, pembacaan sensor yang hilang
       // bukan pembacaan bernilai nol.
       cell: (r: SensorReading) => ({ value: r[p] ?? undefined, type: Number }),
     })),
+    {
+      header: header("amonia_nh3_persen"),
+      cell: (r: SensorReading) => ({
+        value: amonia.get(kunciAmonia(r.device_id, r.time))?.fraction_nh3_pct ?? undefined,
+        type: Number,
+      }),
+      width: 18,
+    },
+    {
+      header: header("amonia_risiko"),
+      cell: (r: SensorReading) => ({
+        value: amonia.get(kunciAmonia(r.device_id, r.time))?.risk_level ?? undefined,
+        type: String,
+      }),
+      width: 14,
+    },
   ];
 
   await writeXlsxFile(rows, { columns }).toFile(filename);

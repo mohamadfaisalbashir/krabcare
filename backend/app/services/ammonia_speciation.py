@@ -1,15 +1,15 @@
 """
 Ammonia speciation (Opsi 1): un-ionized ammonia (NH3) FRACTION from
-pH, temperature, and salinity — no TAN measurement required.
+pH, temperature, and salinity, no TAN measurement required.
 
-SCIENTIFIC SCOPE — READ BEFORE MODIFYING
+SCIENTIFIC SCOPE, READ BEFORE MODIFYING
 ------------------------------------------
 This module computes what FRACTION of Total Ammonia Nitrogen (TAN) would
 be in the toxic un-ionized form (NH3) at a given pH/temperature/salinity.
 It does NOT and CANNOT compute an absolute ammonia concentration (mg/L),
 because TAN is not measured by this system (ammonia gas sensor removed
 from hardware per UAT 2025-11-20). Any caller wanting mg/L must supply
-an assumed or measured TAN value explicitly — this module deliberately
+an assumed or measured TAN value explicitly, this module deliberately
 offers no such function.
 
 References:
@@ -28,7 +28,7 @@ VALID_SALINITY_PPT = (5.0, 35.0)
 VALID_TEMPERATURE_C = (5.0, 35.0)
 VALID_PH = (7.8, 8.3)
 
-#: Ikut disimpan di kolom `model_version` tabel ammonia_risks — kalau rumus atau
+#: Ikut disimpan di kolom `model_version` tabel ammonia_risks, kalau rumus atau
 #: ambangnya diganti, naikkan nilainya supaya baris lama masih bisa dibedakan.
 MODEL_VERSION = "speciation-bb78"
 
@@ -89,7 +89,7 @@ def classify_risk(fraction_pct: float) -> RiskLevel:
     """Threshold pada fraksi NH3 (%), BUKAN pada konsentrasi mg/L.
 
     Ambang berikut ilustratif berdasarkan tabel sensitivitas (lihat dokumen
-    estimasi_amonia.md Bagian 6.1) — bukan baku mutu resmi krustasea. Kalau
+    estimasi_amonia.md Bagian 6.1), bukan baku mutu resmi krustasea. Kalau
     pembimbing/mitra punya ambang definitif untuk Scylla spp., ganti di sini
     dan catat sumbernya.
     """

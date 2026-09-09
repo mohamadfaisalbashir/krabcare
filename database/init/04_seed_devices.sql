@@ -1,12 +1,12 @@
--- REGISTRI DEVICE PRODUKSI KrabCare — bukan data dummy, JANGAN DIHAPUS.
+-- REGISTRI DEVICE PRODUKSI KrabCare, bukan data dummy, JANGAN DIHAPUS.
 --
 -- device_code = MAC address ESP32 tanpa pemisah, huruf BESAR
 -- (WiFi.macAddress() lalu buang ':'). Harus PERSIS sama dengan yang dikirim
--- firmware — pencocokannya case-sensitive.
+-- firmware, pencocokannya case-sensitive.
 --
 -- Backend TIDAK melakukan auto-register: ingest_base.find_devices_by_code() cuma
 -- SELECT, dan /api/v1/ingest/readings membalas 201 dengan unknown_device_codes
--- untuk kode asing — reading-nya dibuang DIAM-DIAM, bukan error. Tanpa baris di
+-- untuk kode asing, reading-nya dibuang DIAM-DIAM, bukan error. Tanpa baris di
 -- bawah ini, ESP32 kirim data dan nol baris tersimpan tanpa pesan apa pun.
 --
 -- parent_device_id sengaja NULL: master node belum didaftarkan (MAC-nya belum
@@ -16,5 +16,5 @@
 
 INSERT INTO devices (device_code, device_type, rack_label, location_note)
 VALUES ('54D660E9BFB4', 'slave_node', 'Rak A',
-        'ESP32 slave node Rak A — sensor pH, suhu, salinitas')
+        'ESP32 slave node Rak A, sensor pH, suhu, salinitas')
 ON CONFLICT (device_code) DO NOTHING;

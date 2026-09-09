@@ -22,6 +22,7 @@ export default function ProfilPage() {
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [bukaHapus, setBukaHapus] = useState(false);
   const [ketikanHapus, setKetikanHapus] = useState("");
   const [menghapusAkun, setMenghapusAkun] = useState(false);
   const [hapusMessage, setHapusMessage] = useState<Message>(null);
@@ -31,7 +32,7 @@ export default function ProfilPage() {
   const [passwordMessage, setPasswordMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
 
-  // Store yang mengambil datanya; di sini cuma menyalin nama ke kolom form
+  // Store yang mengambil datanya. Di sini cuma menyalin nama ke kolom form
   // begitu user-nya sampai (dan tidak menimpanya lagi setelah itu, supaya
   // ketikan yang sedang berjalan tidak terhapus oleh render berikutnya).
   const [namaTerisi, setNamaTerisi] = useState(false);
@@ -92,7 +93,7 @@ export default function ProfilPage() {
    * Hapus akun sendiri (DELETE /auth/me).
    *
    * Dua lapis penjaga, seperti hapus kolam: mengetik ulang email menjaga dari
-   * salah AKUN, dialognya menjaga dari salah TEKAN. Tidak ada undo di backend —
+   * salah AKUN, dialognya menjaga dari salah TEKAN. Tidak ada undo di backend,
    * kolam & notifikasi ikut terhapus lewat FK CASCADE.
    */
   async function handleHapusAkun() {
@@ -233,42 +234,78 @@ export default function ProfilPage() {
               </form>
             </Card>
 
-            {/* Zona berbahaya, paling bawah dan terpisah — pola yang sama
-                dengan DangerZone kolam: tint merah, ketik ulang untuk
-                konfirmasi, tombol mati sampai ketikannya cocok. */}
-            <Card className="border border-status-bahaya/30 bg-status-bahayaBg/50">
-              <div className="mb-2 flex items-center gap-2.5">
-                <Trash2 className="h-5 w-5 text-status-bahaya" />
-                <h3 className="font-display text-base font-semibold text-status-bahaya">
-                  Hapus akun
-                </h3>
-              </div>
-              <p className="mb-4 text-sm leading-relaxed text-muted">
-                Menghapus akun ini beserta seluruh kolam dan notifikasinya, permanen.
-                Device yang terpasang tidak ikut terhapus — ia kembali jadi belum
-                diklaim beserta riwayat sensornya, dan bisa dipasang admin ke akun lain.
-              </p>
-              <div className="space-y-4 sm:max-w-md">
-                <Input
-                  label={`Ketik "${user?.email ?? ""}" untuk mengonfirmasi`}
-                  value={ketikanHapus}
-                  onChange={(e) => setKetikanHapus(e.target.value)}
-                  placeholder={user?.email ?? ""}
-                  autoComplete="off"
-                />
-                <FormMessage message={hapusMessage} />
-                <button
-                  type="button"
-                  onClick={handleHapusAkun}
-                  disabled={
-                    menghapusAkun || !user || ketikanHapus.trim() !== user.email
-                  }
-                  className="btn-danger"
-                >
-                  {menghapusAkun ? "Menghapus..." : "Hapus akun saya"}
-                </button>
-              </div>
-            </Card>
+            {/* Zona berbahaya, paling bawah dan terpisah. Pola yang sama dengan
+                DangerZone kolam: tint merah, ketik ulang untuk konfirmasi,
+                tombol mati sampai ketikannya cocok.
+
+                TIDAK dirender untuk admin. Backend sudah menolaknya dengan 403
+                (routers/auth.py: akun admin adalah satu-satunya pintu ke panel
+                /perangkat, menghapusnya mengunci pendaftaran device untuk semua
+                orang), jadi menampilkan tombol yang pasti gagal cuma menjebak. */}
+            {user && user.role !== "admin" && (
+              <Card className="border border-status-bahaya/30 bg-status-bahayaBg/50">
+                <div className="mb-2 flex items-center gap-2.5">
+                  <Trash2 className="h-5 w-5 text-status-bahaya" />
+                  <h3 className="font-display text-base font-semibold text-status-bahaya">
+                    Hapus akun
+                  </h3>
+                </div>
+
+                {/* Terlipat sampai diminta. Isinya ancaman permanen, dan
+                    membentangkannya terus-menerus di bawah "Ubah nama" membuat
+                    tindakan paling berbahaya di halaman ini jadi yang paling
+                    kelihatan. Satu ketukan sudah cukup jadi pemisah niat. */}
+                {!bukaHapus ? (
+                  <button
+                    type="button"
+                    onClick={() => setBukaHapus(true)}
+                    className="btn-danger"
+                  >
+                    Hapus akun
+                  </button>
+                ) : (
+                  <>
+                    <p className="mb-4 text-sm leading-relaxed text-muted">
+                      Menghapus akun ini beserta seluruh kolam dan notifikasinya,
+                      permanen. Device yang terpasang tidak ikut terhapus. Ia kembali
+                      jadi belum diklaim beserta riwayat sensornya, dan bisa dipasang
+                      admin ke akun lain.
+                    </p>
+                    <div className="space-y-4 sm:max-w-md">
+                      <Input
+                        label={`Ketik "${user.email}" untuk mengonfirmasi`}
+                        value={ketikanHapus}
+                        onChange={(e) => setKetikanHapus(e.target.value)}
+                        placeholder={user.email}
+                        autoComplete="off"
+                      />
+                      <FormMessage message={hapusMessage} />
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleHapusAkun}
+                          disabled={menghapusAkun || ketikanHapus.trim() !== user.email}
+                          className="btn-danger"
+                        >
+                          {menghapusAkun ? "Menghapus..." : "Hapus akun saya"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBukaHapus(false);
+                            setKetikanHapus("");
+                            setHapusMessage(null);
+                          }}
+                          className="btn-ghost"
+                        >
+                          Batal
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </Card>
+            )}
           </div>
         </div>
       </div>

@@ -29,7 +29,7 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # bcrypt 12 rounds memakan ~250-400 ms CPU per operasi, dan itu MEMANG tujuannya
-# — jangan diturunkan untuk mengejar kecepatan. Yang salah sebelumnya bukan
+#, jangan diturunkan untuk mengejar kecepatan. Yang salah sebelumnya bukan
 # biayanya, tapi tempatnya: dipanggil langsung di dalam `async def` sehingga
 # memblokir event loop, jadi satu pendaftaran membekukan SEMUA request lain
 # selama ~700 ms (daftar + auto-login = dua operasi bcrypt berturut-turut).
@@ -60,7 +60,7 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 async def _resolve_user_from_token(token: str, db: AsyncSession) -> User | None:
-    """Decode JWT & muat User-nya. Return None (bukan raise) kalau token/user invalid —
+    """Decode JWT & muat User-nya. Return None (bukan raise) kalau token/user invalid,
     pemanggil yang menentukan: get_current_user langsung 401, get_data_access_scope
     masih coba fallback ke X-API-Key dulu."""
     try:

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MailCheck } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -16,25 +16,66 @@ export default function DaftarPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [perluVerifikasi, setPerluVerifikasi] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      // Backend register hanya mengembalikan UserOut (tanpa token),
-      // jadi langsung login sesudahnya supaya user tidak perlu isi form dua kali.
+      // Backend register hanya mengembalikan UserOut (tanpa token).
       await api.register(email, password, nama);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Pendaftaran gagal. Coba lagi.");
+      setLoading(false);
+      return;
+    }
+
+    // Akunnya SUDAH jadi di titik ini. Login langsung dicoba, dan hasilnya yang
+    // memberi tahu mana yang berlaku, tanpa halaman ini perlu tahu apa pun soal
+    // konfigurasi SMTP server:
+    //   berhasil -> backend melewati verifikasi (SMTP belum diatur), masuk saja
+    //   ditolak  -> akun menunggu link aktivasi, tampilkan "cek email"
+    // Galat di sini TIDAK boleh dilaporkan sebagai "pendaftaran gagal": akunnya
+    // sudah terlanjur dibuat, dan mengulang formulir cuma akan kena "Email
+    // sudah terdaftar".
+    try {
       const { access_token } = await api.login(email, password);
       window.localStorage.setItem("access_token", access_token);
       router.push("/dashboard");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Pendaftaran gagal. Coba lagi."
-      );
-    } finally {
+    } catch {
+      setPerluVerifikasi(true);
       setLoading(false);
     }
+  }
+
+  if (perluVerifikasi) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-bg p-6">
+        <div className="w-full max-w-sm">
+          <div className="mb-8">
+            <Logo />
+          </div>
+          <div className="card p-6 text-center">
+            <MailCheck className="mx-auto mb-3 h-10 w-10 text-brand-500" />
+            <h2 className="font-display text-lg font-semibold text-ink">
+              Cek email Anda
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">
+              Akun untuk <span className="font-semibold text-ink">{email}</span> sudah
+              dibuat. Kami mengirim link aktivasi ke alamat itu. Buka linknya dulu,
+              baru akunnya bisa dipakai masuk.
+            </p>
+            <Link
+              href="/verifikasi-email"
+              className="mt-4 inline-block py-1 text-sm font-semibold text-brand-600 hover:underline"
+            >
+              Tidak menerima emailnya?
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -69,7 +110,7 @@ export default function DaftarPage() {
           {/* pattern WAJIB di samping type="email": type="email" saja meloloskan
               "a@b" (tanpa titik & TLD), yang lalu ditolak pola backend di
               schemas/user.py dan baru ketahuan setelah request bolak-balik.
-              Pola ini versi ringkas dari pola backend — cukup untuk menangkap
+              Pola ini versi ringkas dari pola backend, cukup untuk menangkap
               kesalahan ketik di browser; backend tetap penjaga terakhirnya. */}
           <Input
             label="Email"

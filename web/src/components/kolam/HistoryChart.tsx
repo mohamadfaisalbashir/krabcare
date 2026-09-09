@@ -26,7 +26,7 @@ import ChartTooltip from "./ChartTooltip";
  *  Bukan kosmetik. `(40 - 5) * 0.08` = 2.8000000000000003, jadi `min - pad`
  *  salinitas = 2.1999999999999997. Recharts memakai ujung domain APA ADANYA
  *  sebagai tick pertama, dan label 18 karakter itu tidak muat di sumbu selebar
- *  44px — itulah grafik salinitas yang terlihat terpotong. pH (6.3) dan suhu
+ *  44px, itulah grafik salinitas yang terlihat terpotong. pH (6.3) dan suhu
  *  (18.8) kebetulan lolos karena pad-nya bulat, jadi cuma satu dari tiga
  *  parameter yang kelihatan salah. */
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -36,14 +36,14 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
  *
  * Bentuknya mengikuti rujukan image4.png: kisi TEGAK (bukan mendatar), tanpa
  * garis sumbu, dan TANPA titik sama sekali. Titik yang menetap di grafik
- * membaca sebagai "ini yang penting" padahal setiap pembacaan sama pentingnya —
+ * membaca sebagai "ini yang penting" padahal setiap pembacaan sama pentingnya,
  * yang tersisa cuma `activeDot`, yang hanya muncul selama kursor menyentuh
  * grafik. Nilai terakhir juga tidak lagi diberi garis berlabel: angkanya sudah
  * terbaca besar-besar di baris parameter tepat di atas grafik ini.
  *
  * Pita ambang tetap ada dan itu isi informasinya: pita hijau = rentang optimal,
  * sisanya di dalam garis putus-putus = waspada, di luar = bahaya. Batasnya
- * persis RANGE di lib/parameter.ts — sumber yang sama dengan statusOf(), jadi
+ * persis RANGE di lib/parameter.ts, sumber yang sama dengan statusOf(), jadi
  * warna pita tidak bisa bertentangan dengan status yang tertulis di atasnya.
  * Opasitasnya sengaja rendah supaya garis datanya yang terbaca lebih dulu.
  *
@@ -60,7 +60,7 @@ export default function HistoryChart({
   data: SensorReading[];
   parameter: ParamKey;
   /** Kelas tinggi Tailwind. Panel di Grafik Gabungan lebih pendek dari h-64
-   *  karena ada tiga bertumpuk. TETAP kelas tinggi definitif, bukan flex-1 —
+   *  karena ada tiga bertumpuk. TETAP kelas tinggi definitif, bukan flex-1,
    *  ResponsiveContainer mengukur 0px kalau induknya tidak punya tinggi pasti. */
   height?: string;
   /** Sumbu X disembunyikan untuk panel selain yang PALING BAWAH di Grafik
@@ -77,7 +77,7 @@ export default function HistoryChart({
   const values = data
     .map((d) => d[parameter])
     .filter((v): v is number => typeof v === "number");
-  // Kalau data memang keluar jauh dari toleransi, ikut lebarkan — memotong
+  // Kalau data memang keluar jauh dari toleransi, ikut lebarkan, memotong
   // pembacaan ekstrem justru menyembunyikan keadaan yang paling perlu dilihat.
   const lo = round1(Math.min(min - pad, ...values));
   const hi = round1(Math.max(max + pad, ...values));
@@ -88,8 +88,8 @@ export default function HistoryChart({
           ini seluruh grafik digambar ulang tiap frame selama sidebar
           menguncup/membentang. Itu penyebab utama transisi sidebar tersendat. */}
       <ResponsiveContainer width="100%" height="100%" debounce={200}>
-        {/* data dipakai apa adanya — nama field SensorReading sudah jadi dataKey */}
-        {/* left: 0 — margin negatif menggeser area plot dan memotong label
+        {/* data dipakai apa adanya, nama field SensorReading sudah jadi dataKey */}
+        {/* left: 0, margin negatif menggeser area plot dan memotong label
             sumbu Y. Ruangnya diatur lewat prop `width` di YAxis. */}
         {/* TANPA syncId. Dulu grafik ini dan Grafik gabungan berbagi
             syncId="rak" supaya kursor di satu grafik menyorot titik waktu yang
@@ -117,17 +117,17 @@ export default function HistoryChart({
             fillOpacity={0.07}
             ifOverflow="hidden"
           />
-          {/* Garis toleransi: tipis & putus-putus — ia penanda, bukan data. */}
+          {/* Garis toleransi: tipis & putus-putus, ia penanda, bukan data. */}
           <ReferenceLine y={min} stroke="#C23B22" strokeOpacity={0.3} strokeDasharray="4 4" />
           <ReferenceLine y={max} stroke="#C23B22" strokeOpacity={0.3} strokeDasharray="4 4" />
 
-          {/* Kisi TEGAK, bukan mendatar — ini yang diambil dari image4.png.
+          {/* Kisi TEGAK, bukan mendatar, ini yang diambil dari image4.png.
               Garis tegak membaca sebagai penanda WAKTU, dan waktu memang sumbu
               yang dibaca orang di grafik pemantauan. */}
           <CartesianGrid vertical horizontal={false} stroke="#DCE5DD" strokeOpacity={0.9} />
           {/* height={0} saat disembunyikan, BUKAN dilepas: XAxis tetap harus
               ada supaya recharts memetakan dataKey "time" ke sumbu kategori
-              yang sama dengan panel lain — dilepas, ketiga panel bisa memakai
+              yang sama dengan panel lain, dilepas, ketiga panel bisa memakai
               pembagian titik yang berbeda dan garisnya tidak lagi sejajar. */}
           <XAxis
             dataKey="time"
@@ -139,7 +139,7 @@ export default function HistoryChart({
             axisLine={false}
             tickLine={false}
           />
-          {/* tickFormatter: penjaga kedua setelah round1 di atas — recharts
+          {/* tickFormatter: penjaga kedua setelah round1 di atas, recharts
               membagi domain sendiri, jadi tick di tengah pun bisa lahir dengan
               ekor float walau kedua ujungnya sudah bulat. */}
           <YAxis

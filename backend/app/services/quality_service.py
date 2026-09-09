@@ -90,7 +90,7 @@ async def get_prediction_horizons(
 ) -> list[dict]:
     """Semua horizon dari run forecast TERAKHIR per device, urut horizon_minutes ASC.
 
-    Perlu query sendiri karena satu run menulis banyak baris dengan `time` sama —
+    Perlu query sendiri karena satu run menulis banyak baris dengan `time` sama,
     DISTINCT ON di get_latest_quality() hanya memulangkan salah satunya.
     """
     latest_time_subq = (

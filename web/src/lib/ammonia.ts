@@ -3,8 +3,8 @@
 // SENGAJA terpisah dari parameter.ts, dan `"amonia"` SENGAJA bukan ParamKey
 // keempat: PARAM_KEYS menggerakkan RANGE, statusOf, HistoryChart, CombinedChart,
 // submenu Sidebar, pil pemilih di log historis, ParamSwitch, dan kolom ekspor
-// CSV sekaligus. Amonia bukan parameter TERUKUR — ia angka turunan dari ketiga
-// parameter itu — jadi menyelipkannya ke daftar yang sama akan membuatnya muncul
+// CSV sekaligus. Amonia bukan parameter TERUKUR, ia angka turunan dari ketiga
+// parameter itu, jadi menyelipkannya ke daftar yang sama akan membuatnya muncul
 // sebagai "garis keempat" di grafik sensor, yang keliru secara ilmiah.
 import type { StatusLabel } from "./types";
 import type { ParamKey } from "./parameter";
@@ -29,7 +29,7 @@ export function riskToStatus(level: string | null | undefined): StatusLabel | nu
   return RISK_TO_STATUS[level as RiskLevel] ?? null;
 }
 
-/** Kebalikannya — dipakai filter status di halaman log historis. */
+/** Kebalikannya, dipakai filter status di halaman log historis. */
 export const STATUS_TO_RISK: Record<StatusLabel, RiskLevel> = {
   Aman: "normal",
   Waspada: "perhatian",
@@ -39,7 +39,7 @@ export const STATUS_TO_RISK: Record<StatusLabel, RiskLevel> = {
 /**
  * Ambang fraksi NH3 (%), SALINAN dari classify_risk() di
  * backend/app/services/ammonia_speciation.py. Dua salinan karena Python dan
- * TypeScript tidak bisa berbagi konstanta — masalah yang sama persis dengan
+ * TypeScript tidak bisa berbagi konstanta, masalah yang sama persis dengan
  * water_thresholds.py vs parameter.ts (lihat README bagian "Ambang Parameter").
  * Ubah salah satu tanpa yang lain dan warna kartu bisa berselisih dengan
  * risk_level yang tersimpan di database.
@@ -68,7 +68,7 @@ export function formatFraksi(fractionPct: number): string {
 export function trenAmonia(values: number[]): string {
   const first = values[0];
   const last = values[values.length - 1];
-  // ponytail: 0,3 poin persen — kira-kira selebar riak semalam pada data uji.
+  // ponytail: 0,3 poin persen, kira-kira selebar riak semalam pada data uji.
   // Naikkan kalau pada data hardware asli kalimatnya terlalu sering berbunyi
   // "naik/turun" untuk perubahan yang tidak berarti.
   if (Math.abs(last - first) < 0.3) {

@@ -23,7 +23,7 @@
 
 @layer components {
   /* Radius 8px & bayangan tipis datang dari token (rounded-xl2, shadow-card).
-     Yang memisahkan kartu dari panel adalah GARIS 1px-nya, bukan bayangannya —
+     Yang memisahkan kartu dari panel adalah GARIS 1px-nya, bukan bayangannya,
      begitu cara WinUI 3 menyusun kedalaman. */
   .card {
     @apply bg-surface border border-border rounded-xl2 shadow-card;
@@ -49,7 +49,7 @@
   }
   /* Edge/Chromium menyisipkan tombol "intip sandi" sendiri DI DALAM input.
      Hasilnya dua ikon mata berdampingan, dan yang bawaan duduk di atas tombol
-     React kita sehingga tekanan pengguna tidak pernah sampai ke handler-nya —
+     React kita sehingga tekanan pengguna tidak pernah sampai ke handler-nya,
      persis keluhan "ikon mata ganda & tidak berfungsi". Tombol milik kita yang
      dipertahankan karena ia yang tetap ada di Firefox/Safari. */
   input[type="password"]::-ms-reveal,
@@ -63,7 +63,7 @@
   /* Outline :focus-visible global sengaja TIDAK dimatikan untuk input: garis
      bawah saja bukan penanda fokus keyboard yang memadai. */
 
-  /* Baris yang bisa digeser mendatar. Scrollbar-nya DISEMBUNYIKAN — barisnya
+  /* Baris yang bisa digeser mendatar. Scrollbar-nya DISEMBUNYIKAN, barisnya
      digeser dengan seret (klik-tahan) atau wheel, lihat components/dashboard/
      Rail.tsx. Yang menggantikan scrollbar sebagai tanda "masih ada kartu di
      sebelah sana" ada dua dan keduanya wajib ikut: gradien tepi yang dikelola
@@ -79,11 +79,11 @@
     display: none;
   }
 
-  /* KACA (Acrylic WinUI 3) — hanya dipakai halaman /dashboard, yang punya
+  /* KACA (Acrylic WinUI 3), hanya dipakai halaman /dashboard, yang punya
      lapisan foto sendiri di belakangnya. Jangan dipakai di halaman lain: tanpa
      latar bergambar, kaca cuma terlihat seperti kartu putih yang lebih pucat.
 
-     Radiusnya tetap xl2 (8px), bukan sudut besar ala poster glassmorphism —
+     Radiusnya tetap xl2 (8px), bukan sudut besar ala poster glassmorphism,
      yang diminta rasa kacanya, dengan disiplin WinUI-nya tetap dipegang.
 
      box-shadow ditulis manual karena isinya DUA lapis dan yang pertama `inset`:
@@ -113,12 +113,12 @@
      sana mulai breakpoint sm. Itu penyebab "tombol Masuk tidak responsif
      terhadap tap touchpad": tap-to-click menggeser kursor beberapa piksel
      antara mousedown dan mouseup, dan kalau mouseup mendarat di luar elemen,
-     browser tidak pernah menerbitkan `click` — form-nya tidak submit sama
+     browser tidak pernah menerbitkan `click`, form-nya tidak submit sama
      sekali. 38px di semua ukuran layar, jadi ada ruang untuk geseran itu.
 
      active: bukan hiasan. html { -webkit-tap-highlight-color: transparent }
      di atas menghapus umpan balik bawaan, sehingga tekanan yang tertelan
-     terlihat persis sama dengan tombol mati — pengguna menekan lagi dan lagi
+     terlihat persis sama dengan tombol mati, pengguna menekan lagi dan lagi
      tanpa tahu yang mana yang masuk. */
   .btn-base {
     @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-lg
@@ -128,21 +128,21 @@
   }
 
   /* AccentButton. bg-brand-600, bukan 500: teks putih di atas brand-500 hanya
-     2.88:1. Sorotan tipis di tepi atas — cara WinUI memberi kesan tombol timbul. */
+     2.88:1. Sorotan tipis di tepi atas, cara WinUI memberi kesan tombol timbul. */
   .btn-primary {
     @apply btn-base bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-900;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.17);
   }
 
   /* Button standar WinUI: isian putih, garis bawah sedikit lebih gelap, dan
-     hover NETRAL — bukan bernuansa aksen seperti sebelumnya. */
+     hover NETRAL, bukan bernuansa aksen seperti sebelumnya. */
   .btn-ghost {
     @apply btn-base border border-border bg-white text-ink hover:bg-bg;
     /* 35%→22%, alasan sama dengan .input-field di atas. */
     border-bottom-color: theme("colors.muted / 22%");
   }
 
-  /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di dalam Zona Berbahaya —
+  /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di dalam Zona Berbahaya,
      satu kelas supaya gaya keduanya tidak bisa lepas sinkron. */
   .btn-danger {
     @apply btn-base border border-status-bahaya/30 bg-status-bahayaBg

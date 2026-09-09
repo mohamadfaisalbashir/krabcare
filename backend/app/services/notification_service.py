@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("app.services.notification_service")
 
 #: Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali. SALINAN dari
-#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py — klasifikasi sekarang dihitung
+#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py, klasifikasi sekarang dihitung
 #: di edge, tapi keputusan "kapan kirim notifikasi" tetap di backend, jadi
 #: konstanta ini WAJIB tetap sinkron dengan sumber itu kalau kategorinya
 #: pernah berubah.
@@ -60,7 +60,7 @@ async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notificati
 
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
-    """Kategori pada notifikasi klasifikasi terakhir device ini — acuan transition-check."""
+    """Kategori pada notifikasi klasifikasi terakhir device ini, acuan transition-check."""
     result = await db.execute(
         select(Notification.quality_category)
         .where(Notification.device_id == device_id, Notification.source == "classification")
@@ -78,7 +78,7 @@ async def create_classification_notification(
     quality_score: float,
     sensor_reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi status sekarang — hanya dibuat saat kategori BERUBAH.
+    """Notifikasi status sekarang, hanya dibuat saat kategori BERUBAH.
 
     Tanpa transition-check ini, tiap siklus scheduler akan memberi notifikasi
     selama anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
@@ -130,7 +130,7 @@ async def create_classification_notification(
     )
 
 
-#: Ambang toleransi dan optimal parameter air — SAMA dengan yang ada di web/src/lib/parameter.ts
+#: Ambang toleransi dan optimal parameter air, SAMA dengan yang ada di web/src/lib/parameter.ts
 PARAM_CONFIG: dict[str, dict] = {
     "ph": {
         "label": "pH air",
@@ -173,7 +173,7 @@ def classify_param_value(param_key: str, value: float) -> str:
 
 
 async def _last_parameter_category(db: AsyncSession, device_id: int, parameter: str) -> str | None:
-    """Kategori pada notifikasi parameter terakhir device ini — acuan transition-check."""
+    """Kategori pada notifikasi parameter terakhir device ini, acuan transition-check."""
     result = await db.execute(
         select(Notification.quality_category)
         .where(
@@ -197,7 +197,7 @@ async def create_parameter_notification(
     value_str: str,
     reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi status satu parameter — hanya dibuat saat kategori BERUBAH."""
+    """Notifikasi status satu parameter, hanya dibuat saat kategori BERUBAH."""
     previous = await _last_parameter_category(db, device.id, parameter)
     if previous == category:
         return None
@@ -239,7 +239,7 @@ async def create_prediction_notifications(
     """Peringatan dini dari horizon yang diramal anomali.
 
     `anomalies`: [{"target_time", "category", "horizon_minutes"}, ...]. Dedup cukup
-    lewat UNIQUE (device_id, source, event_time, parameter) karena target_time absolut —
+    lewat UNIQUE (device_id, source, event_time, parameter) karena target_time absolut,
     beda dari klasifikasi yang butuh transition-check. Return yang benar-benar baru.
     """
     if not anomalies:
@@ -255,7 +255,13 @@ async def create_prediction_notifications(
             "quality_category": a["category"],
             "event_time": a["target_time"],
             "message": (
-                f"Prediksi: kualitas air {device.device_code} berpotensi {a['category'].upper()} "
+                # CATEGORY_LABEL, bukan a['category'] mentah. Nilai mentahnya
+                # "sedang"/"buruk" (istilah database), sedangkan seluruh UI
+                # memakai Waspada/Bahaya. Tanpa terjemahan ini pesan prediksi
+                # jadi satu-satunya tempat yang menyebut istilah berbeda, dan
+                # pewarnaan kata status di halaman notifikasi tidak menemukannya.
+                f"Prediksi: kualitas air {device.device_code} berpotensi "
+                f"{CATEGORY_LABEL.get(a['category'], a['category']).upper()} "
                 f"sekitar {a['target_time'].strftime('%H:%M')} ({a['horizon_minutes']} menit lagi)."
             ),
         }
@@ -319,7 +325,7 @@ async def dispatch_from_quality_ingest(
 
     Dulu dipanggil dari ml_pipeline_service.py setiap siklus scheduler backend
     menghitung sendiri; sekarang backend cuma menerima hasil hitungnya, jadi
-    titik pemicunya pindah ke sini — tapi ATURANNYA sama persis (transition
+    titik pemicunya pindah ke sini, tapi ATURANNYA sama persis (transition
     check untuk klasifikasi & per-parameter, dedup UNIQUE untuk prediksi).
     Device yang belum diklaim (kolam_id NULL) dilewati: notifikasi butuh pemilik.
     """
@@ -459,7 +465,7 @@ async def list_notifications(
 
     `source` WAJIB disaring di SQL, bukan di klien. Halaman ini cuma 20 baris:
     menyaring setelah LIMIT membuat tab "Parameter" tampak kosong padahal
-    barisnya ada di halaman berikutnya — persis keluhan "data notifikasi
+    barisnya ada di halaman berikutnya, persis keluhan "data notifikasi
     parameter sering hilang".
     """
     stmt = select(Notification).where(Notification.user_id == user.id)

@@ -4,13 +4,13 @@ LATAR:
 Sensor amonia (MQ-137) dibuang dari hardware, jadi TAN tidak pernah terukur dan
 sistem ini TIDAK BOLEH mengeluarkan angka "amonia = X mg/L". Yang bisa dihitung
 adalah FRAKSI amonia total yang berbentuk NH3 toksik pada pH/suhu/salinitas
-tertentu — persamaan kesetimbangan Bower & Bidwell (1978) / Spotte & Adams
+tertentu, persamaan kesetimbangan Bower & Bidwell (1978) / Spotte & Adams
 (1983), lihat app/services/ammonia_speciation.py.
 
 Perhitungannya deterministik dan bisa diulang kapan saja, jadi secara teori
 tabel ini tidak wajib ada. Ia tetap dibuat karena yang diminta adalah LOG
 HISTORIS: parameter mentah datang dari hardware, angka risikonya dari software,
-dan keduanya harus bisa ditelusuri berpasangan di kemudian hari — termasuk baris
+dan keduanya harus bisa ditelusuri berpasangan di kemudian hari, termasuk baris
 ramalan, yang tidak punya reading padanannya sama sekali.
 
 Satu tabel, tiga peran, dibedakan `horizon_minutes`:
@@ -21,7 +21,7 @@ Hypertable dikonversi SEKARANG selagi tabel masih kosong; mengonversi tabel yang
 sudah berisi data jauh lebih repot.
 
 Backfill memanggil assess_ammonia_risk() lewat Python, BUKAN menyalin rumusnya
-ke SQL — dua salinan rumus kesetimbangan adalah dua sumber kebenaran yang pasti
+ke SQL, dua salinan rumus kesetimbangan adalah dua sumber kebenaran yang pasti
 lepas sinkron. Reading yang salah satu sensornya NULL dilewati, tidak diisi
 nilai default palsu.
 
@@ -42,7 +42,7 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 # ponytail: backfill dibaca sekaligus lalu ditulis per 5000 baris. Cukup untuk
-# skala repo ini (beberapa rak x reading tiap 1-15 menit); kalau tabel reading
+# skala repo ini (beberapa rak x reading tiap 1-15 menit). Kalau tabel reading
 # kelak berjuta baris, ganti SELECT-nya jadi server-side cursor per device.
 UKURAN_BATCH = 5000
 
@@ -99,7 +99,7 @@ def _backfill_dari_readings() -> None:
     """
     # Import di dalam fungsi: env.py sudah menaruh package `app` di path, tapi
     # menaruhnya di atas berkas membuat migrasi ini gagal di-load kalau modul
-    # servicenya suatu saat dipindah — dan migrasi lama harus tetap bisa jalan.
+    # servicenya suatu saat dipindah, dan migrasi lama harus tetap bisa jalan.
     from app.services.ammonia_speciation import MODEL_VERSION, assess_ammonia_risk
 
     bind = op.get_bind()
@@ -155,6 +155,6 @@ def _backfill_dari_readings() -> None:
 
 def downgrade() -> None:
     # Aman dibuang: seluruh isinya turunan deterministik dari sensor_readings
-    # (baris terukur) dan fuzzy_predictions (baris ramalan) — bisa dihitung ulang.
+    # (baris terukur) dan fuzzy_predictions (baris ramalan), bisa dihitung ulang.
     op.drop_index("idx_ammonia_risks_device_target", table_name="ammonia_risks")
     op.drop_table("ammonia_risks")

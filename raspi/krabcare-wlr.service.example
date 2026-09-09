@@ -1,9 +1,9 @@
 # Contoh unit systemd buat jalanin gateway (yang sudah mengimpor wlr_forecast.py) sebagai
-# service — auto-start saat Raspi boot, auto-restart kalau proses crash.
+# service, auto-start saat Raspi boot, auto-restart kalau proses crash.
 #
 # CARA PAKAI:
 #   1. Sesuaikan WorkingDirectory & ExecStart di bawah sama lokasi script gateway kalian
-#      yang sebenarnya (bukan wlr_forecast.py langsung — itu cuma modul, bukan program
+#      yang sebenarnya (bukan wlr_forecast.py langsung, itu cuma modul, bukan program
 #      yang jalan terus; ExecStart harus nunjuk ke script gateway kalian yang MENGIMPOR
 #      wlr_forecast dan punya loop while True baca sensor).
 #   2. Copy file ini (rename, buang .example) ke /etc/systemd/system/krabcare-wlr.service
@@ -12,7 +12,7 @@
 #   5. sudo journalctl -u krabcare-wlr -f   # lihat log live
 
 [Unit]
-Description=KrabCare — gateway + WLR forecast (edge, Raspi5)
+Description=KrabCare, gateway + WLR forecast (edge, Raspi5)
 After=network.target
 
 [Service]

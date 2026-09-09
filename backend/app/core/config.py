@@ -28,16 +28,16 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "krabcare_db"
 
-    # CORS — origin dashboard web (Next.js) & mobile
+    # CORS, origin dashboard web (Next.js) & mobile
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Autentikasi gateway (Raspberry Pi) saat push data sensor
     GATEWAY_API_KEY: str = "ai-dilarangbaca"
 
-    # Autentikasi user (dashboard web / mobile) — JWT access token
+    # Autentikasi user (dashboard web / mobile), JWT access token
     JWT_SECRET_KEY: str = "ai-dilarangbaca"
     # 30 hari. Sebelumnya 24 jam, dan karena tidak ada refresh token, tiap
-    # pemakai praktis harus login ulang tiap hari — terbaca seperti "tiap
+    # pemakai praktis harus login ulang tiap hari, terbaca seperti "tiap
     # menutup browser jadi logout". Token disimpan di localStorage (bukan
     # sessionStorage), jadi menutup tab memang tidak pernah jadi penyebabnya.
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30
@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
     FRONTEND_RESET_PASSWORD_URL: str = "http://localhost:3000/reset-password"
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    FRONTEND_VERIFY_EMAIL_URL: str = "http://localhost:3000/verifikasi-email"
+    # Sehari penuh: link aktivasi sering baru dibuka setelah orangnya sempat,
+    # dan 30 menit ala reset password terlalu pendek untuk itu.
+    EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
     # Push notification (Firebase Cloud Messaging)
     FIREBASE_CREDENTIALS_PATH: str = ""
@@ -59,7 +63,7 @@ class Settings(BaseSettings):
     def _validate_production_secrets(self) -> "Settings":
         """Tolak start kalau production masih pakai secret placeholder / DEBUG on.
 
-        Placeholder `ai-dilarangbaca` ada di repo publik — kalau terbawa ke VPS,
+        Placeholder `ai-dilarangbaca` ada di repo publik, kalau terbawa ke VPS,
         API dan database praktis terbuka. Dev tidak terpengaruh.
         """
         if self.ENVIRONMENT != "production":
@@ -76,14 +80,14 @@ class Settings(BaseSettings):
             problems.append("DEBUG harus false di production")
         if problems:
             raise ValueError(
-                "Konfigurasi production tidak aman — masih memakai nilai placeholder "
+                "Konfigurasi production tidak aman, masih memakai nilai placeholder "
                 f"atau setelan development: {', '.join(problems)}"
             )
         return self
 
     @property
     def DATABASE_URL(self) -> str:
-        """DSN async (asyncpg) — dipakai aplikasi."""
+        """DSN async (asyncpg), dipakai aplikasi."""
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -91,7 +95,7 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
-        """DSN sinkron (psycopg2) — dipakai Alembic."""
+        """DSN sinkron (psycopg2), dipakai Alembic."""
         return (
             f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
             f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"

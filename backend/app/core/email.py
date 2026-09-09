@@ -1,4 +1,4 @@
-"""Kirim email (reset password) pakai smtplib stdlib — tanpa dependency baru."""
+"""Kirim email (reset password) pakai smtplib stdlib, tanpa dependency baru."""
 
 import asyncio
 import logging
@@ -11,7 +11,7 @@ logger = logging.getLogger("app.core.email")
 
 
 def _send_email_sync(to_email: str, subject: str, body: str) -> None:
-    """Kirim satu email lewat SMTP (blocking) — dibungkus thread oleh send_email()."""
+    """Kirim satu email lewat SMTP (blocking), dibungkus thread oleh send_email()."""
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = settings.SMTP_FROM_EMAIL
@@ -30,7 +30,7 @@ async def send_email(to_email: str, subject: str, body: str) -> None:
     """Versi async. SMTP belum dikonfigurasi -> skip + warning, bukan error."""
     if not settings.SMTP_HOST:
         logger.warning(
-            "SMTP_HOST belum diset — email ke %s dilewati (subjek: %s).", to_email, subject
+            "SMTP_HOST belum diset, email ke %s dilewati (subjek: %s).", to_email, subject
         )
         return
     await asyncio.to_thread(_send_email_sync, to_email, subject, body)

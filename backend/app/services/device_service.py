@@ -1,7 +1,7 @@
 """Kelola device sisi admin: lihat semua device (klaim/belum) & tambah device baru.
 
 Sebelum ini device_code cuma bisa masuk lewat INSERT manual ke DB (lihat
-README) — endpoint admin di sini gantiin itu lewat form web.
+README), endpoint admin di sini gantiin itu lewat form web.
 """
 
 from sqlalchemy import select
@@ -21,7 +21,7 @@ class DeviceNotFoundError(DeviceError):
 
 
 class DeviceCodeConflictError(DeviceError):
-    """device_code sudah dipakai device lain — UNIQUE constraint devices.device_code."""
+    """device_code sudah dipakai device lain, UNIQUE constraint devices.device_code."""
 
 
 class DeviceAlreadyClaimedError(DeviceError):
@@ -31,7 +31,7 @@ class DeviceAlreadyClaimedError(DeviceError):
 async def list_all_devices(db: AsyncSession) -> list[DeviceAdminOut]:
     """Semua device terdaftar, sudah diklaim maupun belum (kolam_id NULL).
 
-    Panel admin butuh dua-duanya sekaligus (bukan cuma yang belum diklaim) —
+    Panel admin butuh dua-duanya sekaligus (bukan cuma yang belum diklaim),
     outer join ke Kolam dan User supaya device yang sudah diklaim ikut bawa nama
     kolamnya dan nama pemiliknya.
     """

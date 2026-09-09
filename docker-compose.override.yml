@@ -4,7 +4,7 @@
 # (docker compose -f docker-compose.yml -f docker-compose.prod.yml ...).
 #
 # Bind mount kode ada di sini, bukan di file base, karena Compose menggabung
-# (bukan menimpa) list `volumes` — entri di base tidak bisa dihapus dari file
+# (bukan menimpa) list `volumes`, entri di base tidak bisa dihapus dari file
 # override, sehingga prod akan selalu kebawa kode dari host kalau mount ini
 # ditaruh di base.
 #
@@ -12,13 +12,13 @@
 # "127.0.0.1:PORT" saja (IPv4). Di Windows `localhost` menyelesaikan ke ::1
 # LEBIH DULU (record AAAA sebelum A), jadi browser mengetuk [::1]:3000 dan
 # [::1]:8000 dan ditolak. Halaman kadang masih terbuka karena browser mundur ke
-# IPv4, tapi fetch ke http://localhost:8000/api/v1 tidak selalu ikut mundur —
+# IPv4, tapi fetch ke http://localhost:8000/api/v1 tidak selalu ikut mundur,
 # hasilnya halaman putih / gagal login yang terbaca seperti "web tidak bisa
 # dibuka".
 #
 # Ditambahkan di override, BUKAN di base: Compose MENGGABUNG list `ports`, jadi
 # entri ini menambah alamat dengar tanpa menghapus yang IPv4, dan prod (yang
-# dijalankan dengan -f eksplisit) tidak memuat file ini sama sekali — di VPS
+# dijalankan dengan -f eksplisit) tidak memuat file ini sama sekali, di VPS
 # tetap hanya Caddy yang terekspos.
 services:
   backend:

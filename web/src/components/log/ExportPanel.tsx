@@ -6,12 +6,13 @@ import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
-import { Sensor } from "@/lib/types";
+import { AmmoniaRiskLog, Sensor } from "@/lib/types";
 import { api } from "@/lib/api";
 import {
   dayRangeToIso,
   fetchAllReadings,
   toCsv,
+  petaAmoniaDari,
   namaBerkas,
   downloadCsv,
   downloadXlsx,
@@ -25,6 +26,36 @@ function isoDay(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
   ).padStart(2, "0")}`;
+}
+
+/** Batas keras backend untuk /quality/ammonia-risk/history (le=1000). */
+const AMONIA_CHUNK = 1000;
+/** Sepadan dengan MAX_PAGES di lib/export.ts: 20.000 baris amonia per unduhan. */
+const AMONIA_MAX_PAGES = 20;
+
+/**
+ * Ambil seluruh riwayat amonia terukur pada satu rentang waktu.
+ *
+ * Jauh lebih sederhana dari fetchAllReadings: endpoint ini punya `offset`, jadi
+ * paginasinya biasa saja dan tidak perlu keyset cursor. `only_measured` menyaring
+ * ke horizon 0, yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS.
+ * device_id sengaja tidak dikirim: scope backend sudah membatasi ke device milik
+ * user, sama seperti pengambilan halaman log historis.
+ */
+async function ambilAmonia(start: string, end: string) {
+  const semua: AmmoniaRiskLog[] = [];
+  for (let i = 0; i < AMONIA_MAX_PAGES; i++) {
+    const page = await api.getAmmoniaHistory({
+      start_time: start,
+      end_time: end,
+      only_measured: true,
+      limit: AMONIA_CHUNK,
+      offset: i * AMONIA_CHUNK,
+    });
+    semua.push(...page);
+    if (page.length < AMONIA_CHUNK) break;
+  }
+  return semua;
 }
 
 export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
@@ -84,17 +115,18 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
       const params = paramSel === "semua" ? PARAM_KEYS : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
+      const amonia = petaAmoniaDari(await ambilAmonia(start, end));
 
       const filename = namaBerkas("semua", params, from, to, format);
       if (format === "xlsx") {
-        await downloadXlsx(rows, params, kolamByDevice, filename);
+        await downloadXlsx(rows, params, kolamByDevice, amonia, filename);
       } else {
-        downloadCsv(toCsv(rows, params, kolamByDevice), filename);
+        downloadCsv(toCsv(rows, params, kolamByDevice, amonia), filename);
       }
 
       if (results.some((r) => r.truncated)) {
         // Paging berjalan dari terbaru ke terlama, jadi yang terpotong adalah
-        // data PALING LAMA — dan karena berkasnya sekarang mulai dari yang
+        // data PALING LAMA, dan karena berkasnya sekarang mulai dari yang
         // terlama, potongan itu ada di AWAL berkas, bukan di akhir.
         setNote(
           `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai. ` +
@@ -114,9 +146,9 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       <div className="mb-3">
         <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
         <p className="mt-1 text-xs text-muted">
-          Berisi nilai apa adanya pada rentang tanggal yang dipilih, mulai dari
-          data paling lama. Kolom <code>latensi_detik</code> = selisih jam device
-          dan jam server saat baris itu diterima.
+          Berisi nilai apa adanya pada rentang tanggal yang dipilih, urut mulai
+          dari data paling lama. Ikut disertakan waktu data itu sampai di server,
+          untuk mengukur berapa lama pengirimannya dari alat.
         </p>
       </div>
 

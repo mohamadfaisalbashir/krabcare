@@ -10,15 +10,17 @@ from app.models.enums import UserRole
 from app.schemas.user import (
     ForgotPasswordIn,
     PasswordChangeIn,
+    ResendVerificationIn,
     ResetPasswordIn,
     TokenOut,
     UserLoginIn,
     UserOut,
     UserProfileUpdateIn,
     UserRegisterIn,
+    VerifyEmailIn,
 )
 from app.services import auth_service
-from app.services.auth_service import AuthError
+from app.services.auth_service import AuthError, EmailBelumTerverifikasi
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,9 +40,32 @@ async def login(payload: UserLoginIn, db: AsyncSession = Depends(get_db)) -> Tok
     """Tukar email+password jadi JWT access token."""
     try:
         token = await auth_service.authenticate_user(db, payload)
+    except EmailBelumTerverifikasi as exc:
+        # 403, bukan 401: kredensialnya BENAR, yang kurang cuma aktivasi. 401
+        # akan memicu logout() otomatis di klien (lib/api.ts) dan melempar
+        # pengguna ke halaman login yang baru saja ia isi dengan benar.
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     return TokenOut(access_token=token)
+
+
+@router.post("/verify-email", status_code=204)
+async def verify_email(payload: VerifyEmailIn, db: AsyncSession = Depends(get_db)) -> None:
+    """Aktifkan akun lewat token dari email pendaftaran."""
+    try:
+        await auth_service.verify_email(db, payload.token)
+    except AuthError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@router.post("/resend-verification")
+async def resend_verification(
+    payload: ResendVerificationIn, db: AsyncSession = Depends(get_db)
+) -> dict:
+    """Kirim ulang link aktivasi. Respons sama saja terdaftar atau tidak (anti-enumeration)."""
+    await auth_service.resend_verification(db, payload.email)
+    return {"detail": "Kalau email terdaftar dan belum aktif, link aktivasi sudah dikirim ulang."}
 
 
 @router.get("/me", response_model=UserOut)

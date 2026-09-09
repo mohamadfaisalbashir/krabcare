@@ -1,15 +1,15 @@
-"""Klasifikasi kualitas air (Fuzzy Inference System Mamdani) — jalan di Raspi5.
+"""Klasifikasi kualitas air (Fuzzy Inference System Mamdani), jalan di Raspi5.
 
 Satu file berdiri sendiri (tidak import modul lain di repo), tinggal copy ke Raspi
 tanpa perlu bawa seisi repo. Rumusnya dites terhadap acuan skripsi bagian 3.3.6.
 
-Murni stdlib. Tidak butuh histori/buffer apa pun — klasifikasi ini SEKALI JALAN
+Murni stdlib. Tidak butuh histori/buffer apa pun, klasifikasi ini SEKALI JALAN
 per reading (beda dari forecast WLR di wlr_forecast.py yang butuh histori).
 """
 
 
 def trapezoid(x: float, a: float, b: float, c: float, d: float) -> float:
-    """T(x; a, b, c, d) — Persamaan 3.3.6.1 proposal."""
+    """T(x; a, b, c, d), Persamaan 3.3.6.1 proposal."""
     if b <= x <= c:
         return 1.0
     if x <= a or x >= d:

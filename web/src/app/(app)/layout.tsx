@@ -26,14 +26,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     // Bug: logout() navigasi penuh ke /login (window.location.href) SETELAH
     // menghapus token. Kalau abis itu user pencet tombol Back, browser
-    // memulihkan halaman (mis. /dashboard) dari BFCACHE — potretan JS/DOM
-    // sebelum logout, bukan mount baru — jadi efek di atas TIDAK jalan lagi
+    // memulihkan halaman (mis. /dashboard) dari BFCACHE, potretan JS/DOM
+    // sebelum logout, bukan mount baru, jadi efek di atas TIDAK jalan lagi
     // dan `authorized` yang sudah true sebelumnya tetap nempel, halaman
     // terproteksi sempat kelihatan lagi walau token sudah tidak ada. Baru
     // ketauan pas ADA request API berikutnya yang balas 401 (lihat
-    // lib/api.ts:request) — makanya baru "keluar" setelah beberapa saat.
+    // lib/api.ts:request), makanya baru "keluar" setelah beberapa saat.
     // `pageshow` dengan `persisted: true` adalah satu-satunya sinyal yang
-    // nembak tepat saat halaman dipulihkan dari bfcache; cek ulang token di
+    // nembak tepat saat halaman dipulihkan dari bfcache. Cek ulang token di
     // situ supaya user langsung terlempar balik ke /login tanpa jeda.
     function handlePageShow(e: PageTransitionEvent) {
       if (e.persisted) cekToken();
@@ -42,19 +42,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, [router]);
 
-  // Jangan render isi halaman sebelum token dipastikan ada — kalau tidak,
+  // Jangan render isi halaman sebelum token dipastikan ada, kalau tidak,
   // konten sempat berkedip muncul buat pengunjung yang belum login.
   if (!authorized) return null;
 
   return (
     <div className="flex min-h-screen bg-bg">
-      {/* Lebar ditentukan Sidebar sendiri — ia yang memiliki state kuncupnya.
+      {/* Lebar ditentukan Sidebar sendiri, ia yang memiliki state kuncupnya.
           Kolom konten memakai flex-1, jadi otomatis melebar saat sidebar
           menguncup tanpa kelas pengimbang apa pun di sini. */}
       <Sidebar className="hidden shrink-0 lg:flex" />
       {/* Panel konten WinUI 3: lapisan putih di atas latar bernuansa, dengan
           sudut kiri-atas membulat di tempat ia bertemu panel navigasi. Sudut &
-          garis itu hanya di lg: — di bawahnya sidebar tidak dirender, jadi tidak
+          garis itu hanya di lg:, di bawahnya sidebar tidak dirender, jadi tidak
           ada pertemuan panel yang perlu dilekukkan.
           Padding bawah = tinggi bar nav + safe area iPhone, jadi baris terakhir
           tiap halaman tidak tertutup bar itu.

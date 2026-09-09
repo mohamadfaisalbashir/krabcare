@@ -1,4 +1,4 @@
-"""Router kolam: CRUD kolam + klaim device — pintu masuk isolasi kepemilikan data."""
+"""Router kolam: CRUD kolam + klaim device, pintu masuk isolasi kepemilikan data."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -93,7 +93,7 @@ async def delete_kolam(
 ) -> None:
     """Hapus kolam sendiri, permanen.
 
-    Device yang terhubung tidak ikut terhapus — FK-nya SET NULL, jadi perangkat
+    Device yang terhubung tidak ikut terhapus, FK-nya SET NULL, jadi perangkat
     itu hanya kembali jadi tak terklaim beserta seluruh riwayat sensornya.
     Notifikasi kolam ini ikut terhapus (FK CASCADE).
     """
@@ -110,7 +110,7 @@ async def claim_device(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Klaim device ke kolam ini — langkah yang membuka akses data device tsb."""
+    """Klaim device ke kolam ini, langkah yang membuka akses data device tsb."""
     kolam = await kolam_service.get_owned_kolam(db, current_user, kolam_id)
     if kolam is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kolam tidak ditemukan")

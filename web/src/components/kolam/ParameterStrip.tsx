@@ -19,13 +19,13 @@ import {
 /**
  * Tiga pembacaan terkini sebagai SATU baris, bukan tiga kartu.
  *
- * Sebelumnya tiap parameter adalah kartu kaca sendiri — di dalam panel kaca, di
+ * Sebelumnya tiap parameter adalah kartu kaca sendiri, di dalam panel kaca, di
  * dalam panel konten. Kotak-dalam-kotak-dalam-kotak itu yang membuat halamannya
  * terbaca seperti tumpukan komponen, bukan seperti satu lembar informasi.
  *
  * Pemisahnya sekarang garis `ink/15`, bukan `white/60`. Garis putih di atas
  * lembar kaca yang juga keputihan praktis tidak terlihat, jadi ketiga kolom
- * terbaca meleleh jadi satu blok — yang dibutuhkan justru batas yang tegas
+ * terbaca meleleh jadi satu blok, yang dibutuhkan justru batas yang tegas
  * antara satu parameter dan tetangganya.
  */
 export default function ParameterStrip({
@@ -34,7 +34,7 @@ export default function ParameterStrip({
 }: {
   reading: SensorReading | null;
   /** Kolom keempat: indeks risiko amonia untuk kondisi terukur (horizon 0).
-   *  Datang dari backend, BUKAN dihitung ulang di browser — angkanya harus
+   *  Datang dari backend, BUKAN dihitung ulang di browser, angkanya harus
    *  persis sama dengan baris yang tersimpan di log historis. */
   ammonia?: AmmoniaRisk | null;
 }) {
@@ -68,7 +68,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
   return (
     <div className="group px-1 py-4 sm:px-5 sm:py-3">
       {/* KEPALA: nama parameter kiri, status kanan. Statusnya di pojok, bukan
-          di bawah angka — kalau semua kolom Aman, mata cukup menyapu satu
+          di bawah angka, kalau semua kolom Aman, mata cukup menyapu satu
           kolom kanan alih-alih membaca tiga kali. */}
       <div className="flex items-center gap-2">
         <p className="truncate text-sm font-medium text-ink">{label}</p>
@@ -112,7 +112,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
           dalamnya = rentang optimal; penanda = nilai sekarang. Yang didapat
           pembaca bukan cuma kata "Waspada", tapi SEBERAPA DEKAT ke tepi.
           Persentasenya dihitung rangePercent()/optimalBand() di lib/parameter.ts
-          — satu skala untuk penanda dan pita, jadi keduanya tidak bisa saling
+         , satu skala untuk penanda dan pita, jadi keduanya tidak bisa saling
           bertentangan. Ini yang menggantikan sparkline: bentuk tren ada di
           Grafik pemantauan di bawah, posisi terhadap ambang tidak ada di mana
           pun kecuali di sini. */}
@@ -139,7 +139,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
         <div className="mt-1 grid grid-cols-3 font-mono text-[10px] text-muted">
           <span className="text-left">{formatValue(min)}</span>
           <span className="text-center text-status-aman">
-            {formatValue(RANGE[param].optimal[0])}–{formatValue(RANGE[param].optimal[1])}
+            {formatValue(RANGE[param].optimal[0])} s/d {formatValue(RANGE[param].optimal[1])}
           </span>
           <span className="text-right">{formatValue(max)}</span>
         </div>

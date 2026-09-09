@@ -2,7 +2,7 @@
 
 Field lokasi sudah dihapus dari form tambah/ubah rak di web dan tidak dipakai
 di mana pun (mobile tidak pernah mengirimnya), jadi kolomnya ikut dibuang.
-Nilai lama ikut hilang — memang tidak ada yang membacanya.
+Nilai lama ikut hilang, memang tidak ada yang membacanya.
 
 Revision ID: b3f1c7a9d204
 Revises: 027f8214c47a

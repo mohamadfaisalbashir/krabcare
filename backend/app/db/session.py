@@ -8,7 +8,7 @@ from app.core.config import settings
 
 engine = create_async_engine(settings.DATABASE_URL, echo=settings.DEBUG, future=True)
 
-# Pabrik session; dipakai get_db() (per-request) & scheduler (di luar request).
+# Pabrik session. Dipakai get_db() (per-request) & scheduler (di luar request).
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,

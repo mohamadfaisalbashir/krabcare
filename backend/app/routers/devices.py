@@ -1,8 +1,8 @@
-"""Router device — khusus admin: lihat semua device (klaim/belum) & tambah device baru.
+"""Router device, khusus admin: lihat semua device (klaim/belum) & tambah device baru.
 
 Menggantikan alur lama (INSERT manual ke tabel devices lewat psql) dengan form
-web. Klaim device ke kolam TETAP lewat POST /kolam/:id/devices/:code (kolam.py)
-— router ini cuma soal keberadaan device-nya di DB.
+web. Klaim device ke kolam TETAP lewat POST /kolam/:id/devices/:code (kolam.py),
+router ini cuma soal keberadaan device-nya di DB.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -34,7 +34,7 @@ async def list_devices(
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> list[DeviceAdminOut]:
-    """Semua device terdaftar — sudah diklaim (ikut nama kolamnya) maupun belum."""
+    """Semua device terdaftar, sudah diklaim (ikut nama kolamnya) maupun belum."""
     return await device_service.list_all_devices(db)
 
 
@@ -53,7 +53,7 @@ async def create_device(
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
-    """Daftarkan device_code baru — dipakai admin sebelum device itu dipasang/
+    """Daftarkan device_code baru, dipakai admin sebelum device itu dipasang/
     diklaim, gantinya input manual ke database."""
     try:
         device = await device_service.create_device(db, payload)

@@ -19,7 +19,7 @@ OUT="backups/${DB_NAME}_$(date +%Y%m%d_%H%M%S).sql.gz"
 
 docker compose exec -T db pg_dump -U "$DB_USER" -d "$DB_NAME" | gzip > "$OUT"
 
-# pg_dump yang gagal di tengah pipe tetap menghasilkan file .gz (kecil) — cek isinya.
+# pg_dump yang gagal di tengah pipe tetap menghasilkan file .gz (kecil), cek isinya.
 if [ ! -s "$OUT" ] || [ "$(stat -c %s "$OUT")" -lt 1024 ]; then
     echo "GAGAL: $OUT kosong/terlalu kecil, backup tidak valid." >&2
     rm -f "$OUT"

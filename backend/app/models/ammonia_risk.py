@@ -9,7 +9,7 @@ from app.db.base import Base
 
 
 class AmmoniaRisk(Base):
-    """Indeks risiko toksisitas amonia — FRAKSI NH3 tak-terionisasi, bukan mg/L.
+    """Indeks risiko toksisitas amonia, FRAKSI NH3 tak-terionisasi, bukan mg/L.
 
     Parameter mentahnya datang dari hardware (sensor pH/suhu/salinitas),
     perhitungannya dari software (app/services/ammonia_speciation.py). Baris
@@ -20,7 +20,7 @@ class AmmoniaRisk(Base):
       >0  = RAMALAN, satu baris per horizon FTS (ditulis saat siklus scheduler)
 
     Hypertable, partisi `time`. Lihat catatan index di fuzzy_prediction.py:
-    index *_time_idx sengaja TIDAK didaftarkan di sini — itu bikinan
+    index *_time_idx sengaja TIDAK didaftarkan di sini, itu bikinan
     create_hypertable(), disaring include_object di alembic/env.py.
     """
 

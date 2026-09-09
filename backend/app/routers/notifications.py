@@ -26,7 +26,7 @@ async def list_notifications(
 ) -> list[NotificationOut]:
     """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup.
 
-    `source` menyaring di SQL — tab filter di web memakainya supaya paginasinya
+    `source` menyaring di SQL, tab filter di web memakainya supaya paginasinya
     ikut tersaring, bukan menyaring sisa halaman yang sudah terpotong LIMIT.
     """
     items = await notification_service.list_notifications(

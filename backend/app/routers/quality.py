@@ -1,4 +1,4 @@
-"""GET endpoint — klasifikasi (Mamdani), prediksi (FTS), & risiko amonia."""
+"""GET endpoint, klasifikasi (Mamdani), prediksi (FTS), & risiko amonia."""
 
 from datetime import datetime
 
@@ -52,7 +52,7 @@ async def list_prediction_horizons(
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[DevicePredictionsOut]:
-    """Seluruh horizon (jam+1..jam+N) dari run forecast terakhir — bahan grafik."""
+    """Seluruh horizon (jam+1..jam+N) dari run forecast terakhir, bahan grafik."""
     items = await quality_service.get_prediction_horizons(
         db, device_id, scope.allowed_device_ids
     )
@@ -74,7 +74,7 @@ async def latest_ammonia_risk(
 ) -> list[DeviceAmmoniaOut]:
     """Indeks risiko toksisitas amonia per device: terukur terkini + ramalan.
 
-    Bukan konsentrasi mg/L — yang dikembalikan adalah FRAKSI TAN yang berbentuk
+    Bukan konsentrasi mg/L, yang dikembalikan adalah FRAKSI TAN yang berbentuk
     NH3 toksik pada pH/suhu/salinitas saat itu. Lihat field `disclaimer`.
 
     Barisnya dibaca dari tabel `ammonia_risks` (ditulis saat ingest & saat siklus
@@ -113,7 +113,7 @@ async def ammonia_risk_history(
 ) -> list[AmmoniaRiskLogOut]:
     """Log historis risiko amonia (terbaru dulu), pola sama dengan /readings.
 
-    Respons list polos tanpa `total` — "masih ada lagi" dibaca dari jumlah baris
+    Respons list polos tanpa `total`, "masih ada lagi" dibaca dari jumlah baris
     == limit, sama seperti endpoint readings.
     """
     rows = await ammonia_service.get_history(

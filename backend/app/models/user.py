@@ -32,6 +32,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     reset_token_hash: Mapped[str | None] = mapped_column(Text)
     reset_token_expires_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    # Verifikasi email saat daftar. Polanya sama dengan reset_token_* di atas:
+    # yang disimpan cuma sha256 token-nya, ada kedaluwarsa, dan dihanguskan
+    # setelah dipakai. NULL pada email_verified_at = belum terverifikasi.
+    verify_token_hash: Mapped[str | None] = mapped_column(Text)
+    verify_token_expires_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    email_verified_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )

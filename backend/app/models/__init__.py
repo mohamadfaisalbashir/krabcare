@@ -1,4 +1,4 @@
-"""Re-export semua model ORM — satu pintu import (`from app.models import ...`)
+"""Re-export semua model ORM, satu pintu import (`from app.models import ...`)
 sekaligus memastikan seluruh tabel terdaftar di metadata Alembic."""
 
 from app.models.ammonia_risk import AmmoniaRisk

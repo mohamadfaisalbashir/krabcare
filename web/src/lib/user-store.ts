@@ -48,7 +48,7 @@ export function useUser(): User | null {
 
   useEffect(() => {
     // Penjaga `sedangMemuat`: tiga komponen bisa mount berbarengan, dan tanpa
-    // ini ketiganya menembak GET /auth/me sekaligus — persis pemborosan yang
+    // ini ketiganya menembak GET /auth/me sekaligus, persis pemborosan yang
     // ingin dihilangkan berkas ini.
     if (user !== null || sedangMemuat) return;
     sedangMemuat = true;

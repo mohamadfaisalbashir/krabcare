@@ -1,4 +1,4 @@
-"""Health check — dipakai healthcheck Docker & Caddy."""
+"""Health check, dipakai healthcheck Docker & Caddy."""
 
 from fastapi import APIRouter
 

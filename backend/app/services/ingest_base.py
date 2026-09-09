@@ -1,7 +1,7 @@
 """Plumbing bersama service ingest: lookup device + insert yang aman di-retry.
 
 Dipakai ingest_service.py (sensor_readings) dan quality_ingest_service.py
-(fuzzy_classifications/fuzzy_predictions) — polanya sama: cari device by
+(fuzzy_classifications/fuzzy_predictions), polanya sama: cari device by
 device_code -> insert ON CONFLICT DO NOTHING -> laporkan baris yang di-skip.
 """
 
@@ -25,7 +25,7 @@ def _comparison_key(values: Iterable) -> tuple:
     """Key perbandingan yang tahan beda representasi timezone.
 
     Kolom waktu bertipe TIMESTAMPTZ, jadi RETURNING selalu balik timezone-aware
-    (UTC), sedangkan payload ingest boleh saja mengirim datetime naive — Postgres
+    (UTC), sedangkan payload ingest boleh saja mengirim datetime naive, Postgres
     memperlakukannya sebagai UTC saat menyimpan, jadi di sini dipakai asumsi yang
     sama. Tanpa normalisasi ini, baris ber-timestamp naive SELALU dianggap
     duplikat padahal barusan berhasil masuk (ketahuan saat impor dataset NERR:

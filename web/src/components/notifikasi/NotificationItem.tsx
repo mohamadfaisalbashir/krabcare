@@ -35,6 +35,42 @@ const STATUS_STYLE: Record<
   },
 };
 
+/**
+ * Warnai kata Aman/Waspada/Bahaya di mana pun ia muncul di dalam pesan.
+ *
+ * Pesan backend menyebut statusnya di tengah kalimat ("berubah dari Aman ke
+ * Waspada"), jadi satu badge di pinggir tidak cukup: kalimat yang menyebut DUA
+ * status hanya bisa dibedakan kalau kata-katanya sendiri yang diwarnai.
+ *
+ * Regex-nya case-insensitive karena backend memakai dua bentuk: huruf kapital
+ * awal pada kalimat transisi, dan HURUF BESAR semua pada kalimat pertama kali
+ * dan kalimat prediksi. Grup tangkap di dalam split() membuat pemisahnya ikut
+ * masuk ke hasil, jadi teks di antaranya tidak ada yang hilang.
+ *
+ * Warna diambil dari STATUS_STYLE yang sudah ada di berkas ini, sumber yang
+ * sama dengan ikon di sebelah kiri, supaya kata dan ikon tidak bisa berbeda.
+ */
+function PesanBerwarna({ teks }: { teks: string }) {
+  const bagian = teks.split(/(Aman|Waspada|Bahaya)/gi);
+  return (
+    <>
+      {bagian.map((b, i) => {
+        // Normalkan ke bentuk kunci STATUS_STYLE ("WASPADA" -> "Waspada").
+        const kunci = (b.charAt(0).toUpperCase() +
+          b.slice(1).toLowerCase()) as StatusLabel;
+        const gaya = STATUS_STYLE[kunci];
+        return gaya ? (
+          <span key={i} className={clsx("font-semibold", gaya.text)}>
+            {b}
+          </span>
+        ) : (
+          b
+        );
+      })}
+    </>
+  );
+}
+
 export default function NotificationItem({
   item,
   onRead,
@@ -70,7 +106,7 @@ export default function NotificationItem({
           </span>
           {/* Chip diwarnai KONDISI, bukan warna merek. Chip inilah yang
               menyebut hal apa yang sedang dilaporkan ("Suhu", "Kualitas
-              Kolam"), jadi warnanya harus ikut mengatakan kondisi hal itu —
+              Kolam"), jadi warnanya harus ikut mengatakan kondisi hal itu,
               sebelumnya semua chip parameter berwarna sama entah aman entah
               bahaya. style.bg/style.text sudah dihitung di atas dari
               quality_category yang sama dengan ikonnya. */}
@@ -97,7 +133,7 @@ export default function NotificationItem({
             </span>
           )}
           {/* Kata "Aman"/"Waspada"/"Bahaya" sebagai TEKS. Sebelumnya statusnya
-              hanya tersirat dari bentuk & warna ikon di kiri — tidak terbaca
+              hanya tersirat dari bentuk & warna ikon di kiri, tidak terbaca
               pembaca layar, dan tidak terbaca sama sekali oleh yang kesulitan
               membedakan warna. */}
           <StatusBadge status={label} size="sm" />
@@ -105,7 +141,9 @@ export default function NotificationItem({
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
           )}
         </div>
-        <p className="mt-1 text-sm leading-relaxed text-ink">{item.message}</p>
+        <p className="mt-1 text-sm leading-relaxed text-ink">
+          <PesanBerwarna teks={item.message} />
+        </p>
         <div className="mt-1.5 flex items-center gap-3">
           <p className="text-xs text-muted">
             {formatWaktu(item.created_at)}

@@ -29,11 +29,11 @@ const STORAGE_KEY = "sidebar_collapsed";
  * Kunci kehalusan buka/tutup panel ini ada di tiga aturan:
  *
  * 1. SEMUA yang bergerak memakai durasi & kurva yang sama (`ease-smooth`).
- * 2. TIDAK ADA yang di-unmount di tengah animasi — dulu label & Logo hilang
+ * 2. TIDAK ADA yang di-unmount di tengah animasi, dulu label & Logo hilang
  *    seketika sementara lebarnya beranimasi, dan itu yang terbaca patah-patah.
  * 3. Sesedikit mungkin properti LAYOUT yang dianimasikan. Yang tersisa cuma
  *    lebar <aside> (memang itu intinya) dan tinggi submenu lewat trik grid
- *    0fr→1fr. Label memakai opacity+transform saja; padding aside dibuat tetap
+ *    0fr→1fr. Label memakai opacity+transform saja. Padding aside dibuat tetap
  *    sehingga ikon tidak bergeser mendatar sama sekali selama panel melebar.
  *
  * Sisa jank terbesarnya justru bukan di berkas ini: grafik recharts di panel
@@ -42,7 +42,7 @@ const STORAGE_KEY = "sidebar_collapsed";
  */
 const MOVE = "transition-all duration-300 ease-smooth motion-reduce:transition-none";
 
-/** Kotak ikon 36px yang dipakai SETIAP baris — tombol kuncup, item nav, dan
+/** Kotak ikon 36px yang dipakai SETIAP baris, tombol kuncup, item nav, dan
  *  tombol keluar. Karena ukurannya seragam dan padding aside tetap, ketiganya
  *  duduk pada sumbu X yang sama, dan pada keadaan kuncup (12 + 36 + 12 = 60px)
  *  ikonnya tepat di tengah panel tanpa perlu `justify-center` yang berpindah. */
@@ -68,26 +68,26 @@ const NAV = [
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
-/** Cuma dirender untuk role admin — lihat device belum diklaim & tambah device baru.
+/** Cuma dirender untuk role admin, lihat device belum diklaim & tambah device baru.
  *  Diketik eksplisit ke elemen NAV: item-item dalam SATU array literal saling
  *  "meminjamkan" properti opsional (children) satu sama lain lewat inferensi TS,
- *  tapi ADMIN_NAV_ITEM dideklarasikan terpisah jadi tidak ikut kebagian itu —
+ *  tapi ADMIN_NAV_ITEM dideklarasikan terpisah jadi tidak ikut kebagian itu,
  *  tanpa anotasi ini destructuring `children` di NavGroup gagal type-check. */
 const ADMIN_NAV_ITEM: (typeof NAV)[number] = { href: "/perangkat", label: "Perangkat", icon: Cpu };
 
 /**
  * Label yang memudar, bukan menyusut.
  *
- * Sebelumnya ia menganimasikan `max-width` — properti LAYOUT, jadi setiap frame
+ * Sebelumnya ia menganimasikan `max-width`, properti LAYOUT, jadi setiap frame
  * memaksa hitung ulang tata letak seluruh sidebar sementara panelnya juga
  * sedang melebar. Sekarang hanya `opacity` + `translate-x`, dua properti yang
  * dikerjakan compositor tanpa layout sama sekali. Lebarnya dibiarkan alami dan
- * TERPOTONG oleh `overflow-x-hidden` di <aside> — tidak ada lebar yang perlu
+ * TERPOTONG oleh `overflow-x-hidden` di <aside>, tidak ada lebar yang perlu
  * diinterpolasi.
  *
  * Jeda saat membentang disengaja: tanpa itu teks sudah tampil penuh sebelum
  * panelnya punya ruang, dan yang terlihat adalah huruf yang terjepit tepi.
- * Saat menguncup jedanya nol — teks harus lenyap duluan, bukan ikut terpotong.
+ * Saat menguncup jedanya nol, teks harus lenyap duluan, bukan ikut terpotong.
  */
 function CollapsingLabel({
   collapsed,
@@ -116,7 +116,7 @@ export default function Sidebar({ className }: { className?: string }) {
   const searchParams = useSearchParams();
   const user = useUser();
   // Admin gak punya kolam sendiri, jadi Dashboard/Log historis/Notifikasi
-  // (semuanya berbasis kepemilikan kolam) gak relevan buatnya — nav-nya cuma
+  // (semuanya berbasis kepemilikan kolam) gak relevan buatnya, nav-nya cuma
   // Perangkat (kelola device) + Profil. Item "Profil" diambil dari NAV yang
   // sama (bukan didefinisikan ulang) supaya tidak ada dua sumber kebenaran.
   const navItems =
@@ -124,7 +124,7 @@ export default function Sidebar({ className }: { className?: string }) {
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
 
-  // null selama pengambilan pertama — badge sengaja tidak dirender sampai
+  // null selama pengambilan pertama, badge sengaja tidak dirender sampai
   // angkanya benar-benar diketahui, supaya tidak berkedip "0" lalu berubah.
   const unread = useUnreadCount();
 
@@ -170,7 +170,7 @@ export default function Sidebar({ className }: { className?: string }) {
         // bg-bg, bukan bg-surface: panel nav adalah lapisan LATAR dan panel
         // konten yang putih, seperti NavigationView WinUI 3.
         "border-r border-border bg-bg px-3 py-6",
-        // HANYA lebar yang beranimasi. Padding sengaja tetap — itu yang membuat
+        // HANYA lebar yang beranimasi. Padding sengaja tetap, itu yang membuat
         // ikon diam di tempat sementara panelnya melebar.
         "transition-[width] duration-300 ease-smooth motion-reduce:transition-none",
         collapsed ? "w-[3.75rem]" : "w-64",
@@ -263,7 +263,7 @@ function NavGroup({
   const hasChildren = !!children_?.length;
   // Terbuka HANYA saat panel terbentang: submenu tidak muat di rail selebar
   // 60px. Ini kondisi TAMPILAN, terpisah dari `open` yang menyimpan niat
-  // pengguna — jadi submenu kembali seperti semula begitu panel dibentangkan.
+  // pengguna, jadi submenu kembali seperti semula begitu panel dibentangkan.
   const showChildren = hasChildren && open && !collapsed;
 
   return (
@@ -271,7 +271,7 @@ function NavGroup({
       {/* Latar aktif/hover ada di PEMBUNGKUS, bukan di <Link>, supaya sorotan
           membentang utuh sampai melewati chevron. Kalau ditaruh di Link, chevron
           adalah saudara di luar area berlatar dan tampak menggantung.
-          Jangan tambahkan overflow-hidden — itu memotong outline fokus global. */}
+          Jangan tambahkan overflow-hidden, itu memotong outline fokus global. */}
       <div
         className={clsx(
           "relative flex items-center rounded-lg",
@@ -279,7 +279,7 @@ function NavGroup({
           active ? "bg-brand-50" : "hover:bg-border/60"
         )}
       >
-        {/* Indikator aksen ala WinUI3 NavigationView. Dekoratif —
+        {/* Indikator aksen ala WinUI3 NavigationView. Dekoratif,
             maknanya sudah dibawa aria-current di bawah. Item non-aktif
             tetap merender span ini dalam keadaan menyusut, supaya
             perpindahannya beranimasi tumbuh/menyusut, bukan mengedip. */}
@@ -344,7 +344,7 @@ function NavGroup({
 
       {hasChildren && (
         // Trik grid 0fr→1fr: tingginya beranimasi tanpa mengukur DOM dan tanpa
-        // max-height yang harus ditebak. Anak grid WAJIB overflow-hidden —
+        // max-height yang harus ditebak. Anak grid WAJIB overflow-hidden,
         // tanpa itu isinya meluber keluar saat barisnya berukuran 0fr.
         <div
           className={clsx(
@@ -373,7 +373,7 @@ function NavGroup({
                     // dua kontrol yang mengerjakan hal identik.
                     replace
                     // Tersembunyi tapi masih di DOM (itulah yang membuatnya bisa
-                    // beranimasi), jadi harus dikeluarkan dari urutan Tab —
+                    // beranimasi), jadi harus dikeluarkan dari urutan Tab,
                     // kalau tidak fokus bisa mendarat di elemen tak terlihat.
                     tabIndex={showChildren ? undefined : -1}
                     aria-current={childActive ? "page" : undefined}

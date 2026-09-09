@@ -8,14 +8,14 @@ export type Message = { type: "ok" | "err"; text: string } | null;
  * berakhir memakai `alert()` karena menyalin yang keempat kali terasa konyol.
  *
  * Bukan toast: aplikasi ini tidak punya sistem toast, dan pesan yang menempel
- * di bawah form-nya justru lebih tepat di sini — ia tetap terbaca setelah
+ * di bawah form-nya justru lebih tepat di sini, ia tetap terbaca setelah
  * beberapa detik, dan posisinya sendiri sudah menunjuk form mana yang berhasil.
  */
 export default function FormMessage({ message }: { message: Message }) {
   if (!message) return null;
   return (
     <p
-      // role/aria-live supaya pembaca layar ikut mengumumkan hasilnya; tanpa
+      // role/aria-live supaya pembaca layar ikut mengumumkan hasilnya. Tanpa
       // ini "berhasil" cuma peristiwa visual.
       role={message.type === "err" ? "alert" : "status"}
       aria-live="polite"

@@ -1,6 +1,6 @@
-"""Estimasi fraksi risiko amonia (NH3) — jalan di Raspi5.
+"""Estimasi fraksi risiko amonia (NH3), jalan di Raspi5.
 
-Duplikat persis dari backend/app/services/ammonia_speciation.py — dua salinan
+Duplikat persis dari backend/app/services/ammonia_speciation.py, dua salinan
 ini WAJIB tetap identik (kalau rumus/ambang berubah, ubah dua-duanya, dan
 naikkan MODEL_VERSION di sini SEKALIGUS di sana).
 
@@ -20,7 +20,7 @@ VALID_SALINITY_PPT = (5.0, 35.0)
 VALID_TEMPERATURE_C = (5.0, 35.0)
 VALID_PH = (7.8, 8.3)
 
-#: SAMA dengan MODEL_VERSION backend/app/services/ammonia_speciation.py — jangan
+#: SAMA dengan MODEL_VERSION backend/app/services/ammonia_speciation.py, jangan
 #: dibedakan, ini rumus yang sama, cuma beda tempat jalannya.
 MODEL_VERSION = "speciation-bb78"
 
@@ -78,7 +78,7 @@ def _in_valid_range(ph: float, temperature_c: float, salinity_ppt: float) -> boo
 
 
 def classify_risk(fraction_pct: float) -> RiskLevel:
-    """Ambang ilustratif (bukan baku mutu resmi krustasea) — lihat catatan
+    """Ambang ilustratif (bukan baku mutu resmi krustasea), lihat catatan
     di backend/app/services/ammonia_speciation.py kalau perlu diganti."""
     if fraction_pct < 6.0:
         return RiskLevel.NORMAL

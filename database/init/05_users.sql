@@ -1,5 +1,5 @@
 -- ============================================================
--- Tabel users — akun dashboard web (admin/pemilik) & mobile (operator lapangan)
+-- Tabel users, akun dashboard web (admin/pemilik) & mobile (operator lapangan)
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS users (

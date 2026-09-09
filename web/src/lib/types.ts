@@ -62,14 +62,14 @@ export interface Device {
   last_seen_at: string | null;
 }
 
-/** DeviceAdminOut — Device + status klaim, dipakai halaman admin /perangkat. */
+/** DeviceAdminOut, Device + status klaim, dipakai halaman admin /perangkat. */
 export interface DeviceAdmin extends Device {
   kolam_id: number | null;
   kolam_nama: string | null;
   owner_nama?: string | null;
 }
 
-/** TargetKolamOut — Kolam tujuan untuk pemasangan device oleh admin. */
+/** TargetKolamOut, Kolam tujuan untuk pemasangan device oleh admin. */
 export interface TargetKolam {
   id: number;
   nama: string;
@@ -79,7 +79,7 @@ export interface TargetKolam {
   current_device_code: string | null;
 }
 
-/** Payload POST /devices (schemas/device.py DeviceCreateIn) — form tambah device admin. */
+/** Payload POST /devices (schemas/device.py DeviceCreateIn), form tambah device admin. */
 export interface DeviceCreateIn {
   device_code: string;
   device_type: Device["device_type"];
@@ -119,7 +119,7 @@ export interface FuzzyPrediction {
   horizon_minutes: number;
   predicted_quality_score: number | null;
   predicted_category: WaterQualityCategory | null;
-  /** Ramalan per parameter — null untuk baris sebelum migrasi 027f8214c47a. */
+  /** Ramalan per parameter, null untuk baris sebelum migrasi 027f8214c47a. */
   predicted_ph: number | null;
   predicted_temperature_c: number | null;
   predicted_salinity_ppt: number | null;
@@ -143,11 +143,11 @@ export interface DevicePredictions {
 
 // ── Amonia (schemas/ammonia.py) ─────────────────────────────────────
 
-/** AmmoniaRiskOut — FRAKSI NH3 (% dari TAN), BUKAN konsentrasi mg/L. */
+/** AmmoniaRiskOut, FRAKSI NH3 (% dari TAN), BUKAN konsentrasi mg/L. */
 export interface AmmoniaRisk {
   time: string;
   target_time: string;
-  /** 0 = kondisi terukur dari sensor; >0 = ramalan FTS sekian menit ke depan. */
+  /** 0 = kondisi terukur dari sensor. >0 = ramalan FTS sekian menit ke depan. */
   horizon_minutes: number;
   fraction_nh3_pct: number | null;
   risk_level: string | null;
@@ -159,7 +159,7 @@ export interface AmmoniaRisk {
   model_version: string;
 }
 
-/** AmmoniaRiskLogOut — satu baris log historis. */
+/** AmmoniaRiskLogOut, satu baris log historis. */
 export interface AmmoniaRiskLog extends AmmoniaRisk {
   device_id: number;
   device_code: string | null;
@@ -176,7 +176,7 @@ export interface DeviceAmmonia {
 
 // ── Notification (schemas/notification.py) ──────────────────────────
 
-/** notifications.source — nilai CHECK di database/init/08_notifications.sql. */
+/** notifications.source, nilai CHECK di database/init/08_notifications.sql. */
 export type NotifSource = "classification" | "prediction" | "parameter";
 
 /** NotificationOut */
@@ -196,7 +196,7 @@ export interface Notification {
 
 // ── Tipe komposit khusus frontend ───────────────────────────────────
 
-/** Satu sensor terpasang beserta kolam yang mengklaimnya — dipakai Log Historis. */
+/** Satu sensor terpasang beserta kolam yang mengklaimnya, dipakai Log Historis. */
 export interface Sensor {
   deviceId: number;
   deviceCode: string;

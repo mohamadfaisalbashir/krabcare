@@ -8,7 +8,7 @@ import { useUser } from "@/lib/user-store";
 /**
  * Blok profil yang bisa ditekan: nama + email + lingkaran inisial.
  *
- * SATU komponen untuk dua latar, bukan dua komponen — itulah yang dulu membuat
+ * SATU komponen untuk dua latar, bukan dua komponen, itulah yang dulu membuat
  * "logo profil posisinya beda-beda di HP": banner dashboard memakai komponen
  * ini (bulatan brand-500 + cincin, dibungkus padding tautan), sedangkan Topbar
  * menggambar bulatannya sendiri (brand-600, tanpa cincin, tanpa padding). Di
@@ -17,7 +17,7 @@ import { useUser } from "@/lib/user-store";
  * geometri dan jarak dipakai bersama, jadi tidak bisa lepas sinkron lagi.
  *
  * Sebagai efek sampingnya semua halaman ber-Topbar sekarang punya jalan ke
- * /profil — sebelumnya hanya dashboard yang punya.
+ * /profil, sebelumnya hanya dashboard yang punya.
  */
 export default function AccountChip({
   tone = "gelap",
@@ -33,7 +33,7 @@ export default function AccountChip({
     <Link
       href="/profil"
       // Nama & email disembunyikan di layar sempit, jadi di sana tautan ini
-      // hanya berupa lingkaran huruf. aria-label-nya wajib, bukan hiasan —
+      // hanya berupa lingkaran huruf. aria-label-nya wajib, bukan hiasan,
       // tanpa itu pembaca layar cuma mendengar satu huruf.
       aria-label={user ? `Buka profil ${user.nama}` : "Buka halaman profil"}
       className={clsx(

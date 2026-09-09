@@ -1,4 +1,4 @@
-"""Re-export schema Pydantic — suffix In = request body, Out = response."""
+"""Re-export schema Pydantic, suffix In = request body, Out = response."""
 
 from app.schemas.ammonia import AmmoniaRiskLogOut, AmmoniaRiskOut, DeviceAmmoniaOut
 from app.schemas.device import DeviceOut

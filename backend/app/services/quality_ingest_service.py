@@ -86,7 +86,7 @@ async def ingest_predictions(
 
     if rows:
         # Satu run forecast menghasilkan banyak horizon dengan `time` sama, jadi
-        # horizon_minutes WAJIB ikut conflict target — kalau tidak, cuma 1 yang masuk.
+        # horizon_minutes WAJIB ikut conflict target, kalau tidak, cuma 1 yang masuk.
         inserted, skipped_rows = await insert_skip_duplicates(
             db,
             FuzzyPrediction,

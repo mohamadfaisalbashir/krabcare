@@ -23,7 +23,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // Backend mengembalikan TokenOut { access_token, token_type }
-      // TANPA user object — data user diambil terpisah lewat GET /auth/me.
+      // TANPA user object, data user diambil terpisah lewat GET /auth/me.
       const { access_token } = await api.login(email, password);
       window.localStorage.setItem("access_token", access_token);
       const me = await api.getMe();
@@ -105,7 +105,7 @@ export default function LoginPage() {
             />
 
             <div>
-              {/* Tombol intip sandi sekarang milik komponen Input — lihat
+              {/* Tombol intip sandi sekarang milik komponen Input, lihat
                   components/ui/Input.tsx. Versi tempelan yang dulu di sini
                   memakai offset tetap top-[38px] yang meleset di mobile, dan
                   tertutup mata bawaan browser yang belum dimatikan. */}

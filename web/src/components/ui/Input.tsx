@@ -14,12 +14,12 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
  * Dulu halaman login menempelnya sendiri dengan `absolute right-3 top-[38px]`.
  * Dua masalahnya nyata: 38px itu tinggi label + setengah input pada breakpoint
  * `sm`, sedangkan `.input-field` sengaja lebih tinggi di mobile (text-base
- * supaya Safari iOS tidak memperbesar viewport) — jadi ikonnya meleset di salah
- * satu ukuran layar; dan halaman daftar tidak punya tombol itu sama sekali.
+ * supaya Safari iOS tidak memperbesar viewport), jadi ikonnya meleset di salah
+ * satu ukuran layar. Dan halaman daftar tidak punya tombol itu sama sekali.
  * Diletakkan di sini, posisinya dihitung relatif terhadap INPUT-nya sendiri dan
  * semua form sandi ikut kebagian tanpa disalin.
  *
- * Mata bawaan Edge/Chromium (::-ms-reveal) dimatikan di globals.css — kalau
+ * Mata bawaan Edge/Chromium (::-ms-reveal) dimatikan di globals.css, kalau
  * tidak, ada dua ikon berdampingan dan yang bawaan menutupi yang ini sehingga
  * tekanan pengguna tidak sampai ke React.
  */

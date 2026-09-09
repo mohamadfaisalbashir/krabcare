@@ -21,12 +21,12 @@ from app.services.ammonia_speciation import (  # noqa: E402
 
 
 def test_kondisi_khas_kolam():
-    """pH 8.0 / 28.5 C / 19 ppt — kondisi operasi normal rak kepiting.
+    """pH 8.0 / 28.5 C / 19 ppt, kondisi operasi normal rak kepiting.
 
     CATATAN PENYIMPANGAN dari amonia.md:147. Dokumen menuliskan harapan
     `risk_level == PERHATIAN`, tapi classify_risk() di dokumen yang SAMA
     (amonia.md:120) menggolongkan `< 6.0 %` sebagai NORMAL, dan fraksinya
-    5.9985 % — tepat di bawah ambang. Keputusan user 2026-09-03: percayai
+    5.9985 %, tepat di bawah ambang. Keputusan user 2026-09-03: percayai
     ambang 6 %/15 %, jadi yang benar NORMAL. Ambang tidak diubah diam-diam
     (larangan amonia.md:228).
     """

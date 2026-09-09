@@ -9,13 +9,13 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-krabcare}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ai-dilarangbaca}
       POSTGRES_DB: ${POSTGRES_DB:-krabcare_db}
-      # Zona waktu default TAMPILAN query (bukan cara penyimpanan — kolom time/
+      # Zona waktu default TAMPILAN query (bukan cara penyimpanan, kolom time/
       # received_at tetap TIMESTAMPTZ, instant absolut, tidak berubah nilainya).
       TZ: ${TZ:-Asia/Jakarta}
     ports:
       # Bind ke localhost saja: di laptop tidak ada bedanya (pytest dari host tetap
       # konek), tapi di VPS ini yang mencegah database terekspos ke internet.
-      # WAJIB di file base — Compose menggabung (bukan menimpa) list `ports`,
+      # WAJIB di file base, Compose menggabung (bukan menimpa) list `ports`,
       # jadi entri ini tidak bisa dihapus lewat file override.
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -43,7 +43,7 @@ services:
       DEBUG: "true"
       # Biar timestamp di log container ini juga WIB, konsisten sama db.
       TZ: ${TZ:-Asia/Jakarta}
-      # Bertipe list[str] di pydantic-settings — nilainya WAJIB format JSON
+      # Bertipe list[str] di pydantic-settings, nilainya WAJIB format JSON
       # (kurung siku + kutip ganda), bukan dipisah koma.
       CORS_ORIGINS: '${CORS_ORIGINS:-["http://localhost:3000"]}'
       POSTGRES_USER: ${POSTGRES_USER:-krabcare}
@@ -67,10 +67,10 @@ services:
       db:
         condition: service_healthy
     ports:
-      # Lihat catatan di service db — di VPS hanya Caddy yang boleh terekspos ke luar.
+      # Lihat catatan di service db, di VPS hanya Caddy yang boleh terekspos ke luar.
       - "127.0.0.1:8000:8000"
     healthcheck:
-      # Pakai python, bukan curl/wget — image python:3.12-slim tidak punya keduanya.
+      # Pakai python, bukan curl/wget, image python:3.12-slim tidak punya keduanya.
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
       interval: 30s
       timeout: 5s
@@ -86,7 +86,7 @@ services:
     build:
       context: ./web
       args:
-        # Dibaca browser pengguna, jadi harus alamat host — BUKAN nama service
+        # Dibaca browser pengguna, jadi harus alamat host, BUKAN nama service
         # Docker. Next meng-inline nilai ini ke bundel saat build, bukan runtime,
         # makanya lewat build args dan bukan environment.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
@@ -96,7 +96,7 @@ services:
       backend:
         condition: service_healthy
     ports:
-      # Lihat catatan di service db — di VPS hanya Caddy yang boleh terekspos ke luar.
+      # Lihat catatan di service db, di VPS hanya Caddy yang boleh terekspos ke luar.
       - "127.0.0.1:3000:3000"
     healthcheck:
       # "/" membalas 307 ke /login, jadi cek langsung ke halaman tujuannya.

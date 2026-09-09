@@ -30,8 +30,8 @@ const WARNA: Record<StatusLabel, string> = {
  * bersamaan kalau istilah atau ambangnya diubah, dan dua salinan sudah pasti
  * membuat salah satunya ketinggalan.
  *
- * Bentuknya meniru tetangganya persis — nama di kiri, status di pojok kanan,
- * lalu isinya — supaya baris amonia terbaca sebagai kolom keempat dari
+ * Bentuknya meniru tetangganya persis, nama di kiri, status di pojok kanan,
+ * lalu isinya, supaya baris amonia terbaca sebagai kolom keempat dari
  * instrumen yang sama, bukan tempelan.
  */
 export default function AmmoniaCell({
@@ -54,7 +54,7 @@ export default function AmmoniaCell({
         <p className="truncate text-sm font-medium text-ink">{AMONIA_UI.label}</p>
         {/* Badge status pojok kanan cuma untuk baris "Parameter" (terkini).
             Baris "Prediksi" tidak punya badge ini lagi, sama seperti ketiga
-            kolom tetangganya di PredictionPanel — statusnya sekarang bulatan
+            kolom tetangganya di PredictionPanel, statusnya sekarang bulatan
             per horizon di dalam body. */}
         {mode === "terkini" && (
           <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
@@ -91,7 +91,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
   const nilai = risk?.fraction_nh3_pct ?? null;
 
   // Pita "optimal" = wilayah di bawah ambang perhatian. Skalanya satu dengan
-  // penanda nilai (skalaPersen), jadi keduanya tidak bisa saling bertentangan —
+  // penanda nilai (skalaPersen), jadi keduanya tidak bisa saling bertentangan,
   // aturan yang sama dengan optimalBand()/rangePercent() di parameter.ts.
   const lebarAman = skalaPersen(AMBANG.perhatian);
   const mulaiBahaya = skalaPersen(AMBANG.berbahaya);
@@ -141,14 +141,14 @@ function renderTerkini(risk: AmmoniaRisk | null): {
           <div className="mt-1 grid grid-cols-3 font-mono text-[10px] text-muted">
             <span className="text-left">0</span>
             <span className="text-center text-status-aman">
-              0–{formatFraksi(AMBANG.perhatian)}%
+              0 s/d {formatFraksi(AMBANG.perhatian)}%
             </span>
             <span className="text-right">{SKALA_MAKS}</span>
           </div>
         </div>
 
         {/* Peringatan ekstrapolasi. Hanya muncul kalau memang di luar envelope
-            persamaannya (pH 7,8-8,3 / 5-35 °C / 5-35 ppt) — di dalam rentang,
+            persamaannya (pH 7,8-8,3 / 5-35 °C / 5-35 ppt), di dalam rentang,
             baris ini tidak ada dan kolomnya tetap serapi tetangganya. */}
         {risk && !risk.in_valid_range && (
           <p className="mt-2 text-[11px] leading-snug text-muted">
@@ -170,7 +170,7 @@ function renderPrediksi(forecast: AmmoniaRisk[]): {
 } {
   return {
     // Tidak ada satu status ringkasan lagi untuk kolom ini (lihat komentar di
-    // PredictionPanel) — badge di kepala kolom sudah disembunyikan untuk mode
+    // PredictionPanel), badge di kepala kolom sudah disembunyikan untuk mode
     // prediksi, jadi field ini praktis tidak dipakai, dipertahankan cuma
     // supaya tipe kembaliannya tetap sama dengan renderTerkini.
     status: null,

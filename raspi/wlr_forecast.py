@@ -1,4 +1,4 @@
-"""Forecast Weighted Linear Regression (WLR) — jalan LANGSUNG di Raspberry Pi 5 (gateway),
+"""Forecast Weighted Linear Regression (WLR), jalan LANGSUNG di Raspberry Pi 5 (gateway),
 bukan di backend cloud. Prediksi cuma untuk horizon 15, 30, 60 menit (sesuai permintaan),
 tidak ada opsi horizon lain.
 
@@ -7,10 +7,10 @@ Kenapa WLR (bukan FTS) yang dipilih buat jalan di edge:
     histori tiap kali dipanggil, lebih berat dan kurang cocok dipanggil tiap menit terus
     menerus di perangkat sekecil Raspi.
   - WLR di sini cuma least-squares tertimbang 2x2 (persamaan normal langsung, bukan iteratif)
-    — komputasinya ringan banget, jalan mulus di Raspi5 walau dipanggil tiap menit terus-terusan,
+   , komputasinya ringan banget, jalan mulus di Raspi5 walau dipanggil tiap menit terus-terusan,
     dan tidak butuh dependency (numpy dst) yang kadang ribet di-pip-install di Raspi OS.
 
-Murni Python stdlib — tidak butuh `pip install` apa pun, jalan di Python 3.9+ yang sudah
+Murni Python stdlib, tidak butuh `pip install` apa pun, jalan di Python 3.9+ yang sudah
 ada bawaan Raspberry Pi OS.
 
 CARA PAKAI (integrasi ke script gateway kalian yang sudah baca ESP32):
@@ -30,7 +30,7 @@ CARA PAKAI (integrasi ke script gateway kalian yang sudah baca ESP32):
     # Nilai None kalau histori di jendela horizon itu belum cukup (baru nyala/baru mulai).
 
 Jalankan langsung file ini (`python3 wlr_forecast.py`) buat lihat demo tanpa hardware
-sama sekali — ada simulasi data di bagian bawah.
+sama sekali, ada simulasi data di bagian bawah.
 """
 
 from collections import deque
@@ -40,7 +40,7 @@ from datetime import datetime, timedelta
 HORIZONS_MINUTES: tuple[int, ...] = (15, 30, 60)
 PARAMETERS: tuple[str, ...] = ("ph", "temperature_c", "salinity_ppt")
 
-# Presisi pembulatan output — disamakan dengan tipe kolom di backend
+# Presisi pembulatan output, disamakan dengan tipe kolom di backend
 # (backend/app/models/sensor_reading.py: ph Numeric(4,2), temperature_c Numeric(4,1),
 # salinity_ppt Numeric(5,2)) supaya kalau hasil ini nanti dikirim ke backend, formatnya
 # konsisten dari awal.
@@ -54,7 +54,7 @@ class HorizonConfig:
     titik paling baru (titik makin lama makin kurang berpengaruh).
 
     Default di bawah pakai heuristik "window = horizon" (makin jauh mau diramal, makin
-    jauh juga ke belakang lihatnya) — sederhana & gampang dijustifikasi di laporan, tapi
+    jauh juga ke belakang lihatnya), sederhana & gampang dijustifikasi di laporan, tapi
     kalau sudah ada data berjam-jam, VALIDASI ULANG angka ini pakai data riil untuk
     cari kombinasi window/half_life yang RMSE-nya paling kecil buat tiap horizon.
     """
@@ -131,10 +131,10 @@ class WLRForecaster:
     """Buffer rolling di memori + forecast WLR 15/30/60 menit ke depan.
 
     Buffer otomatis membuang data yang lebih tua dari horizon terpanjang (60 menit) tiap
-    kali ada reading baru masuk — jadi aman dijalankan sebagai proses jangka panjang
+    kali ada reading baru masuk, jadi aman dijalankan sebagai proses jangka panjang
     (systemd service, lihat README.md) tanpa memori membengkak walau jalan berhari-hari.
 
-    TIDAK thread-safe secara eksplisit — kalau baca sensor & forecast dipanggil dari thread
+    TIDAK thread-safe secara eksplisit, kalau baca sensor & forecast dipanggil dari thread
     berbeda, bungkus `add_reading`/`forecast` dengan `threading.Lock` sendiri. Buat loop
     polling satu-thread biasa (baca sensor -> forecast -> lanjut) ini sudah aman dipakai
     apa adanya.
@@ -153,7 +153,7 @@ class WLRForecaster:
         salinity_ppt: float | None = None,
     ) -> None:
         """Tambah satu reading baru. `time` HARUS timezone-aware (pakai
-        `datetime.now(timezone.utc)` atau yang setara) — samakan dengan konvensi ingest API
+        `datetime.now(timezone.utc)` atau yang setara), samakan dengan konvensi ingest API
         backend (lihat rangkuman.md: timestamp naive dianggap salah, bukan otomatis UTC)."""
         if time.tzinfo is None:
             raise ValueError(
@@ -197,7 +197,7 @@ class WLRForecaster:
 
     def forecast_as_records(self, as_of: datetime | None = None) -> list[dict]:
         """Format hasil forecast jadi list of dict siap di-JSON-kan / dikirim ke mana pun
-        (backend, MQTT, log file, dst) — satu record per horizon:
+        (backend, MQTT, log file, dst), satu record per horizon:
         {"horizon_minutes": 15, "target_time": "2026-...+07:00", "ph": ..., ...}."""
         as_of = as_of or (self._buffer[-1].time if self._buffer else None)
         if as_of is None:
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     import random
     from datetime import timezone
 
-    print("=== Demo WLRForecaster — simulasi data, TANPA hardware ===")
+    print("=== Demo WLRForecaster, simulasi data, TANPA hardware ===")
     print("(ganti bagian pembacaan sensor di bawah dengan punya Raspi kalian)\n")
 
     forecaster = WLRForecaster()
@@ -226,7 +226,7 @@ if __name__ == "__main__":
 
     for minute in range(75):  # simulasi 75 menit data masuk tiap 1 menit
         t = t0 + timedelta(minutes=minute)
-        # simulasi tren naik pelan + noise kecil — GANTI dengan baca ESP32 asli kalian.
+        # simulasi tren naik pelan + noise kecil, GANTI dengan baca ESP32 asli kalian.
         suhu += 0.02 + random.uniform(-0.05, 0.05)
         ph += random.uniform(-0.01, 0.01)
         sal += random.uniform(-0.05, 0.05)

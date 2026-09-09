@@ -11,7 +11,7 @@ const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
  * Next meng-inline NEXT_PUBLIC_* ke bundel saat BUILD (lihat web/Dockerfile),
  * dan nilai default proyek ini `http://localhost:8000/api/v1`. Buka dashboard
  * dari HP di WiFi yang sama, dan browser HP itu menembak localhost-nya SENDIRI
- * — tidak ada backend di sana, jadi setiap permintaan mati sebagai
+ *, tidak ada backend di sana, jadi setiap permintaan mati sebagai
  * "Failed to fetch". Halamannya tetap terbuka (HTML-nya sudah sampai), sehingga
  * gejalanya menyamar jadi "gagal membuat kolam" / "error jaringan".
  *
@@ -42,7 +42,7 @@ function resolveApiBaseUrl(): string {
       return url.toString().replace(/\/$/, "");
     }
   } catch {
-    // Alamat tidak bisa di-parse — pakai apa adanya, biar errornya jujur.
+    // Alamat tidak bisa di-parse, pakai apa adanya, biar errornya jujur.
   }
   return CONFIGURED_API_BASE_URL;
 }
@@ -67,7 +67,7 @@ export function logout(): void {
 /**
  * Konfirmasi sebelum keluar akun, lalu buang token.
  *
- * Pakai window.confirm bawaan browser — dialog modal sendiri butuh state,
+ * Pakai window.confirm bawaan browser, dialog modal sendiri butuh state,
  * focus trap, dan penanganan Escape untuk hasil yang sama.
  */
 export function confirmLogout(): void {
@@ -81,7 +81,7 @@ export function confirmLogout(): void {
  *
  * HTTPException yang kita lempar sendiri mengisinya dengan string. TAPI galat
  * validasi Pydantic (422) mengisinya dengan ARRAY objek
- * `{loc, msg, type, ...}` — dan `new Error(array)` menghasilkan "[object
+ * `{loc, msg, type, ...}`, dan `new Error(array)` menghasilkan "[object
  * Object]". Itulah kenapa email yang ditolak pola backend terasa seperti tidak
  * divalidasi sama sekali: pesannya memang ada, cuma tidak pernah terbaca.
  *
@@ -102,7 +102,7 @@ function pesanError(detail: unknown, status: number): string {
       // Kalimat siap pakai MENGGANTIKAN msg, bukan diawali olehnya. `msg`
       // Pydantic itu bahasa Inggris dan untuk pola email isinya regex mentah,
       // jadi "Email tidak valid: String should match pattern '^[A-Za-z0-9!#$..."
-      // adalah yang dilihat pembudidaya — bukan pesan, tapi isi kode program.
+      // adalah yang dilihat pembudidaya, bukan pesan, tapi isi kode program.
       return PESAN_FIELD[String(field)] ?? msg;
     }
   }
@@ -116,7 +116,7 @@ function pesanError(detail: unknown, status: number): string {
  * Sengaja kalimat penuh, bukan label yang ditempel di depan pesan Pydantic:
  * satu-satunya pembaca pesan ini adalah pembudidaya di lapangan, dan pesan
  * asli Pydantic berbahasa Inggris. Field yang belum ada di sini tetap jatuh
- * ke `msg` aslinya — pesan Inggris masih lebih berguna daripada tidak ada.
+ * ke `msg` aslinya, pesan Inggris masih lebih berguna daripada tidak ada.
  *
  * Aturannya sama dengan pesan lain di aplikasi ini: sebutkan APA yang salah
  * dan bentuk yang benar, bukan aturan formalnya.
@@ -149,7 +149,7 @@ async function request<T>(
     });
   } catch {
     // fetch hanya melempar untuk kegagalan JARINGAN (server mati, CORS preflight
-    // ditolak, DNS gagal) — status HTTP berapa pun tetap resolve. Pesan bawaannya
+    // ditolak, DNS gagal), status HTTP berapa pun tetap resolve. Pesan bawaannya
     // "Failed to fetch" tanpa konteks apa pun, dan pemanggil membungkusnya lagi
     // jadi "Gagal membuat kolam", sehingga penyebab sebenarnya tidak pernah
     // terlihat. Sebut alamatnya supaya bisa dicek langsung.
@@ -209,9 +209,23 @@ export const api = {
     }),
 
   /** DELETE /auth/me → 204. PERMANEN, dan menghapus kolam + notifikasi user ini.
-   *  Device-nya selamat (FK SET NULL) beserta riwayat sensornya — ia cuma
+   *  Device-nya selamat (FK SET NULL) beserta riwayat sensornya, ia cuma
    *  kembali jadi belum diklaim dan bisa dipasang admin ke pemilik lain. */
   deleteAccount: () => request<void>("/auth/me", { method: "DELETE" }),
+
+  /** POST /auth/verify-email → 204. Aktifkan akun lewat token dari email. */
+  verifyEmail: (token: string) =>
+    request<void>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+
+  /** POST /auth/resend-verification → {detail}. Balasannya sama saja terdaftar atau tidak. */
+  resendVerification: (email: string) =>
+    request<{ detail: string }>("/auth/resend-verification", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
 
   /** POST /auth/forgot-password → {detail} */
   forgotPassword: (email: string) =>
@@ -246,7 +260,7 @@ export const api = {
     }),
 
   /** DELETE /kolam/:id → 204. PERMANEN.
-   *  Device-nya tidak ikut terhapus (FK SET NULL) — ia cuma jadi tak terklaim,
+   *  Device-nya tidak ikut terhapus (FK SET NULL), ia cuma jadi tak terklaim,
    *  beserta seluruh riwayat sensornya. Notifikasi kolam ini ikut hilang (CASCADE). */
   deleteKolam: (kolamId: number) =>
     request<void>(`/kolam/${kolamId}`, { method: "DELETE" }),
@@ -270,11 +284,11 @@ export const api = {
 
   // ── Devices (routers/devices.py, khusus admin) ───────────────────
 
-  /** GET /devices → DeviceAdminOut[] — semua device, sudah diklaim maupun belum. */
+  /** GET /devices → DeviceAdminOut[], semua device, sudah diklaim maupun belum. */
   listDevices: () =>
     request<import("./types").DeviceAdmin[]>("/devices"),
 
-  /** GET /devices/target-kolams → TargetKolam[] — daftar kolam untuk pemasangan device. */
+  /** GET /devices/target-kolams → TargetKolam[], daftar kolam untuk pemasangan device. */
   getTargetKolams: () =>
     request<import("./types").TargetKolam[]>("/devices/target-kolams"),
 
