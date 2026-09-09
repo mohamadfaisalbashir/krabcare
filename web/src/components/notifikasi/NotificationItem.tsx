@@ -121,7 +121,14 @@ export default function NotificationItem({
               {PARAM_LABELS[item.parameter]}
             </span>
           )}
-          {!item.parameter && item.source === "classification" && (
+          {/* Syaratnya `!item.parameter` saja, TANPA memeriksa source. Dulu
+              syaratnya menuntut source === "classification", dan baris prediksi
+              (parameter NULL, source "prediction") jatuh di antara dua cabang:
+              tidak cocok chip parameter, tidak cocok chip ini, jadi satu-satunya
+              yang tampil chip abu-abu SOURCE_LABEL dan warnanya hilang sama
+              sekali. Prediksi meramal kategori kualitas air keseluruhan, subjek
+              yang sama dengan klasifikasi, jadi labelnya memang sama. */}
+          {!item.parameter && (
             <span
               className={clsx(
                 "rounded-full px-2 py-0.5 text-[11px] font-semibold",

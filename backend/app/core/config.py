@@ -52,9 +52,11 @@ class Settings(BaseSettings):
     FRONTEND_RESET_PASSWORD_URL: str = "http://localhost:3000/reset-password"
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
     FRONTEND_VERIFY_EMAIL_URL: str = "http://localhost:3000/verifikasi-email"
-    # Sehari penuh: link aktivasi sering baru dibuka setelah orangnya sempat,
-    # dan 30 menit ala reset password terlalu pendek untuk itu.
-    EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    # Sengaja pendek. Konsekuensinya link sering keburu kedaluwarsa karena
+    # pengiriman email saja bisa memakan sebagian jatahnya, jadi tombol kirim
+    # ulang di halaman /verifikasi-email itu bagian penting dari alurnya,
+    # bukan pelengkap. Bisa ditimpa lewat .env tanpa mengubah kode.
+    EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES: int = 5
 
     # Push notification (Firebase Cloud Messaging)
     FIREBASE_CREDENTIALS_PATH: str = ""

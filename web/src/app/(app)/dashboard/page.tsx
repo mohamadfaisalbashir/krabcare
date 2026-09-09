@@ -376,7 +376,9 @@ export default function DashboardPage() {
               pojoknya, yang tidak pernah menyebut apa yang akan terjadi.
               Hilang begitu ada kolam terpilih (variant "rail"), saat itu
               pengguna sudah membuktikan sendiri kartunya bisa diklik. */}
-          <p className="mb-3 text-sm font-semibold text-brand-700 sm:text-base">
+          {/* Putih, karena paragraf ini duduk di dalam pembungkus -mt-20 yang
+              menindih banner gelap. Tetangganya, <h1> "Dashboard", juga putih. */}
+          <p className="mb-3 text-sm font-semibold text-white sm:text-base">
             Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>

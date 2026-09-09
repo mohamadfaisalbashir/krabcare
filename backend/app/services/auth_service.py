@@ -48,13 +48,17 @@ def _terbitkan_token_verifikasi(user: User) -> str:
 async def _kirim_email_verifikasi(user: User, raw_token: str) -> None:
     """Kirim link aktivasi ke alamat yang baru didaftarkan."""
     link = f"{settings.FRONTEND_VERIFY_EMAIL_URL}?token={raw_token}"
-    jam = settings.EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES // 60
+    # Menit apa adanya, JANGAN dibagi 60 jadi jam. Masa berlakunya sekarang 5
+    # menit, dan pembagian bilangan bulat membuat emailnya berbunyi
+    # "berlaku 0 jam" alias link yang seolah sudah mati sebelum dibuka.
+    menit = settings.EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES
     await send_email(
         user.email,
         "Aktivasi Akun KrabCare",
         f"Halo {user.nama},\n\n"
         f"Klik link berikut untuk mengaktifkan akun KrabCare Anda "
-        f"(berlaku {jam} jam):\n{link}\n\n"
+        f"(berlaku {menit} menit, jadi sebaiknya segera dibuka):\n{link}\n\n"
+        "Kalau linknya sudah kedaluwarsa, buka saja halaman itu dan minta kirim ulang.\n"
         "Kalau Anda tidak merasa mendaftar, abaikan email ini.",
     )
 
