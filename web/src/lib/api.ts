@@ -99,21 +99,34 @@ function pesanError(detail: unknown, status: number): string {
       // loc = ["body", "email"] -> "email". Segmen pertama selalu sumbernya
       // (body/query/path), jadi yang berguna bagi pengguna adalah yang terakhir.
       const field = Array.isArray(pertama.loc) ? pertama.loc[pertama.loc.length - 1] : null;
-      const label = FIELD_LABEL[String(field)] ?? (field ? String(field) : null);
-      return label ? `${label}: ${msg}` : msg;
+      // Kalimat siap pakai MENGGANTIKAN msg, bukan diawali olehnya. `msg`
+      // Pydantic itu bahasa Inggris dan untuk pola email isinya regex mentah,
+      // jadi "Email tidak valid: String should match pattern '^[A-Za-z0-9!#$..."
+      // adalah yang dilihat pembudidaya — bukan pesan, tapi isi kode program.
+      return PESAN_FIELD[String(field)] ?? msg;
     }
   }
 
   return `Permintaan gagal (${status})`;
 }
 
-/** Nama field backend -> label Indonesia, supaya pesan 422 bisa dibaca pengguna. */
-const FIELD_LABEL: Record<string, string> = {
-  email: "Email tidak valid",
-  password: "Kata sandi",
-  new_password: "Kata sandi baru",
-  nama: "Nama",
-  device_code: "Kode device",
+/**
+ * Field backend -> kalimat Indonesia utuh untuk galat validasi 422.
+ *
+ * Sengaja kalimat penuh, bukan label yang ditempel di depan pesan Pydantic:
+ * satu-satunya pembaca pesan ini adalah pembudidaya di lapangan, dan pesan
+ * asli Pydantic berbahasa Inggris. Field yang belum ada di sini tetap jatuh
+ * ke `msg` aslinya — pesan Inggris masih lebih berguna daripada tidak ada.
+ *
+ * Aturannya sama dengan pesan lain di aplikasi ini: sebutkan APA yang salah
+ * dan bentuk yang benar, bukan aturan formalnya.
+ */
+const PESAN_FIELD: Record<string, string> = {
+  email: "Email tidak valid. Tulis lengkap dengan domainnya, contoh: nama@email.com",
+  password: "Kata sandi minimal 8 karakter.",
+  new_password: "Kata sandi baru minimal 8 karakter.",
+  nama: "Nama tidak boleh kosong.",
+  device_code: "Kode device tidak boleh kosong.",
 };
 
 async function request<T>(

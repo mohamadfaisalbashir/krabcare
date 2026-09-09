@@ -48,7 +48,7 @@ const SECTION = {
   prediksi: { title: "Prediksi 15/30/60 menit" },
   pemantauan: {
     title: "Grafik Pemantauan",
-    note: "Warna hijau pada grafik adalah rentang optimal dan garis putus-putus warna merah adalah batas ambang berbahaya.",
+    note: "Pita hijau adalah rentang optimal, garis putus-putus merah adalah batas toleransi. Nilai di luar garis merah masuk kategori Bahaya.",
   },
   gabungan: { title: "Grafik Gabungan" },
   pengaturan: { title: "Pengaturan Kolam" },

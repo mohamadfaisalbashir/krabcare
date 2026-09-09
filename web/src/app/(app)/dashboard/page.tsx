@@ -377,7 +377,7 @@ export default function DashboardPage() {
               Hilang begitu ada kolam terpilih (variant "rail") — saat itu
               pengguna sudah membuktikan sendiri kartunya bisa diklik. */}
           <p className="mb-3 text-xs text-muted">
-            Ketuk kartu kolam untuk membuka detailnya: parameter terkini,
+            Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

@@ -92,9 +92,9 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
       })}
 
       <p className="text-[10px] leading-snug text-muted sm:pl-[7.75rem]">
-        Tiap parameter punya sumbu nilainya sendiri dalam satuan asli; sumbu
-        waktunya sama untuk ketiganya. Pita hijau = rentang optimal, garis
-        putus-putus merah = batas toleransi.
+        Tiap parameter punya sumbu nilainya sendiri dalam satuan asli, dan
+        ketiganya berbagi sumbu waktu yang sama. Arti pita warnanya sama dengan
+        Grafik Pemantauan di atas.
       </p>
     </div>
   );
