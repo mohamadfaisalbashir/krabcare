@@ -1,5 +1,7 @@
 """Router notifikasi in-app + registrasi push token (FCM)."""
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,12 +20,17 @@ async def list_notifications(
     unread_only: bool = False,
     limit: int = Query(default=50, gt=0, le=200),
     offset: int = Query(default=0, ge=0),
+    source: Literal["classification", "prediction", "parameter"] | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[NotificationOut]:
-    """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup."""
+    """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup.
+
+    `source` menyaring di SQL — tab filter di web memakainya supaya paginasinya
+    ikut tersaring, bukan menyaring sisa halaman yang sudah terpotong LIMIT.
+    """
     items = await notification_service.list_notifications(
-        db, current_user, unread_only, limit, offset
+        db, current_user, unread_only, limit, offset, source
     )
     device_ids = {n.device_id for n in items}
     devices_result = await db.execute(select(Device).where(Device.id.in_(device_ids)))

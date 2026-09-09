@@ -94,6 +94,8 @@ export interface SensorReading {
   device_id: number;
   device_code: string;
   time: string;
+  /** Jam backend saat baris ini masuk. `received_at - time` = latensi gateway. */
+  received_at: string;
   ph: number | null;
   temperature_c: number | null;
   salinity_ppt: number | null;
@@ -174,13 +176,16 @@ export interface DeviceAmmonia {
 
 // ── Notification (schemas/notification.py) ──────────────────────────
 
+/** notifications.source — nilai CHECK di database/init/08_notifications.sql. */
+export type NotifSource = "classification" | "prediction" | "parameter";
+
 /** NotificationOut */
 export interface Notification {
   id: number;
   device_id: number;
   device_code: string | null;
   kolam_id: number;
-  source: string; // "classification" | "prediction" | "parameter"
+  source: NotifSource;
   parameter?: string | null; // "ph" | "temperature_c" | "salinity_ppt" | "ammonia" | null
   quality_category: string; // WaterQualityCategory value
   event_time: string;

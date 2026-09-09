@@ -1,0 +1,33 @@
+$kind: http-request
+name: https://api.krabcare.com/api/v1/ingest/readings
+description: ""
+url: https://api.krabcare.com/api/v1/ingest/readings
+method: POST
+headers:
+  - key: Content-Type
+    value: application/json
+    disabled: false
+    description: ""
+  - key: X-API-Key
+    value: 4105a27f1036f81d8dd30bc06e5f50f18de00b871a15527d50446ac6a4910558
+    disabled: false
+    description: ""
+  - key: 4105a27f1036f81d8dd30bc06e5f50f18de00b871a15527d50446ac6a4910558
+    value: ""
+    disabled: true
+    description: ""
+body:
+  type: json
+  content: |-
+    {
+      "readings": [
+        {
+          "device_code": "54D660E9BFB3",
+          "time": "2026-09-08T03:00:00Z",
+          "ph": 8.0,
+          "temperature_c": 25.3,
+          "salinity_ppt": 18.0
+        }
+      ]
+    }
+order: 1788836984668

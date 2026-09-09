@@ -7,6 +7,11 @@ from pydantic import BaseModel, Field
 
 class KolamCreateIn(BaseModel):
     nama: str = Field(min_length=1)
+    #: Satu kolam = satu rak = tepat satu device, jadi device-nya ditentukan
+    #: sekalian saat kolam dibuat. Keduanya masuk dalam SATU transaksi: kode
+    #: device yang salah membatalkan pembuatan kolamnya juga, supaya tidak ada
+    #: kolam yatim yang harus dihapus manual.
+    device_code: str = Field(min_length=1)
 
 
 class KolamUpdateIn(BaseModel):

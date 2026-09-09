@@ -26,6 +26,7 @@ import {
 import { DISCLAIMER as AMONIA_DISCLAIMER } from "@/lib/ammonia";
 import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { api } from "@/lib/api";
+import { formatWaktu } from "@/lib/tanggal";
 
 /**
  * Judul & catatan tiap bagian, ditulis SEKALI.
@@ -234,10 +235,7 @@ export default function RakDetail({
     : null;
 
   const updated = reading
-    ? new Date(reading.time).toLocaleString("id-ID", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      })
+    ? formatWaktu(reading.time)
     : null;
 
   return (
@@ -254,7 +252,10 @@ export default function RakDetail({
           <p className="text-sm font-semibold text-[#266B70]">Detail Kolam</p>
           {/* Nama rak buatan pengguna — panjangnya tidak terbatas, jadi dipotong
               alih-alih mendorong tombol Tutup keluar. */}
-          <h2 className="mt-0.5 truncate font-display text-xl font-semibold text-ink">
+          {/* brand-700 (#0F7078), bukan `ink`: mencolok dan langsung menandai
+              "ini judul panelnya", tapi 5.82:1 di atas putih dan masih warna
+              merek — bukan kontras keras yang berkelahi dengan tema. */}
+          <h2 className="mt-0.5 truncate font-display text-2xl font-semibold text-brand-700 sm:text-3xl">
             {kolam.nama}
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -277,26 +278,6 @@ export default function RakDetail({
         </button>
       </div>
 
-      {/* Legenda warna kondisi. Sekali ditulis di sini, berlaku untuk semua
-          titik/garis warna aman-waspada-bahaya di bawahnya (Parameter,
-          Prediksi, amonia) supaya tidak perlu dijelaskan berulang di tiap
-          bagian. */}
-      <div className="flex flex-col items-start gap-1 border-t border-white/60 px-5 py-2.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5 sm:px-6">
-        <span className="font-medium text-ink">Warna kondisi:</span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
-          Aman: dalam rentang optimal
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-status-waspada" />
-          Waspada: di luar optimal, masih toleransi
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-status-bahaya" />
-          Bahaya: di luar rentang toleransi
-        </span>
-      </div>
-
       {loading ? (
         <DetailSkeleton />
       ) : (
@@ -310,6 +291,7 @@ export default function RakDetail({
           {/* Pembacaan terkini — satu baris, bukan empat kartu. */}
           <Section {...SECTION.terkini}>
             <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
+            <WarnaKondisiLegend />
           </Section>
 
           <Section {...SECTION.prediksi}>
@@ -317,6 +299,7 @@ export default function RakDetail({
               predictions={predictions}
               ammoniaForecast={ammonia?.forecast ?? []}
             />
+            <WarnaKondisiLegend />
           </Section>
 
           {/* Klaim device — satu rak hanya boleh satu device, jadi bagian ini
@@ -355,6 +338,10 @@ export default function RakDetail({
                 {...SECTION.pemantauan}
                 aside={<ParamSwitch value={activeParam} onChange={setActiveParam} />}
               >
+                {/* Legenda warna grafik ini. Cuma satu parameter tergambar,
+                    jadi satu chip sudah cukup — tapi tanpa itu warna garisnya
+                    tidak pernah dijelaskan sama sekali. */}
+                <ParamChip param={activeParam} />
                 {dataLoading ? (
                   <Skeleton className="h-64 w-full rounded-lg" />
                 ) : history.length > 0 ? (
@@ -474,6 +461,52 @@ function Section({
       )}
       {children}
     </section>
+  );
+}
+
+/**
+ * Legenda warna kondisi, dirender DI DALAM tiap bagian yang memakai warnanya
+ * (Parameter & Prediksi) — bukan sekali di kepala panel.
+ *
+ * Sebelumnya ia satu blok di paling atas, jauh dari titik-titik warna yang
+ * dijelaskannya: saat pengguna sampai ke Prediksi, keterangannya sudah
+ * ter-scroll keluar layar. Komponen, bukan salinan, supaya kalimatnya tidak
+ * bisa berbeda antara dua tempat.
+ */
+function WarnaKondisiLegend() {
+  return (
+    <div className="mt-3 flex flex-col items-start gap-1 border-t border-white/60 pt-2.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
+      <span className="font-medium text-ink">Warna kondisi:</span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
+        Aman: dalam rentang optimal
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full bg-status-waspada" />
+        Waspada: di luar optimal, masih toleransi
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full bg-status-bahaya" />
+        Bahaya: di luar rentang toleransi
+      </span>
+    </div>
+  );
+}
+
+/** Keterangan warna garis satu parameter. Warnanya dari PARAM_UI, sumber yang
+ *  sama dengan stroke grafiknya — jadi tidak bisa berbeda. */
+function ParamChip({ param }: { param: ParamKey }) {
+  const cfg = PARAM_UI[param];
+  return (
+    <div className="mb-2 flex items-center gap-2 text-xs">
+      <span
+        aria-hidden
+        className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
+        style={{ background: cfg.color }}
+      />
+      <span className="font-medium text-ink">{cfg.label}</span>
+      <span className="text-muted">({cfg.unit})</span>
+    </div>
   );
 }
 

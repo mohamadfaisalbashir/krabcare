@@ -2,6 +2,7 @@
 
 import type { TooltipProps } from "recharts";
 import { ParamKey, PARAM_UI, formatValue, statusOf } from "@/lib/parameter";
+import { formatWaktu } from "@/lib/tanggal";
 
 /**
  * Tooltip bersama kedua grafik halaman detail rak.
@@ -25,10 +26,7 @@ export default function ChartTooltip({
     <div className="card min-w-[11rem] px-3 py-2.5 shadow-float">
       <p className="mb-2 text-xs font-semibold text-muted">
         {typeof label === "string"
-          ? new Date(label).toLocaleString("id-ID", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })
+          ? formatWaktu(label)
           : label}
       </p>
       <div className="space-y-1.5">

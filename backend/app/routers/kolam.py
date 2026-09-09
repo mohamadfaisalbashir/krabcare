@@ -20,8 +20,16 @@ async def create_kolam(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> KolamOut:
-    """Buat kolam baru milik user ini."""
-    kolam = await kolam_service.create_kolam(db, current_user, payload)
+    """Buat kolam baru milik user ini, sekaligus klaim device-nya.
+
+    Gagal klaim = kolam tidak jadi dibuat (satu transaksi di kolam_service).
+    """
+    try:
+        kolam = await kolam_service.create_kolam(db, current_user, payload)
+    except DeviceNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except DeviceAlreadyClaimedError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return KolamOut.model_validate(kolam)
 
 

@@ -7,7 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
-import { Notification } from "@/lib/types";
+import { Notification, NotifSource } from "@/lib/types";
 import { api } from "@/lib/api";
 import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/notif-store";
 
@@ -16,6 +16,22 @@ import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/not
 const PAGE = 20;
 
 type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi";
+
+/**
+ * Filter -> nilai `source` di backend. undefined = tanpa filter.
+ *
+ * Penyaringannya WAJIB lewat sini, bukan .filter() di klien. Satu halaman cuma
+ * 20 baris: menyaring sisa halaman yang sudah dipotong LIMIT membuat tab
+ * "Parameter" tampak kosong padahal barisnya ada di halaman berikutnya — dan
+ * "Muat lebih banyak" pun tetap mengambil halaman yang tidak tersaring, jadi
+ * datanya terlihat seperti tidak pernah tersimpan.
+ */
+const FILTER_SOURCE: Record<NotifFilter, NotifSource | undefined> = {
+  semua: undefined,
+  kolam: "classification",
+  parameter: "parameter",
+  prediksi: "prediction",
+};
 
 const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
   { id: "semua", label: "Semua" },
@@ -37,7 +53,11 @@ export default function NotifikasiPage() {
   // semua tempat, bukan cuma di halaman ini — lihat lib/notif-store.ts.
   const unread = useUnreadCount();
 
-  const muatHalaman = useCallback((offset: number) => api.getNotifications({ limit: PAGE, offset }), []);
+  const muatHalaman = useCallback(
+    (offset: number) =>
+      api.getNotifications({ limit: PAGE, offset, source: FILTER_SOURCE[filter] }),
+    [filter]
+  );
 
   useEffect(() => {
     let batal = false;
@@ -70,6 +90,8 @@ export default function NotifikasiPage() {
       batal = true;
       clearInterval(id);
     };
+    // muatHalaman ikut berubah tiap `filter` berganti, jadi efek ini otomatis
+    // memuat ulang dari offset 0 — persis yang dibutuhkan saat ganti tab.
   }, [muatHalaman]);
 
   async function handleMuatLagi() {
@@ -134,12 +156,9 @@ export default function NotifikasiPage() {
     }
   }
 
-  const filteredNotifications = notifications.filter((n) => {
-    if (filter === "kolam") return !n.parameter && n.source === "classification";
-    if (filter === "parameter") return n.source === "parameter" || Boolean(n.parameter);
-    if (filter === "prediksi") return n.source === "prediction";
-    return true;
-  });
+  // Tanpa penyaringan klien: `notifications` sudah berisi persis satu source
+  // karena servernya yang menyaring (lihat FILTER_SOURCE).
+  const filteredNotifications = notifications;
 
   return (
     <>

@@ -1,6 +1,8 @@
 import { AlertOctagon, AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
 import { Notification, StatusLabel, WaterQualityCategory, categoryToLabel } from "@/lib/types";
+import StatusBadge from "@/components/ui/StatusBadge";
 import clsx from "clsx";
+import { formatWaktu } from "@/lib/tanggal";
 
 /** Label sumber notifikasi sesuai backend notification.source. */
 const SOURCE_LABEL: Record<string, string> = {
@@ -66,16 +68,39 @@ export default function NotificationItem({
           <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
             {SOURCE_LABEL[item.source] ?? item.source}
           </span>
+          {/* Chip diwarnai KONDISI, bukan warna merek. Chip inilah yang
+              menyebut hal apa yang sedang dilaporkan ("Suhu", "Kualitas
+              Kolam"), jadi warnanya harus ikut mengatakan kondisi hal itu —
+              sebelumnya semua chip parameter berwarna sama entah aman entah
+              bahaya. style.bg/style.text sudah dihitung di atas dari
+              quality_category yang sama dengan ikonnya. */}
           {item.parameter && PARAM_LABELS[item.parameter] && (
-            <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">
+            <span
+              className={clsx(
+                "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                style.bg,
+                style.text
+              )}
+            >
               {PARAM_LABELS[item.parameter]}
             </span>
           )}
           {!item.parameter && item.source === "classification" && (
-            <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
+            <span
+              className={clsx(
+                "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                style.bg,
+                style.text
+              )}
+            >
               Kualitas Kolam
             </span>
           )}
+          {/* Kata "Aman"/"Waspada"/"Bahaya" sebagai TEKS. Sebelumnya statusnya
+              hanya tersirat dari bentuk & warna ikon di kiri — tidak terbaca
+              pembaca layar, dan tidak terbaca sama sekali oleh yang kesulitan
+              membedakan warna. */}
+          <StatusBadge status={label} size="sm" />
           {!item.is_read && (
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
           )}
@@ -83,10 +108,7 @@ export default function NotificationItem({
         <p className="mt-1 text-sm leading-relaxed text-ink">{item.message}</p>
         <div className="mt-1.5 flex items-center gap-3">
           <p className="text-xs text-muted">
-            {new Date(item.created_at).toLocaleString("id-ID", {
-              dateStyle: "medium",
-              timeStyle: "short",
-            })}
+            {formatWaktu(item.created_at)}
           </p>
           {!item.is_read && onRead && (
             <button

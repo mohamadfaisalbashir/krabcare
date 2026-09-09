@@ -31,6 +31,33 @@ ANOMALY_CATEGORIES = {"sedang", "buruk"}
 #: sama seperti ANOMALY_CATEGORIES di atas.
 CATEGORY_LABEL: dict[str, str] = {"baik": "Aman", "sedang": "Waspada", "buruk": "Bahaya"}
 
+#: Kunci UNIQUE tabel notifications (lihat database/init/08_notifications.sql:16).
+#: Ketiga jalur pembuatan notifikasi memakainya untuk on_conflict_do_nothing.
+_UNIQUE_KEY = [
+    Notification.device_id,
+    Notification.source,
+    Notification.event_time,
+    Notification.parameter,
+]
+
+
+async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notification | None:
+    """INSERT satu notifikasi; None kalau kunci uniknya sudah ada.
+
+    db.add() polos akan melempar IntegrityError kalau ingest yang sama diulang
+    (gateway retry), dan karena ini dipanggil di dalam loop dispatch, satu
+    tabrakan akan 500 seluruh request dan membuang sisa notifikasi batch itu.
+    """
+    stmt = (
+        pg_insert(Notification)
+        .values(values)
+        .on_conflict_do_nothing(index_elements=_UNIQUE_KEY)
+        .returning(Notification)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return result.scalars().first()
+
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
     """Kategori pada notifikasi klasifikasi terakhir device ini — acuan transition-check."""
@@ -88,19 +115,19 @@ async def create_classification_notification(
             f"(skor {quality_score:.1f})."
         )
 
-    notification = Notification(
-        user_id=kolam.owner_user_id,
-        device_id=device.id,
-        kolam_id=kolam.id,
-        source="classification",
-        quality_category=category,
-        event_time=sensor_reading_time,
-        message=message,
+    return await _insert_abaikan_duplikat(
+        db,
+        {
+            "user_id": kolam.owner_user_id,
+            "device_id": device.id,
+            "kolam_id": kolam.id,
+            "source": "classification",
+            "parameter": None,
+            "quality_category": category,
+            "event_time": sensor_reading_time,
+            "message": message,
+        },
     )
-    db.add(notification)
-    await db.commit()
-    await db.refresh(notification)
-    return notification
 
 
 #: Ambang toleransi dan optimal parameter air — SAMA dengan yang ada di web/src/lib/parameter.ts
@@ -191,20 +218,19 @@ async def create_parameter_notification(
             f"({value_str})."
         )
 
-    notification = Notification(
-        user_id=kolam.owner_user_id,
-        device_id=device.id,
-        kolam_id=kolam.id,
-        source="parameter",
-        parameter=parameter,
-        quality_category=category,
-        event_time=reading_time,
-        message=message,
+    return await _insert_abaikan_duplikat(
+        db,
+        {
+            "user_id": kolam.owner_user_id,
+            "device_id": device.id,
+            "kolam_id": kolam.id,
+            "source": "parameter",
+            "parameter": parameter,
+            "quality_category": category,
+            "event_time": reading_time,
+            "message": message,
+        },
     )
-    db.add(notification)
-    await db.commit()
-    await db.refresh(notification)
-    return notification
 
 
 async def create_prediction_notifications(
@@ -422,12 +448,25 @@ async def dispatch_from_quality_ingest(
 
 
 async def list_notifications(
-    db: AsyncSession, user: User, unread_only: bool, limit: int, offset: int = 0
+    db: AsyncSession,
+    user: User,
+    unread_only: bool,
+    limit: int,
+    offset: int = 0,
+    source: str | None = None,
 ) -> list[Notification]:
-    """Notifikasi milik `user`, terbaru dulu. `offset` untuk paginasi "muat lebih banyak"."""
+    """Notifikasi milik `user`, terbaru dulu. `offset` untuk paginasi "muat lebih banyak".
+
+    `source` WAJIB disaring di SQL, bukan di klien. Halaman ini cuma 20 baris:
+    menyaring setelah LIMIT membuat tab "Parameter" tampak kosong padahal
+    barisnya ada di halaman berikutnya — persis keluhan "data notifikasi
+    parameter sering hilang".
+    """
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
+    if source is not None:
+        stmt = stmt.where(Notification.source == source)
     stmt = stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())

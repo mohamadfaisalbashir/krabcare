@@ -21,6 +21,7 @@ import {
 import { dayRangeToIso } from "@/lib/export";
 import { api } from "@/lib/api";
 import clsx from "clsx";
+import { formatWaktu } from "@/lib/tanggal";
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Semua",
@@ -548,11 +549,12 @@ function LogHistorisView() {
                         REAL-TIME (only_measured: true di muatHalaman), jadi
                         keterangan "ramalan +N menit"/"ekstrapolasi" yang dulu
                         ada di sini sudah tidak pernah relevan lagi. */}
-                    <p className="text-xs text-muted">
-                      {new Date(r.target_time).toLocaleString("id-ID", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
+                    {/* brand-700 + semibold: waktu adalah kunci baca baris log,
+                        tapi `muted` membuatnya terbaca paling akhir. Warna merek,
+                        bukan warna status — supaya tidak tertukar dengan
+                        aman/waspada/bahaya di kolom sebelahnya. */}
+                    <p className="text-xs font-semibold text-brand-700">
+                      {formatWaktu(r.target_time)}
                     </p>
                   </div>
                   <div className="shrink-0">
@@ -584,11 +586,8 @@ function LogHistorisView() {
                       {param === "ph" || value == null ? "" : ` ${meta.unit}`}
                     </span>
                   </p>
-                  <p className="text-xs text-muted">
-                    {new Date(r.time).toLocaleString("id-ID", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
+                  <p className="text-xs font-semibold text-brand-700">
+                    {formatWaktu(r.time)}
                   </p>
                 </div>
                 {/* Dibungkus supaya bisa shrink-0 — StatusBadge tidak menerima

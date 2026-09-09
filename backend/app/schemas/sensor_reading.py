@@ -48,6 +48,10 @@ class SensorReadingOut(BaseModel):
     device_id: int
     device_code: str
     time: datetime
+    #: Jam BACKEND saat baris ini masuk (server_default now()), bukan jam device.
+    #: Selisihnya terhadap `time` = latensi gateway->backend, yang dipakai kolom
+    #: `latensi_detik` di ekspor CSV/XLSX.
+    received_at: datetime
     ph: float | None
     temperature_c: float | None
     salinity_ppt: float | None

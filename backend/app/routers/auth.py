@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import User
+from app.models.enums import UserRole
 from app.schemas.user import (
     ForgotPasswordIn,
     PasswordChangeIn,
@@ -57,6 +58,32 @@ async def update_me(
     """Ubah nama profil sendiri."""
     user = await auth_service.update_profile(db, current_user, payload)
     return UserOut.model_validate(user)
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Hapus akun sendiri, permanen.
+
+    Tidak ada kode pembersihan karena aturan FK sudah menanganinya:
+      - kolam.owner_user_id   ON DELETE CASCADE   -> kolam ikut hilang
+      - devices.kolam_id      ON DELETE SET NULL  -> device SELAMAT, jadi tak terklaim
+      - notifications, push_tokens                -> CASCADE
+    Riwayat sensor menempel di devices, jadi ia bertahan dan bisa diakses lagi
+    setelah device-nya diklaim ulang.
+
+    Admin ditolak: akun admin hasil seed adalah satu-satunya pintu ke panel
+    /perangkat, dan menghapusnya mengunci pendaftaran device untuk semua orang.
+    """
+    if current_user.role == UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Akun admin tidak bisa dihapus sendiri.",
+        )
+    await db.delete(current_user)
+    await db.commit()
 
 
 @router.post("/me/change-password", status_code=204)

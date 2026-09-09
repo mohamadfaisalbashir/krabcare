@@ -54,9 +54,19 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 export default function HistoryChart({
   data,
   parameter,
+  height = "h-64",
+  hideXAxis = false,
 }: {
   data: SensorReading[];
   parameter: ParamKey;
+  /** Kelas tinggi Tailwind. Panel di Grafik Gabungan lebih pendek dari h-64
+   *  karena ada tiga bertumpuk. TETAP kelas tinggi definitif, bukan flex-1 —
+   *  ResponsiveContainer mengukur 0px kalau induknya tidak punya tinggi pasti. */
+  height?: string;
+  /** Sumbu X disembunyikan untuk panel selain yang PALING BAWAH di Grafik
+   *  Gabungan: ketiganya memakai deret waktu yang sama persis, jadi mencetak
+   *  label jam tiga kali cuma menghabiskan tinggi yang bisa dipakai garisnya. */
+  hideXAxis?: boolean;
 }) {
   const cfg = PARAM_UI[parameter];
   const { min, max, optimal } = RANGE[parameter];
@@ -73,7 +83,7 @@ export default function HistoryChart({
   const hi = round1(Math.max(max + pad, ...values));
 
   return (
-    <div className="h-64 w-full">
+    <div className={`${height} w-full`}>
       {/* debounce: ResponsiveContainer memakai ResizeObserver, dan tanpa jeda
           ini seluruh grafik digambar ulang tiap frame selama sidebar
           menguncup/membentang. Itu penyebab utama transisi sidebar tersendat. */}
@@ -115,12 +125,17 @@ export default function HistoryChart({
               Garis tegak membaca sebagai penanda WAKTU, dan waktu memang sumbu
               yang dibaca orang di grafik pemantauan. */}
           <CartesianGrid vertical horizontal={false} stroke="#DCE5DD" strokeOpacity={0.9} />
+          {/* height={0} saat disembunyikan, BUKAN dilepas: XAxis tetap harus
+              ada supaya recharts memetakan dataKey "time" ke sumbu kategori
+              yang sama dengan panel lain — dilepas, ketiga panel bisa memakai
+              pembagian titik yang berbeda dan garisnya tidak lagi sejajar. */}
           <XAxis
             dataKey="time"
             tickFormatter={chartTickLabel}
             interval="preserveStartEnd"
             minTickGap={48}
-            tick={{ fontSize: 11, fill: "#5C7A72" }}
+            tick={hideXAxis ? false : { fontSize: 11, fill: "#5C7A72" }}
+            height={hideXAxis ? 0 : undefined}
             axisLine={false}
             tickLine={false}
           />

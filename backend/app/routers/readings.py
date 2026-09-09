@@ -57,6 +57,7 @@ async def list_readings(
             device_id=reading.device_id,
             device_code=code,
             time=reading.time,
+            received_at=reading.received_at,
             ph=float(reading.ph) if reading.ph is not None else None,
             temperature_c=float(reading.temperature_c) if reading.temperature_c is not None else None,
             salinity_ppt=float(reading.salinity_ppt) if reading.salinity_ppt is not None else None,

@@ -11,8 +11,9 @@ import Skeleton from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { useUser } from "@/lib/user-store";
 import { Device, DeviceAdmin, TargetKolam } from "@/lib/types";
+import { formatWaktu } from "@/lib/tanggal";
+import FormMessage, { type Message } from "@/components/ui/FormMessage";
 
-type Message = { type: "ok" | "err"; text: string } | null;
 
 const DEVICE_TYPE_LABEL: Record<Device["device_type"], string> = {
   slave_node: "Slave node",
@@ -20,21 +21,19 @@ const DEVICE_TYPE_LABEL: Record<Device["device_type"], string> = {
   gateway: "Gateway (Raspberry Pi)",
 };
 
-/** Pesan hasil submit, dirender tepat di bawah form yang memicunya. */
-function FormMessage({ message }: { message: Message }) {
-  if (!message) return null;
-  return (
-    <p
-      className={`rounded-lg px-3.5 py-2.5 text-sm ${
-        message.type === "ok"
-          ? "bg-status-amanBg text-status-aman"
-          : "bg-status-bahayaBg text-status-bahaya"
-      }`}
-    >
-      {message.text}
-    </p>
-  );
-}
+/**
+ * Tipe yang boleh DIPILIH saat mendaftarkan device baru — gateway TIDAK ikut.
+ *
+ * Gateway (Raspberry Pi) bukan device yang diklaim ke kolam: ia yang MENGIRIM
+ * data device lain lewat /ingest/* dengan X-API-Key, dan didaftarkan lewat
+ * seed SQL, bukan lewat panel ini. Menawarkannya di dropdown cuma mengundang
+ * baris yang tidak akan pernah punya pembacaan sensor.
+ *
+ * DEVICE_TYPE_LABEL di atas TETAP memuat gateway — ia dipakai sebagai label
+ * baris untuk gateway yang memang sudah terdaftar, dan enum backend
+ * (models/enums.py) juga tidak disentuh supaya device lama tidak jadi tertolak.
+ */
+const TIPE_BISA_DIDAFTAR: Device["device_type"][] = ["slave_node", "master_node"];
 
 /** Baris satu device dengan aksi pasang, lepas, atau hapus. */
 function DeviceRow({
@@ -62,7 +61,7 @@ function DeviceRow({
         <p className="mt-0.5 flex items-center gap-1.5 text-[11px] text-muted">
           <Clock className="h-3 w-3" />
           {d.last_seen_at
-            ? `Terakhir aktif: ${new Date(d.last_seen_at).toLocaleString("id-ID")}`
+            ? `Terakhir aktif: ${formatWaktu(d.last_seen_at)}`
             : "Belum pernah kirim data"}
         </p>
       </div>
@@ -138,6 +137,9 @@ export default function PerangkatPage() {
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [busyDeviceId, setBusyDeviceId] = useState<number | null>(null);
+  /** Hasil aksi pada BARIS device (pasang/lepas/hapus) — terpisah dari
+   *  formMessage yang milik form "Tambah device" di atasnya. */
+  const [aksiMessage, setAksiMessage] = useState<Message>(null);
 
   function loadDevices() {
     setLoadingList(true);
@@ -193,11 +195,16 @@ export default function PerangkatPage() {
     if (!konfirmasi) return;
 
     setBusyDeviceId(d.id);
+    setAksiMessage(null);
     try {
       await api.deleteDevice(d.id);
+      setAksiMessage({ type: "ok", text: `Device '${d.device_code}' berhasil dihapus.` });
       loadDevices();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal menghapus device.");
+      setAksiMessage({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal menghapus device.",
+      });
     } finally {
       setBusyDeviceId(null);
     }
@@ -209,12 +216,21 @@ export default function PerangkatPage() {
     );
     if (!konfirmasi) return;
 
+    const asalKolam = d.kolam_nama;
     setBusyDeviceId(d.id);
+    setAksiMessage(null);
     try {
       await api.unclaimDevice(d.id);
+      setAksiMessage({
+        type: "ok",
+        text: `Device '${d.device_code}' berhasil dilepas dari kolam '${asalKolam}'.`,
+      });
       loadDevices();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Gagal mencopot device dari kolam.");
+      setAksiMessage({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal mencopot device dari kolam.",
+      });
     } finally {
       setBusyDeviceId(null);
     }
@@ -232,8 +248,18 @@ export default function PerangkatPage() {
 
     setAssigning(true);
     setAssignError(null);
+    setAksiMessage(null);
     try {
       await api.claimDeviceToKolam(assignModalDevice.id, Number(selectedKolamId));
+      // Nama kolam dibaca dari daftar target SEBELUM loadDevices menyegarkannya,
+      // dan device-nya dari state modal sebelum modalnya ditutup.
+      const kolam = targetKolams.find((k) => k.id === Number(selectedKolamId));
+      setAksiMessage({
+        type: "ok",
+        text:
+          `Device '${assignModalDevice.device_code}' berhasil dipasang ke kolam ` +
+          `'${kolam?.nama ?? selectedKolamId}'.`,
+      });
       setAssignModalDevice(null);
       setSelectedKolamId("");
       loadDevices();
@@ -290,9 +316,9 @@ export default function PerangkatPage() {
                 value={deviceType}
                 onChange={(e) => setDeviceType(e.target.value as Device["device_type"])}
               >
-                {Object.entries(DEVICE_TYPE_LABEL).map(([value, label]) => (
+                {TIPE_BISA_DIDAFTAR.map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {DEVICE_TYPE_LABEL[value]}
                   </option>
                 ))}
               </select>
@@ -308,6 +334,11 @@ export default function PerangkatPage() {
             </div>
           </form>
         </Card>
+
+        {/* Hasil pasang/lepas/hapus. Di ATAS kedua daftar, karena aksinya
+            memindahkan barisnya antar daftar — pesan yang menempel di barisnya
+            sendiri akan ikut hilang bersama baris itu. */}
+        <FormMessage message={aksiMessage} />
 
         {listError && (
           <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">

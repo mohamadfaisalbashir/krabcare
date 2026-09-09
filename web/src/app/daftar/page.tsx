@@ -66,9 +66,16 @@ export default function DaftarPage() {
             onChange={(e) => setNama(e.target.value)}
             required
           />
+          {/* pattern WAJIB di samping type="email": type="email" saja meloloskan
+              "a@b" (tanpa titik & TLD), yang lalu ditolak pola backend di
+              schemas/user.py dan baru ketahuan setelah request bolak-balik.
+              Pola ini versi ringkas dari pola backend — cukup untuk menangkap
+              kesalahan ketik di browser; backend tetap penjaga terakhirnya. */}
           <Input
             label="Email"
             type="email"
+            pattern="[^@\s]+@[^@\s.]+(\.[^@\s.]+)*\.[A-Za-z]{2,}"
+            title="Masukkan email lengkap dengan domain, contoh: nama@email.com"
             placeholder="nama@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

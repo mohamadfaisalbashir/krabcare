@@ -90,15 +90,23 @@ Ada **dua jalur terpisah**, jangan tertukar:
 Langkah yang harus dilakukan sebelum ada apa pun kelihatan di web:
 
 1. Register + login user.
-2. `POST /api/v1/kolam` — buat kolam.
-3. `POST /api/v1/kolam/{kolam_id}/devices/{device_code}` — klaim device ke kolam.
-   **Satu kolam = satu rak = TEPAT SATU device** (`kolam_service.py:74`). Klaim device
-   kedua ke kolam yang sama ditolak 409, dan tidak ada cascade master → slave.
+2. `POST /api/v1/kolam` — buat kolam **sekaligus klaim device-nya**. Body-nya
+   `{"nama": "...", "device_code": "..."}`; `device_code` **wajib**, karena
+   **satu kolam = satu rak = TEPAT SATU device** (`kolam_service.py`). Keduanya
+   satu transaksi: `device_code` tidak dikenal → 404 dan kolamnya **tidak jadi
+   dibuat**, sudah dipakai kolam lain → 409. Tidak ada kolam yatim yang harus
+   dibersihkan manual.
+3. `POST /api/v1/kolam/{kolam_id}/devices/{device_code}` — masih ada, untuk
+   MENGGANTI/menambahkan device pada kolam yang sudah terlanjur dibuat. Klaim
+   device kedua ke kolam yang sama tetap ditolak 409, dan tidak ada cascade
+   master → slave.
 4. Nyalakan Raspberry Pi. Gateway POST ke `/api/v1/ingest/readings` (data mentah sensor)
    dan `/api/v1/ingest/quality` (hasil klasifikasi, forecast, risiko amonia yang sudah
    dihitung Raspi lewat `raspi/edge_pipeline.py`), keduanya pakai `X-API-Key` yang sama.
 5. Data bisa diambil lewat:
-   - `GET /api/v1/readings` — data historis sensor
+   - `GET /api/v1/readings` — data historis sensor (ikut `received_at`, jam
+     backend saat baris itu masuk; selisihnya terhadap `time` = latensi gateway,
+     dan itulah kolom `latensi_detik` di ekspor CSV/XLSX)
    - `GET /api/v1/quality/latest` — status ringkas kualitas air terkini
    - `GET /api/v1/quality/predictions` — forecast 15/30/60 menit ke depan (untuk grafik)
    - `GET /api/v1/kolam/{kolam_id}/devices` — topologi device dalam satu kolam (rak)

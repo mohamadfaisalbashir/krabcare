@@ -76,6 +76,46 @@ export function confirmLogout(): void {
   }
 }
 
+/**
+ * `detail` FastAPI punya DUA bentuk, dan itu bukan detail sepele.
+ *
+ * HTTPException yang kita lempar sendiri mengisinya dengan string. TAPI galat
+ * validasi Pydantic (422) mengisinya dengan ARRAY objek
+ * `{loc, msg, type, ...}` — dan `new Error(array)` menghasilkan "[object
+ * Object]". Itulah kenapa email yang ditolak pola backend terasa seperti tidak
+ * divalidasi sama sekali: pesannya memang ada, cuma tidak pernah terbaca.
+ *
+ * `loc` dipakai untuk menyebut nama field-nya, karena satu form bisa punya
+ * beberapa field dan "String should match pattern" saja tidak memberi tahu yang
+ * mana.
+ */
+function pesanError(detail: unknown, status: number): string {
+  if (typeof detail === "string" && detail) return detail;
+
+  if (Array.isArray(detail) && detail.length > 0) {
+    const pertama = detail[0] as { loc?: unknown[]; msg?: string };
+    const msg = pertama?.msg;
+    if (msg) {
+      // loc = ["body", "email"] -> "email". Segmen pertama selalu sumbernya
+      // (body/query/path), jadi yang berguna bagi pengguna adalah yang terakhir.
+      const field = Array.isArray(pertama.loc) ? pertama.loc[pertama.loc.length - 1] : null;
+      const label = FIELD_LABEL[String(field)] ?? (field ? String(field) : null);
+      return label ? `${label}: ${msg}` : msg;
+    }
+  }
+
+  return `Permintaan gagal (${status})`;
+}
+
+/** Nama field backend -> label Indonesia, supaya pesan 422 bisa dibaca pengguna. */
+const FIELD_LABEL: Record<string, string> = {
+  email: "Email tidak valid",
+  password: "Kata sandi",
+  new_password: "Kata sandi baru",
+  nama: "Nama",
+  device_code: "Kode device",
+};
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
@@ -113,7 +153,7 @@ async function request<T>(
   if (!res.ok) {
     // Backend FastAPI mengirim error di field `detail`, bukan `message`.
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.detail ?? `Permintaan gagal (${res.status})`);
+    throw new Error(pesanError(body?.detail, res.status));
   }
 
   // Beberapa endpoint (mis. change-password) return 204 tanpa body.
@@ -155,6 +195,11 @@ export const api = {
       body: JSON.stringify({ old_password, new_password }),
     }),
 
+  /** DELETE /auth/me → 204. PERMANEN, dan menghapus kolam + notifikasi user ini.
+   *  Device-nya selamat (FK SET NULL) beserta riwayat sensornya — ia cuma
+   *  kembali jadi belum diklaim dan bisa dipasang admin ke pemilik lain. */
+  deleteAccount: () => request<void>("/auth/me", { method: "DELETE" }),
+
   /** POST /auth/forgot-password → {detail} */
   forgotPassword: (email: string) =>
     request<{ detail: string }>("/auth/forgot-password", {
@@ -171,11 +216,13 @@ export const api = {
 
   // ── Kolam (routers/kolam.py) ──────────────────────────────────────
 
-  /** POST /kolam → KolamOut */
-  createKolam: (nama: string) =>
+  /** POST /kolam → KolamOut. Kolam DAN klaim device-nya sekaligus.
+   *  Satu transaksi di backend: device_code yang salah -> 404/409 dan kolamnya
+   *  TIDAK jadi dibuat, jadi tidak perlu rollback dari sisi klien. */
+  createKolam: (nama: string, device_code: string) =>
     request<import("./types").Kolam>("/kolam", {
       method: "POST",
-      body: JSON.stringify({ nama }),
+      body: JSON.stringify({ nama, device_code }),
     }),
 
   /** PUT /kolam/:id → KolamOut. */
@@ -327,9 +374,17 @@ export const api = {
   // ── Notifications (routers/notifications.py) ──────────────────────
 
   /** GET /notifications → NotificationOut[] */
-  getNotifications: (params?: { unread_only?: boolean; limit?: number; offset?: number }) => {
+  getNotifications: (params?: {
+    unread_only?: boolean;
+    limit?: number;
+    offset?: number;
+    /** Disaring di SQL. Menyaring di klien setelah limit membuat tab filter
+     *  tampak kosong padahal barisnya ada di halaman berikutnya. */
+    source?: import("./types").NotifSource;
+  }) => {
     const qs = new URLSearchParams();
     if (params?.unread_only) qs.set("unread_only", "true");
+    if (params?.source) qs.set("source", params.source);
     if (params?.limit) qs.set("limit", String(params.limit));
     // != null, bukan cek falsy: offset=0 itu halaman pertama, bukan "tidak diisi".
     if (params?.offset != null) qs.set("offset", String(params.offset));

@@ -9,11 +9,8 @@ yang berbentuk NH3 toksik pada pH/suhu/salinitas tertentu. TIDAK menghitung
 konsentrasi mg/L, karena sensor amonia tidak terpasang di hardware ini.
 
 Referensi:
-[1] Emerson et al. 1975, J. Fish. Res. Board Can. 32(12):2379-2383.
-[2] Bower & Bidwell 1978, J. Fish. Res. Board Can. 35(7):1012-1016.
-[3] Spotte & Adams 1983, Mar. Ecol. Prog. Ser. 10:207-210.
-
-Murni stdlib.
+[1] Hopton, C. M., Nienow, P., & Cockell, C. S. (2025). Ammonia sets limit to life and alters physiology independently of pH in Halomonas meridiana. Scientific Reports, 15, 19549.  
+[2] Florida Department of Environmental Protection. (2001). Chemistry Laboratory Methods Manual: Calculation of Un-ionized Ammonia in Fresh Water (Revision 2). Tallahassee, FL: FDEP.
 """
 
 from dataclasses import dataclass
@@ -53,9 +50,7 @@ def _ionic_strength(salinity_ppt: float) -> float:
 def _pka_saline(temperature_c: float, salinity_ppt: float) -> float:
     ionic = _ionic_strength(salinity_ppt)
     return (
-        0.0901821
-        + 2729.92 / (temperature_c + 273.2)
-        + (0.1552 - 0.0003142 * temperature_c) * ionic
+        0.0901821 + 2729.92 / (temperature_c + 273.2) + (0.1552 - 0.0003142 * temperature_c) * ionic
     )
 
 

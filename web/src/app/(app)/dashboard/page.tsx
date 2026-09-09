@@ -55,6 +55,7 @@ export default function DashboardPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [nama, setNama] = useState("");
+  const [kodeDevice, setKodeDevice] = useState("");
   const [saving, setSaving] = useState(false);
 
   // Rak yang detailnya sedang terbuka di bawah kartu. null = belum ada yang
@@ -207,8 +208,9 @@ export default function DashboardPage() {
     setSaving(true);
     setError(null);
     try {
-      await api.createKolam(nama);
+      await api.createKolam(nama, kodeDevice.trim());
       setNama("");
+      setKodeDevice("");
       setShowForm(false);
       await loadDashboard();
     } catch (err) {
@@ -369,6 +371,15 @@ export default function DashboardPage() {
           ruang di bawahnya jadi milik panel detail. */}
       {variant === "grid" ? (
         <div className="relative z-10 -mt-20 px-5 sm:-mt-24 sm:px-8">
+          {/* Petunjuk sekali di sini, bukan tooltip di tiap kartu: satu-satunya
+              isyarat bahwa kartu bisa diklik selama ini cuma chevron kecil di
+              pojoknya, yang tidak pernah menyebut apa yang akan terjadi.
+              Hilang begitu ada kolam terpilih (variant "rail") — saat itu
+              pengguna sudah membuktikan sendiri kartunya bisa diklik. */}
+          <p className="mb-3 text-xs text-muted">
+            Ketuk kartu kolam untuk membuka detailnya: parameter terkini,
+            prediksi, dan grafik pemantauan.
+          </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {cards}
             <TambahKolamTile variant="grid" onClick={() => setShowForm((v) => !v)} />
@@ -394,6 +405,23 @@ export default function DashboardPage() {
                 onChange={(e) => setNama(e.target.value)}
                 required
               />
+              {/* Device ditentukan di sini juga, bukan langkah kedua di panel
+                  detail: satu kolam = satu rak = tepat satu device, jadi kolam
+                  tanpa device adalah baris yang belum berfungsi. Backend
+                  mengerjakan keduanya dalam SATU transaksi — kode yang salah
+                  berarti kolamnya tidak jadi dibuat, bukan kolam kosong yang
+                  harus dihapus manual. */}
+              <Input
+                label="Kode device"
+                placeholder="54D660E9BFB4"
+                value={kodeDevice}
+                onChange={(e) => setKodeDevice(e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted">
+                Kode device = MAC address ESP32 tanpa titik dua, huruf besar.
+                Device harus sudah didaftarkan admin dan belum diklaim kolam lain.
+              </p>
               <Button type="submit" disabled={saving}>
                 {saving ? "Menyimpan..." : "Simpan kolam"}
               </Button>

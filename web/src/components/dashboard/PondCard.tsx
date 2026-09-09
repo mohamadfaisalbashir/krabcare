@@ -63,6 +63,9 @@ export default function PondCard({
       onClick={() => onSelect(kolam.id)}
       aria-expanded={selected}
       aria-controls={panelId}
+      // aria-expanded sendirian cuma berbunyi "diciutkan"; pembaca layar tidak
+      // tahu apa yang akan terbentang. Label ini yang menyebutnya.
+      aria-label={`${kolam.nama} — ${selected ? "tutup" : "buka"} detail kolam`}
       // Dipakai dashboard untuk menggulirkan kartu terpilih ke tengah rail.
       data-pondcard={kolam.id}
       className={clsx(

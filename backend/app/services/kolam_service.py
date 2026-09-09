@@ -22,10 +22,23 @@ class DeviceAlreadyClaimedError(KolamError):
 
 
 async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) -> Kolam:
-    """Kolam baru, langsung terikat ke pembuatnya."""
+    """Kolam baru + klaim device-nya, dalam SATU transaksi.
+
+    flush() dulu supaya `kolam.id` terisi tanpa commit; commit-nya baru terjadi
+    di dalam claim_device. Jadi kalau device_code salah atau sudah dipakai,
+    rollback membatalkan kolamnya juga — tidak ada kolam yatim yang tertinggal
+    karena langkah kedua gagal.
+    """
     kolam = Kolam(owner_user_id=owner.id, nama=payload.nama)
     db.add(kolam)
-    await db.commit()
+    await db.flush()
+
+    try:
+        await claim_device(db, kolam, payload.device_code)
+    except KolamError:
+        await db.rollback()
+        raise
+
     await db.refresh(kolam)
     return kolam
 

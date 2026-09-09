@@ -33,6 +33,23 @@ export default function DangerZone({
   const cocok = ketikan.trim() === nama;
 
   async function handleHapus() {
+    // Peringatan TERAKHIR, di atas ketik-ulang-nama. Keduanya menjaga hal yang
+    // berbeda: mengetik nama menjaga dari salah KOLAM, dialog ini menjaga dari
+    // salah TEKAN — nama yang benar bisa saja sudah terlanjur diketik lalu
+    // tombolnya tersenggol. Sengaja window.confirm, sama seperti tiga
+    // konfirmasi destruktif lain di aplikasi ini (lihat lib/api.ts:69).
+    if (
+      !window.confirm(
+        `Hapus kolam "${nama}" secara permanen?\n\n` +
+          "Seluruh notifikasi kolam ini ikut terhapus. Device-nya tidak " +
+          "terhapus, hanya kembali jadi belum diklaim beserta riwayat sensornya." +
+          "\n\n" +
+          "Tindakan ini tidak bisa dibatalkan."
+      )
+    ) {
+      return;
+    }
+
     setError(null);
     setMenghapus(true);
     try {

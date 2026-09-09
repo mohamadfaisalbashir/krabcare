@@ -12,9 +12,11 @@ import {
   dayRangeToIso,
   fetchAllReadings,
   toCsv,
-  csvFilename,
+  namaBerkas,
   downloadCsv,
+  downloadXlsx,
   MAX_PAGES,
+  type ExportFormat,
   type GetPage,
 } from "@/lib/export";
 
@@ -33,6 +35,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
   const [from, setFrom] = useState(isoDay(weekAgo));
   const [to, setTo] = useState(isoDay(today));
   const [paramSel, setParamSel] = useState<ParamKey | "semua">("semua");
+  const [format, setFormat] = useState<ExportFormat>("csv");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +71,12 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
         sensors.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))
       );
 
-      const rows = results.flatMap((r) => r.rows);
+      // flatMap menyambung sensor demi sensor, jadi berkas gabungan melompat
+      // mundur ke awal rentang tiap kali ganti sensor. Diurutkan lagi supaya
+      // seluruh berkas benar-benar kronologis dari yang paling lama.
+      const rows = results
+        .flatMap((r) => r.rows)
+        .sort((a, b) => a.time.localeCompare(b.time));
       if (rows.length === 0) {
         setError("Tidak ada data pada rentang tanggal itu.");
         return;
@@ -77,15 +85,21 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       const params = paramSel === "semua" ? PARAM_KEYS : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
 
-      downloadCsv(toCsv(rows, params, kolamByDevice), csvFilename("semua", params, from, to));
+      const filename = namaBerkas("semua", params, from, to, format);
+      if (format === "xlsx") {
+        await downloadXlsx(rows, params, kolamByDevice, filename);
+      } else {
+        downloadCsv(toCsv(rows, params, kolamByDevice), filename);
+      }
 
       if (results.some((r) => r.truncated)) {
         // Paging berjalan dari terbaru ke terlama, jadi yang terpotong adalah
-        // data PALING LAMA. Itu harus dikatakan, bukan sekadar "terpotong".
+        // data PALING LAMA — dan karena berkasnya sekarang mulai dari yang
+        // terlama, potongan itu ada di AWAL berkas, bukan di akhir.
         setNote(
           `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai. ` +
-            "Berkas berisi data terbaru saja, data paling lama terpotong. " +
-            "Persempit rentang tanggalnya."
+            "Data paling lama terpotong, jadi berkas ini tidak mulai dari tanggal " +
+            "'Dari' yang dipilih. Persempit rentang tanggalnya."
         );
       }
     } catch (err) {
@@ -100,7 +114,9 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       <div className="mb-3">
         <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
         <p className="mt-1 text-xs text-muted">
-          Berkas CSV berisi nilai apa adanya pada rentang tanggal yang dipilih.
+          Berisi nilai apa adanya pada rentang tanggal yang dipilih, mulai dari
+          data paling lama. Kolom <code>latensi_detik</code> = selisih jam device
+          dan jam server saat baris itu diterima.
         </p>
       </div>
 
@@ -145,9 +161,26 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           </select>
         </div>
 
+        <div className="sm:w-36">
+          <label htmlFor="unduh-format" className="label-field">
+            Format
+          </label>
+          <select
+            id="unduh-format"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as ExportFormat)}
+            className="input-field"
+          >
+            <option value="csv">CSV</option>
+            <option value="xlsx">Excel (XLSX)</option>
+          </select>
+        </div>
+
         <Button variant="ghost" onClick={handleDownload} disabled={busy}>
           <Download className="mr-1.5 inline h-4 w-4" />
-          {busy ? `Mengunduh… (${progress.toLocaleString("id-ID")} baris)` : "Unduh CSV"}
+          {busy
+            ? `Mengunduh… (${progress.toLocaleString("id-ID")} baris)`
+            : `Unduh ${format.toUpperCase()}`}
         </Button>
       </div>
 

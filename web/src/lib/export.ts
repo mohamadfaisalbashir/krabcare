@@ -1,10 +1,16 @@
-// Ekspor data mentah sensor ke CSV. Seluruhnya di klien: backend tidak punya
-// endpoint ekspor, dan /readings dibatasi 1000 baris per permintaan.
+// Ekspor data mentah sensor ke CSV & XLSX. Seluruhnya di klien: backend tidak
+// punya endpoint ekspor, dan /readings dibatasi 1000 baris per permintaan.
 //
-// Modul ini sengaja TANPA import runtime (hanya `import type`, yang terhapus
-// saat kompilasi) supaya `node --test` bisa memuatnya tanpa me-resolve apa pun.
+// Modul ini sengaja TANPA import runtime di ATAS (hanya `import type`, yang
+// terhapus saat kompilasi) supaya `node --test` bisa memuatnya tanpa me-resolve
+// apa pun. write-excel-file karenanya di-import DINAMIS di dalam downloadXlsx,
+// bukan di kepala berkas: ia satu-satunya bagian yang butuh DOM + bundler, dan
+// import statis di sini akan mematikan seluruh berkas tesnya. Efek sampingnya
+// kebetulan menguntungkan — pustakanya baru diunduh browser saat pengguna
+// benar-benar memilih XLSX.
 import type { SensorReading } from "./types";
 import type { ParamKey } from "./parameter";
+import { formatWaktuDetik } from "./tanggal.ts";
 
 /** RFC 4180 + default pandas. Ganti ";" kalau Excel-ID jadi konsumen utama. */
 export const CSV_SEP = ",";
@@ -48,6 +54,10 @@ export type GetPage = (p: {
  * batas halaman selalu tepat satu baris dan selalu di posisi pertama. Query
  * lintas device tidak punya jaminan itu dan akan menggandakan atau menghilangkan
  * baris di tiap batas.
+ *
+ * Hasilnya DIBALIK sebelum dikembalikan: paging jalan mundur (terbaru dulu),
+ * sedangkan berkas ekspor harus mulai dari data TERLAMA. Dibalik di sini, satu
+ * tempat, bukan di pemanggil — supaya urutannya tidak bisa beda antar pemakai.
  */
 export async function fetchAllReadings(
   getPage: GetPage,
@@ -67,7 +77,7 @@ export async function fetchAllReadings(
 
     // Halaman tidak penuh berarti jendela waktunya sudah habis. Syarat ini juga
     // sudah mencakup halaman kosong dan halaman yang isinya cuma duplikat.
-    if (page.length < CHUNK) return { rows, truncated: false };
+    if (page.length < CHUNK) return { rows: rows.reverse(), truncated: false };
 
     // Verbatim, jangan lewat Date: `time` punya presisi mikrodetik dan
     // toISOString() memotongnya ke milidetik — cursor jadi bergeser lebih awal
@@ -75,7 +85,7 @@ export async function fetchAllReadings(
     cursor = page[page.length - 1].time;
   }
 
-  return { rows, truncated: true };
+  return { rows: rows.reverse(), truncated: true };
 }
 
 /** Bungkus sel yang mengandung pemisah, kutip, atau newline (nama kolam itu teks bebas). */
@@ -84,12 +94,27 @@ function cell(s: string): string {
 }
 
 /**
- * Waktu lokal siap baca: "2026-08-31 16:12:57". Locale sv-SE kebetulan
- * menghasilkan format ISO-like yang zero-padded dan bisa diurutkan sebagai
- * teks — tidak perlu pustaka tanggal.
+ * Selisih jam device (`time`) dan jam backend (`received_at`), dalam detik.
+ *
+ * Inilah latensi gateway->backend yang jadi tujuan kolom ini. Bisa NEGATIF
+ * kalau jam Raspberry Pi berjalan lebih cepat dari jam server — dan itu justru
+ * yang perlu terlihat, jadi JANGAN dijepit ke 0: angka negatif adalah bukti
+ * jamnya perlu disinkronkan, bukan noise yang harus disembunyikan.
  */
-function localStamp(iso: string): string {
-  return new Date(iso).toLocaleString("sv-SE");
+export function latensiDetik(r: SensorReading): number {
+  return (new Date(r.received_at).getTime() - new Date(r.time).getTime()) / 1000;
+}
+
+/** Nama kolom, satu definisi untuk CSV maupun XLSX. */
+export function headerFor(params: ParamKey[]): string[] {
+  return [
+    "waktu_lokal",
+    "waktu_diterima",
+    "latensi_detik",
+    "device_code",
+    "kolam",
+    ...params,
+  ];
 }
 
 /**
@@ -101,8 +126,7 @@ export function toCsv(
   params: ParamKey[],
   kolamByDevice: Record<number, string>
 ): string {
-  const header = ["waktu_lokal", "device_code", "kolam", ...params];
-  const lines = [header.join(CSV_SEP)];
+  const lines = [headerFor(params).join(CSV_SEP)];
 
   for (const r of rows) {
     const values = params.map((p) => {
@@ -113,7 +137,9 @@ export function toCsv(
     });
     lines.push(
       [
-        localStamp(r.time),
+        formatWaktuDetik(r.time),
+        formatWaktuDetik(r.received_at),
+        String(latensiDetik(r)),
         cell(r.device_code),
         cell(kolamByDevice[r.device_id] ?? ""),
         ...values,
@@ -124,23 +150,100 @@ export function toCsv(
   return lines.join("\n");
 }
 
-export function csvFilename(
+/** "csv" | "xlsx" — dipilih pengguna di ExportPanel. */
+export type ExportFormat = "csv" | "xlsx";
+
+export function namaBerkas(
   deviceLabel: string,
   params: ParamKey[],
   from: string,
-  to: string
+  to: string,
+  format: ExportFormat
 ): string {
   // Segmen parameter dihilangkan kalau ketiganya ikut — namanya sudah panjang.
   const paramPart = params.length === 3 ? "" : `_${params.join("-")}`;
-  return `log-sensor_${deviceLabel}${paramPart}_${from}_${to}.csv`;
+  return `log-sensor_${deviceLabel}${paramPart}_${from}_${to}.${format}`;
 }
 
-export function downloadCsv(csv: string, filename: string): void {
-  const url = URL.createObjectURL(
-    new Blob([CSV_BOM + csv], { type: "text/csv;charset=utf-8" })
-  );
+function unduh(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: filename });
   a.click();
   // Revoke langsung pernah membatalkan unduhan di Safari; tunda satu tick.
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export function downloadCsv(csv: string, filename: string): void {
+  unduh(new Blob([CSV_BOM + csv], { type: "text/csv;charset=utf-8" }), filename);
+}
+
+/**
+ * XLSX lewat write-excel-file v4 (import dinamis — lihat catatan di kepala berkas).
+ *
+ * Subpath `/browser` WAJIB: paketnya tidak punya export root ".", cuma
+ * "./browser", "./node", "./universal". `import("write-excel-file")` polos
+ * gagal resolve.
+ *
+ * Kedua kolom waktu ditulis sebagai `Date` asli dengan format tampilan
+ * dd-mm-yyyy, BUKAN teks. Itu bedanya dengan CSV: di Excel kolomnya tampil
+ * dd-mm-yyyy persis seperti yang diminta, tapi tetap terurut & terfilter
+ * sebagai tanggal. Teks "09-09-2026" akan terurut sebagai teks, dan Januari
+ * 2027 mendarat di antara dua tanggal September 2026.
+ */
+export async function downloadXlsx(
+  rows: SensorReading[],
+  params: ParamKey[],
+  kolamByDevice: Record<number, string>,
+  filename: string
+): Promise<void> {
+  const writeXlsxFile = (await import("write-excel-file/browser")).default;
+
+  const FORMAT_TANGGAL = "dd-mm-yyyy hh:mm:ss";
+  const header = (value: string) => ({ value, fontWeight: "bold" as const });
+
+  const columns = [
+    {
+      header: header("waktu_lokal"),
+      cell: (r: SensorReading) => ({
+        value: new Date(r.time),
+        type: Date,
+        format: FORMAT_TANGGAL,
+      }),
+      width: 20,
+    },
+    {
+      header: header("waktu_diterima"),
+      cell: (r: SensorReading) => ({
+        value: new Date(r.received_at),
+        type: Date,
+        format: FORMAT_TANGGAL,
+      }),
+      width: 20,
+    },
+    {
+      header: header("latensi_detik"),
+      cell: (r: SensorReading) => ({ value: latensiDetik(r), type: Number }),
+    },
+    {
+      header: header("device_code"),
+      cell: (r: SensorReading) => ({ value: r.device_code, type: String }),
+    },
+    {
+      header: header("kolam"),
+      cell: (r: SensorReading) => ({
+        value: kolamByDevice[r.device_id] ?? "",
+        type: String,
+      }),
+      width: 18,
+    },
+    ...params.map((p) => ({
+      header: header(p),
+      // undefined, BUKAN null: sel kosong harus benar-benar kosong supaya
+      // Excel tidak membacanya sebagai 0 — pembacaan sensor yang hilang
+      // bukan pembacaan bernilai nol.
+      cell: (r: SensorReading) => ({ value: r[p] ?? undefined, type: Number }),
+    })),
+  ];
+
+  await writeXlsxFile(rows, { columns }).toFile(filename);
 }
