@@ -195,7 +195,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
                 {PARAM_UI[p].short}
               </option>
             ))}
-            <option value="amonia">{AMONIA_UI.short} saja</option>
+            <option value="amonia">{AMONIA_UI.short}</option>
           </select>
         </div>
 

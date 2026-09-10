@@ -80,6 +80,17 @@ class Settings(BaseSettings):
             problems.append("POSTGRES_PASSWORD")
         if self.DEBUG:
             problems.append("DEBUG harus false di production")
+        # Default keduanya localhost:3000 (lihat komentar di atas field-nya) --
+        # kalau VPS lupa mengisi .env, email verifikasi/reset password akan
+        # terkirim dengan link localhost yang tidak pernah bisa dibuka
+        # pengguna, DIAM-DIAM (tidak ada error apa pun saat start maupun saat
+        # kirim, cuma link di email yang salah). Ditolak di sini supaya
+        # kesalahannya kelihatan saat deploy, bukan lewat keluhan "link
+        # verifikasi localhost" dari pengguna.
+        if "localhost" in self.FRONTEND_VERIFY_EMAIL_URL:
+            problems.append("FRONTEND_VERIFY_EMAIL_URL masih localhost")
+        if "localhost" in self.FRONTEND_RESET_PASSWORD_URL:
+            problems.append("FRONTEND_RESET_PASSWORD_URL masih localhost")
         if problems:
             raise ValueError(
                 "Konfigurasi production tidak aman, masih memakai nilai placeholder "
