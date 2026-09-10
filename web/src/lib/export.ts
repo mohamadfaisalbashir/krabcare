@@ -116,18 +116,29 @@ export function latensiDetik(r: SensorReading): number {
 }
 
 /**
- * Amonia per baris sensor, dikunci `${device_id}|${time}`.
+ * Toleransi pencocokan reading sensor <-> baris amonia, dalam milidetik.
  *
- * Amonia hidup di tabel lain (`ammonia_risks`) dan diambil lewat endpoint lain,
- * tapi dihitung DARI pembacaan sensor yang sama, jadi `time`-nya identik dan
- * bisa dipasangkan tepat. Baris sensor yang tidak punya pasangan meninggalkan
- * sel kosong, sama seperti parameter yang null.
+ * Amonia hidup di tabel lain (`ammonia_risks`) dan diambil lewat endpoint
+ * lain, tapi SEHARUSNYA dihitung dari pembacaan sensor yang sama persis
+ * (lihat raspi/edge_pipeline.py: satu variabel `waktu` dipakai untuk
+ * keduanya). Kenyataan di lapangan: gateway mengirimkannya lewat DUA request
+ * HTTP terpisah (POST /ingest/readings lalu POST /ingest/quality), dan jeda
+ * beberapa detik di antara keduanya membuat `time` yang tersimpan di
+ * ammonia_risks tidak selalu identik BIT-PER-BIT dengan `time` di
+ * sensor_readings. Pencocokan kunci string persis sebelumnya membuat kolom
+ * amonia di ekspor kosong 100% walau datanya ADA di database.
+ *
+ * Diganti jadi "amonia terdekat pada device yang sama, dalam jendela ini".
+ * 30 detik dipilih karena interval antar-reading pada sistem ini biasanya
+ * 60 detik ke atas, jadi jendela ini tidak akan salah pasang ke reading
+ * tetangga, tapi cukup longgar untuk menyerap jeda dua-request di atas.
  */
-export type PetaAmonia = Map<string, { fraction_nh3_pct: number | null; risk_level: string | null }>;
+export const TOLERANSI_AMONIA_MS = 30_000;
 
-export function kunciAmonia(device_id: number, time: string): string {
-  return `${device_id}|${time}`;
-}
+type BarisAmonia = { t: number; fraction_nh3_pct: number | null; risk_level: string | null };
+
+/** Amonia dikelompokkan per device, diurutkan waktu naik (syarat binary search di cariAmonia). */
+export type PetaAmonia = Map<number, BarisAmonia[]>;
 
 /** Susun peta amonia dari hasil /quality/ammonia-risk/history. */
 export function petaAmoniaDari(
@@ -135,12 +146,53 @@ export function petaAmoniaDari(
 ): PetaAmonia {
   const peta: PetaAmonia = new Map();
   for (const a of rows) {
-    peta.set(kunciAmonia(a.device_id, a.time), {
+    const arr = peta.get(a.device_id) ?? [];
+    arr.push({
+      t: new Date(a.time).getTime(),
       fraction_nh3_pct: a.fraction_nh3_pct,
       risk_level: a.risk_level,
     });
+    peta.set(a.device_id, arr);
   }
+  for (const arr of peta.values()) arr.sort((x, y) => x.t - y.t);
   return peta;
+}
+
+/**
+ * Amonia device tertentu yang waktunya PALING DEKAT dengan `time`, kalau ada
+ * yang jatuh dalam TOLERANSI_AMONIA_MS. Binary search: array per-device sudah
+ * terurut naik (dijamin petaAmoniaDari), jadi tetangga terdekat cuma bisa ada
+ * tepat di titik potong itu atau satu langkah sebelumnya.
+ */
+export function cariAmonia(
+  peta: PetaAmonia,
+  device_id: number,
+  time: string
+): { fraction_nh3_pct: number | null; risk_level: string | null } | undefined {
+  const arr = peta.get(device_id);
+  if (!arr || arr.length === 0) return undefined;
+
+  const target = new Date(time).getTime();
+  let lo = 0;
+  let hi = arr.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid].t < target) lo = mid + 1;
+    else hi = mid;
+  }
+
+  let terbaik = arr[lo];
+  let jarak = Math.abs(terbaik.t - target);
+  if (lo > 0) {
+    const sebelum = arr[lo - 1];
+    const jarakSebelum = Math.abs(sebelum.t - target);
+    if (jarakSebelum < jarak) {
+      terbaik = sebelum;
+      jarak = jarakSebelum;
+    }
+  }
+
+  return jarak <= TOLERANSI_AMONIA_MS ? terbaik : undefined;
 }
 
 /** Nama kolom, satu definisi untuk CSV maupun XLSX. */
@@ -179,7 +231,7 @@ export function toCsv(
       // presisi penuh. null jadi sel kosong (dibaca pandas sebagai NaN).
       return v == null ? "" : String(v);
     });
-    const a = amonia.get(kunciAmonia(r.device_id, r.time));
+    const a = cariAmonia(amonia, r.device_id, r.time);
     lines.push(
       [
         formatWaktuDetik(r.time),
@@ -298,7 +350,7 @@ export async function downloadXlsx(
     {
       header: header("amonia_nh3_persen"),
       cell: (r: SensorReading) => ({
-        value: amonia.get(kunciAmonia(r.device_id, r.time))?.fraction_nh3_pct ?? undefined,
+        value: cariAmonia(amonia, r.device_id, r.time)?.fraction_nh3_pct ?? undefined,
         type: Number,
       }),
       width: 18,
@@ -306,7 +358,7 @@ export async function downloadXlsx(
     {
       header: header("amonia_risiko"),
       cell: (r: SensorReading) => ({
-        value: amonia.get(kunciAmonia(r.device_id, r.time))?.risk_level ?? undefined,
+        value: cariAmonia(amonia, r.device_id, r.time)?.risk_level ?? undefined,
         type: String,
       }),
       width: 14,

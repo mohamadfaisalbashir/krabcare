@@ -14,6 +14,7 @@ import {
   latensiDetik,
   namaBerkas,
   petaAmoniaDari,
+  TOLERANSI_AMONIA_MS,
 } from "./export.ts";
 import { formatTanggal, formatWaktu, formatWaktuDetik } from "./tanggal.ts";
 import type { SensorReading } from "./types.ts";
@@ -118,6 +119,47 @@ test("toCsv: amonia terpasang ke baris sensor berwaktu sama", () => {
   assert.equal(sel[5], "7.5");
   assert.equal(sel[6], "3.7");
   assert.equal(sel[7], "perhatian");
+});
+
+test("toCsv: amonia yang mesetnya beberapa detik dari reading (dua request ingest terpisah) tetap terpasang", () => {
+  // Kasus nyata di lapangan: POST /ingest/readings dan POST /ingest/quality
+  // adalah DUA request terpisah, jedanya beberapa detik membuat `time` di
+  // ammonia_risks TIDAK identik bit-per-bit dengan `time` di sensor_readings.
+  // Sebelumnya ini bikin kolom amonia kosong 100% di ekspor walau datanya ada.
+  const geser = (i: number, ms: number) => new Date(new Date(baris(i).time).getTime() + ms).toISOString();
+  const peta = petaAmoniaDari([
+    { device_id: 1, time: geser(0, 4000), fraction_nh3_pct: 2.4, risk_level: "normal" },
+  ]);
+  const sel = toCsv([baris(0)], ["ph"], {}, peta).split("\n")[1].split(",");
+  assert.equal(sel[6], "2.4");
+  assert.equal(sel[7], "normal");
+});
+
+test("toCsv: amonia yang meleset lebih jauh dari TOLERANSI_AMONIA_MS tidak dipasangkan", () => {
+  const geser = (i: number, ms: number) => new Date(new Date(baris(i).time).getTime() + ms).toISOString();
+  const peta = petaAmoniaDari([
+    {
+      device_id: 1,
+      time: geser(0, TOLERANSI_AMONIA_MS + 1000),
+      fraction_nh3_pct: 2.4,
+      risk_level: "normal",
+    },
+  ]);
+  const sel = toCsv([baris(0)], ["ph"], {}, peta).split("\n")[1].split(",");
+  assert.equal(sel[6], "");
+  assert.equal(sel[7], "");
+});
+
+test("toCsv: di antara beberapa kandidat, yang dipasangkan adalah yang PALING DEKAT waktunya", () => {
+  const geser = (i: number, ms: number) => new Date(new Date(baris(i).time).getTime() + ms).toISOString();
+  const peta = petaAmoniaDari([
+    { device_id: 1, time: geser(0, -20_000), fraction_nh3_pct: 1.1, risk_level: "jauh-sebelum" },
+    { device_id: 1, time: geser(0, 3_000), fraction_nh3_pct: 2.2, risk_level: "paling-dekat" },
+    { device_id: 1, time: geser(0, 25_000), fraction_nh3_pct: 3.3, risk_level: "jauh-sesudah" },
+  ]);
+  const sel = toCsv([baris(0)], ["ph"], {}, peta).split("\n")[1].split(",");
+  assert.equal(sel[6], "2.2");
+  assert.equal(sel[7], "paling-dekat");
 });
 
 test("toCsv: baris tanpa pasangan amonia jadi sel KOSONG, bukan 0", () => {
