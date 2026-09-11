@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Waves } from "lucide-react";
@@ -16,6 +16,37 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // true = belum tahu, sedang mengecek token lama di localStorage.
+  // Form BARU ditampilkan setelah ini false, supaya tidak sempat berkedip
+  // "form login" lalu langsung raib dialihkan ke dashboard.
+  const [mengecekSesi, setMengecekSesi] = useState(true);
+
+  useEffect(() => {
+    // Tanpa ini, pengguna yang token-nya MASIH VALID (belum kedaluwarsa,
+    // belum dihapus) tetap disodori form login tiap kali mendarat di
+    // /login -- termasuk lewat "/" yang SELALU redirect ke sini tanpa
+    // pernah peduli status login (lihat app/page.tsx). Ini yang membuat
+    // aplikasi terasa "logout tiap tutup tab": token di localStorage
+    // sebenarnya tidak pernah hilang, cuma halaman ini sebelumnya tidak
+    // pernah repot-repot mengeceknya.
+    if (!window.localStorage.getItem("access_token")) {
+      setMengecekSesi(false);
+      return;
+    }
+    // GET /auth/me, bukan cuma cek localStorage: token BISA ada tapi sudah
+    // kedaluwarsa/dicabut. 401 di sini otomatis membuat request() di
+    // lib/api.ts menghapus token lewat logout(), jadi cabang .catch() di
+    // bawah aman menampilkan form apa adanya.
+    api
+      .getMe()
+      .then((me) => {
+        setUser(me);
+        router.replace(me.role === "admin" ? "/perangkat" : "/dashboard");
+      })
+      .catch(() => {
+        setMengecekSesi(false);
+      });
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,6 +74,11 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  // Belum pasti statusnya (masih mengecek /auth/me): jangan tampilkan form
+  // dulu. Kalau ternyata tokennya valid, halaman ini cuma transit sepersekian
+  // detik menuju dashboard/perangkat, bukan destinasi yang perlu terlihat.
+  if (mengecekSesi) return null;
 
   return (
     <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[2fr_1fr]">
