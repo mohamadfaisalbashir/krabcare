@@ -10,13 +10,11 @@ export default function Topbar({
   subtitle?: string;
 }) {
   return (
-    // Tanpa border-b & backdrop-blur: header ini bukan bar terpisah lagi, ia
-    // bagian atas panel konten yang sudah putih (dan tidak sticky, jadi blur
-    // tadi memang cuma dekoratif).
+    // Tanpa border-b & backdrop-blur: header ini bagian atas panel konten yang
+    // sudah putih dan tidak sticky.
     //
-    // items-start + pt-6, disamakan dengan banner dashboard (dashboard/page.tsx):
-    // dua header dengan padding atas berbeda membuat avatar melompat beberapa
-    // piksel setiap kali berpindah halaman di layar HP.
+    // items-start + pt-6 disamakan dengan banner dashboard (dashboard/page.tsx),
+    // supaya avatar tidak melompat saat berpindah halaman di layar HP.
     <header className="flex items-start justify-between px-5 pb-2 pt-6 sm:px-8">
       <div className="min-w-0">
         {/* Judul halaman detail adalah nama rak buatan pengguna, panjangnya
@@ -26,9 +24,7 @@ export default function Topbar({
         </h1>
         {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
       </div>
-      {/* Blok profil yang SAMA dengan yang dipakai banner dashboard, cuma beda
-          warna, sekaligus membuat halaman ini punya jalan ke /profil, yang
-          dulu cuma dimiliki dashboard. */}
+      {/* Blok profil yang sama dengan banner dashboard, cuma beda warna. */}
       <AccountChip tone="terang" />
     </header>
   );

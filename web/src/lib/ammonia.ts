@@ -1,16 +1,13 @@
 // Penyajian indeks risiko toksisitas amonia.
 //
-// SENGAJA terpisah dari parameter.ts, dan `"amonia"` SENGAJA bukan ParamKey
-// keempat: PARAM_KEYS menggerakkan RANGE, statusOf, HistoryChart, CombinedChart,
-// submenu Sidebar, pil pemilih di log historis, ParamSwitch, dan kolom ekspor
-// CSV sekaligus. Amonia bukan parameter TERUKUR, ia angka turunan dari ketiga
-// parameter itu, jadi menyelipkannya ke daftar yang sama akan membuatnya muncul
-// sebagai "garis keempat" di grafik sensor, yang keliru secara ilmiah.
+// Terpisah dari parameter.ts, dan "amonia" bukan ParamKey keempat. PARAM_KEYS
+// menggerakkan grafik, submenu, dan kolom ekspor CSV; amonia angka turunan,
+// bukan parameter terukur, jadi tidak boleh ikut jadi garis di grafik sensor.
 import type { StatusLabel } from "./types";
 import type { ParamKey } from "./parameter";
 
 /** Nilai `?param=` di halaman Log historis: tiga parameter terukur + amonia.
- *  Dipisah dari ParamKey supaya amonia TIDAK ikut masuk grafik & ekspor sensor. */
+ *  Dipisah dari ParamKey supaya amonia tidak ikut grafik & ekspor sensor. */
 export const LOG_PARAM_AMONIA = "amonia" as const;
 export type LogParam = ParamKey | typeof LOG_PARAM_AMONIA;
 
@@ -37,12 +34,9 @@ export const STATUS_TO_RISK: Record<StatusLabel, RiskLevel> = {
 };
 
 /**
- * Ambang fraksi NH3 (%), SALINAN dari classify_risk() di
- * backend/app/services/ammonia_speciation.py. Dua salinan karena Python dan
- * TypeScript tidak bisa berbagi konstanta, masalah yang sama persis dengan
- * water_thresholds.py vs parameter.ts (lihat README bagian "Ambang Parameter").
- * Ubah salah satu tanpa yang lain dan warna kartu bisa berselisih dengan
- * risk_level yang tersimpan di database.
+ * Ambang fraksi NH3 (%). Salinan dari classify_risk() di
+ * backend/app/services/ammonia_speciation.py, harus tetap sinkron: kalau
+ * berbeda, warna kartu berselisih dengan risk_level di database.
  */
 export const AMBANG = { perhatian: 6.0, berbahaya: 15.0 } as const;
 
@@ -59,18 +53,13 @@ export function formatFraksi(fractionPct: number): string {
   return fractionPct.toFixed(1).replace(".", ",");
 }
 
-/**
- * Kalimat tren dari deret fraksi ramalan.
- *
- * Bentuknya sengaja meniru trendSentence() di parameter.ts supaya kolom amonia
- * terbaca sebagai satu keluarga dengan ketiga kolom di sebelahnya.
- */
+/** Kalimat tren dari deret fraksi ramalan. Bentuknya mengikuti trendSentence()
+ *  di parameter.ts supaya kolom amonia seragam dengan kolom di sebelahnya. */
 export function trenAmonia(values: number[]): string {
   const first = values[0];
   const last = values[values.length - 1];
   // ponytail: 0,3 poin persen, kira-kira selebar riak semalam pada data uji.
-  // Naikkan kalau pada data hardware asli kalimatnya terlalu sering berbunyi
-  // "naik/turun" untuk perubahan yang tidak berarti.
+  // Naikkan kalau pada hardware asli terlalu sering berbunyi "naik/turun".
   if (Math.abs(last - first) < 0.3) {
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -93,9 +82,8 @@ export const AMONIA_UI = {
 } as const;
 
 /**
- * Kalimat batasan ilmiah. WAJIB tampil di dekat angkanya (amonia.md:7-8):
- * ini fraksi hasil model kesetimbangan, bukan konsentrasi terukur, karena
- * sensor amonia memang tidak terpasang di sistem ini.
+ * Kalimat batasan ilmiah, wajib tampil di dekat angkanya (amonia.md:7-8).
+ * Ini fraksi hasil model kesetimbangan, bukan konsentrasi terukur.
  */
 export const DISCLAIMER =
   "Amonia hanya perkiraan karena sensornya tidak terpasang. Angkanya dihitung dari pH, suhu, dan salinitas.";

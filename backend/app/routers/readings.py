@@ -29,10 +29,10 @@ async def list_readings(
 ) -> list[SensorReadingOut]:
     """Histori reading (terbaru dulu); Decimal dari DB di-cast float untuk JSON.
 
-    `param` + `limit`/`offset` dipakai halaman Log Historis: satu halaman = satu
-    parameter, 25 baris, diiris di database. Respons tetap list polos (bukan
-    {items, total}) supaya dashboard, detail rak, dan ekspor CSV tidak ikut
-    berubah, "masih ada lagi" cukup dibaca dari jumlah baris == limit.
+    `param` + `limit`/`offset` dipakai halaman Log Historis: satu halaman satu
+    parameter, 25 baris, diiris di database. Respons list polos, bukan
+    {items, total}; "masih ada lagi" dibaca dari jumlah baris yang sama dengan
+    limit.
     """
     if status is not None and param is None:
         raise HTTPException(

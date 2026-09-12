@@ -15,21 +15,19 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 def create_app() -> FastAPI:
     """Rakit app: middleware CORS + semua router (v1 di-prefix /api/v1).
 
-    Tidak ada lifespan/scheduler di sini lagi, klasifikasi Mamdani, forecast,
-    dan risiko amonia sekarang dihitung di edge (Raspi, raspi/edge_pipeline.py)
-    dan masuk lewat POST /ingest/quality. Backend murni menyimpan dan melayani
-    permintaan, tidak menjalankan siklus berkala apa pun sendiri.
+    Tidak ada lifespan atau scheduler. Klasifikasi Mamdani, forecast, dan
+    risiko amonia dihitung di edge (raspi/edge_pipeline.py) lalu masuk lewat
+    POST /ingest/quality; backend cuma menyimpan dan melayani permintaan.
     """
     app = FastAPI(
         title=settings.PROJECT_NAME,
         debug=settings.DEBUG,
     )
 
-    # Di DEVELOPMENT saja: terima juga origin LAN (mis. http://192.168.1.7:3000)
-    # supaya dashboard bisa dibuka dari HP di WiFi yang sama. Tanpa ini setiap
-    # POST dari alamat non-localhost mati di preflight dan browser cuma melapor
-    # "Failed to fetch", yang di UI menyamar jadi "gagal membuat kolam".
-    # PRODUCTION tidak berubah: hanya CORS_ORIGINS eksplisit yang diterima.
+    # Development saja: terima juga origin LAN (misal http://192.168.1.7:3000)
+    # supaya dashboard bisa dibuka dari HP di WiFi yang sama. Tanpa ini POST
+    # dari alamat non-localhost mati di preflight sebagai "Failed to fetch".
+    # Production tetap hanya menerima CORS_ORIGINS eksplisit.
     origin_regex = (
         r"^https?://(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+"
         r"|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$"

@@ -1,16 +1,15 @@
-"""Seed akun admin awal, sekali jalan, idempoten.
+"""Seed akun admin awal, idempoten.
 
-Sistem auth di aplikasi ini login pakai EMAIL (bukan username terpisah, lihat
-schemas/user.py), jadi "SuperKrab" dipakai sebagai bagian depan alamat email:
-superkrab@krabcare.com. Login tetap pakai alamat itu + password di bawah.
+Login pakai email (schemas/user.py), jadi "SuperKrab" jadi bagian depan alamat:
+superkrab@krabcare.com.
 
-Jalankan sekali dari container backend:
+Jalankan dari container backend:
     docker compose -f docker-compose.yml -f docker-compose.prod.yml \\
         exec backend python -m app.scripts.seed_admin
 
-Aman dijalankan berkali-kali: kalau akunnya sudah ada, cuma dipastikan
-role-nya admin & aktif, password TIDAK ditimpa supaya password yang sudah
-diganti manual lewat /auth/me/change-password tidak balik ke nilai awal ini.
+Aman dijalankan berkali-kali: kalau akunnya sudah ada, cuma role admin dan
+status aktif yang dipastikan. Password tidak ditimpa, supaya password yang
+sudah diganti lewat /auth/me/change-password tidak kembali ke nilai awal.
 """
 
 import asyncio

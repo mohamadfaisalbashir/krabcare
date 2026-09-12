@@ -1,38 +1,3 @@
-"""Forecast Weighted Linear Regression (WLR), jalan LANGSUNG di Raspberry Pi 5 (gateway),
-bukan di backend cloud. Prediksi cuma untuk horizon 15, 30, 60 menit (sesuai permintaan),
-tidak ada opsi horizon lain.
-
-Kenapa WLR (bukan FTS) yang dipilih buat jalan di edge:
-  - FTS butuh FLRG (fuzzy logical relationship groups) yang dibangun ulang dari window
-    histori tiap kali dipanggil, lebih berat dan kurang cocok dipanggil tiap menit terus
-    menerus di perangkat sekecil Raspi.
-  - WLR di sini cuma least-squares tertimbang 2x2 (persamaan normal langsung, bukan iteratif)
-   , komputasinya ringan banget, jalan mulus di Raspi5 walau dipanggil tiap menit terus-terusan,
-    dan tidak butuh dependency (numpy dst) yang kadang ribet di-pip-install di Raspi OS.
-
-Murni Python stdlib, tidak butuh `pip install` apa pun, jalan di Python 3.9+ yang sudah
-ada bawaan Raspberry Pi OS.
-
-CARA PAKAI (integrasi ke script gateway kalian yang sudah baca ESP32):
-    from wlr_forecast import WLRForecaster
-
-    forecaster = WLRForecaster()
-
-    # tiap ada reading baru masuk dari ESP32 (GANTI bagian baca sensor asli kalian):
-    forecaster.add_reading(waktu_reading, ph=6.9, temperature_c=28.4, salinity_ppt=15.2)
-
-    hasil = forecaster.forecast()
-    # hasil = {
-    #     15: {"ph": 6.91, "temperature_c": 28.5, "salinity_ppt": 15.3},
-    #     30: {"ph": 6.92, "temperature_c": 28.6, "salinity_ppt": 15.4},
-    #     60: {"ph": 6.94, "temperature_c": 28.9, "salinity_ppt": 15.6},
-    # }
-    # Nilai None kalau histori di jendela horizon itu belum cukup (baru nyala/baru mulai).
-
-Jalankan langsung file ini (`python3 wlr_forecast.py`) buat lihat demo tanpa hardware
-sama sekali, ada simulasi data di bagian bawah.
-"""
-
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -40,23 +5,18 @@ from datetime import datetime, timedelta
 HORIZONS_MINUTES: tuple[int, ...] = (15, 30, 60)
 PARAMETERS: tuple[str, ...] = ("ph", "temperature_c", "salinity_ppt")
 
-# Presisi pembulatan output, disamakan dengan tipe kolom di backend
-# (backend/app/models/sensor_reading.py: ph Numeric(4,2), temperature_c Numeric(4,1),
-# salinity_ppt Numeric(5,2)) supaya kalau hasil ini nanti dikirim ke backend, formatnya
-# konsisten dari awal.
 _ROUNDING = {"ph": 2, "temperature_c": 1, "salinity_ppt": 2}
 
 
 @dataclass(frozen=True)
 class HorizonConfig:
-    """window_minutes: seberapa jauh ke belakang data mentah dipakai buat fit garis.
-    half_life_minutes: di umur berapa menit bobot suatu titik sudah meluruh jadi separuh
-    titik paling baru (titik makin lama makin kurang berpengaruh).
+    """window_minutes: seberapa jauh ke belakang data mentah dipakai untuk fit garis.
+    half_life_minutes: umur (menit) saat bobot sebuah titik meluruh jadi separuh
+    titik paling baru.
 
-    Default di bawah pakai heuristik "window = horizon" (makin jauh mau diramal, makin
-    jauh juga ke belakang lihatnya), sederhana & gampang dijustifikasi di laporan, tapi
-    kalau sudah ada data berjam-jam, VALIDASI ULANG angka ini pakai data riil untuk
-    cari kombinasi window/half_life yang RMSE-nya paling kecil buat tiap horizon.
+    Default di bawah memakai heuristik "window = horizon". Kalau sudah ada data
+    berjam-jam, validasi ulang angkanya dengan data riil untuk mencari kombinasi
+    window/half_life dengan RMSE terkecil per horizon.
     """
 
     window_minutes: float
@@ -77,14 +37,14 @@ def weighted_linear_forecast(
     window_minutes: float,
     half_life_minutes: float,
 ) -> float | None:
-    """Regresi linear tertimbang atas titik-titik dalam `window_minutes` terakhir (relatif
-    ke titik paling akhir di `times`), diekstrapolasi ke `target_time`. Bobot titik pada
-    umur `age` menit = 0.5 ** (age / half_life_minutes).
+    """Regresi linear tertimbang atas titik dalam `window_minutes` terakhir
+    (relatif ke titik paling akhir di `times`), diekstrapolasi ke `target_time`.
+    Bobot titik berumur `age` menit = 0.5 ** (age / half_life_minutes).
 
-    File ini BENAR-BENAR berdiri sendiri (tidak import modul lain di repo): tinggal copy
-    satu file ini ke Raspi, tidak perlu bawa seisi repo.
+    Berkas ini berdiri sendiri, tidak mengimpor modul lain di repo, jadi cukup
+    disalin satu berkas ke Raspi.
 
-    Return None kalau titik dalam jendela < 2 (tidak cukup buat fit garis, misal baru nyala).
+    Return None kalau titik dalam jendela kurang dari 2.
     """
     if not times:
         return None
@@ -130,14 +90,13 @@ class _Reading:
 class WLRForecaster:
     """Buffer rolling di memori + forecast WLR 15/30/60 menit ke depan.
 
-    Buffer otomatis membuang data yang lebih tua dari horizon terpanjang (60 menit) tiap
-    kali ada reading baru masuk, jadi aman dijalankan sebagai proses jangka panjang
-    (systemd service, lihat README.md) tanpa memori membengkak walau jalan berhari-hari.
+    Buffer membuang data yang lebih tua dari horizon terpanjang (60 menit) tiap
+    ada reading baru, jadi aman dijalankan sebagai proses jangka panjang
+    (systemd service, lihat README.md).
 
-    TIDAK thread-safe secara eksplisit, kalau baca sensor & forecast dipanggil dari thread
-    berbeda, bungkus `add_reading`/`forecast` dengan `threading.Lock` sendiri. Buat loop
-    polling satu-thread biasa (baca sensor -> forecast -> lanjut) ini sudah aman dipakai
-    apa adanya.
+    Tidak thread-safe. Kalau baca sensor dan forecast dipanggil dari thread
+    berbeda, bungkus `add_reading`/`forecast` dengan `threading.Lock` sendiri.
+    Untuk loop polling satu thread, aman dipakai apa adanya.
     """
 
     def __init__(self, horizon_config: dict[int, HorizonConfig] | None = None):
@@ -152,9 +111,9 @@ class WLRForecaster:
         temperature_c: float | None = None,
         salinity_ppt: float | None = None,
     ) -> None:
-        """Tambah satu reading baru. `time` HARUS timezone-aware (pakai
-        `datetime.now(timezone.utc)` atau yang setara), samakan dengan konvensi ingest API
-        backend (lihat rangkuman.md: timestamp naive dianggap salah, bukan otomatis UTC)."""
+        """Tambah satu reading baru. `time` harus timezone-aware (misal
+        `datetime.now(timezone.utc)`), mengikuti konvensi ingest API backend:
+        timestamp naive dianggap salah, bukan otomatis UTC."""
         if time.tzinfo is None:
             raise ValueError(
                 "`time` harus timezone-aware (pakai datetime.now(timezone.utc) atau setara), "
@@ -169,11 +128,11 @@ class WLRForecaster:
             self._buffer.popleft()
 
     def forecast(self, as_of: datetime | None = None) -> dict[int, dict[str, float | None]]:
-        """Forecast tiap parameter di tiap horizon (15/30/60 menit), dari histori s/d `as_of`
-        (default: waktu reading paling akhir yang masuk).
+        """Forecast tiap parameter di tiap horizon (15/30/60 menit), dari histori
+        sampai `as_of` (default: waktu reading terakhir yang masuk).
 
-        Return dict {horizon_menit: {"ph": ..., "temperature_c": ..., "salinity_ppt": ...}}.
-        Nilai None kalau histori di jendela horizon itu belum cukup (>= 2 titik)."""
+        Return {horizon: {"ph": ..., "temperature_c": ..., "salinity_ppt": ...}}.
+        Nilai None kalau titik di jendela horizon itu kurang dari 2."""
         if not self._buffer:
             return {h: dict.fromkeys(PARAMETERS) for h in HORIZONS_MINUTES}
 
@@ -196,9 +155,8 @@ class WLRForecaster:
         return result
 
     def forecast_as_records(self, as_of: datetime | None = None) -> list[dict]:
-        """Format hasil forecast jadi list of dict siap di-JSON-kan / dikirim ke mana pun
-        (backend, MQTT, log file, dst), satu record per horizon:
-        {"horizon_minutes": 15, "target_time": "2026-...+07:00", "ph": ..., ...}."""
+        """Format hasil forecast jadi list dict siap di-JSON-kan, satu record per
+        horizon: {"horizon_minutes": 15, "target_time": "2026-...+07:00", ...}."""
         as_of = as_of or (self._buffer[-1].time if self._buffer else None)
         if as_of is None:
             return []
@@ -226,7 +184,7 @@ if __name__ == "__main__":
 
     for minute in range(75):  # simulasi 75 menit data masuk tiap 1 menit
         t = t0 + timedelta(minutes=minute)
-        # simulasi tren naik pelan + noise kecil, GANTI dengan baca ESP32 asli kalian.
+        # Simulasi tren naik pelan + noise kecil, ganti dengan baca ESP32 asli.
         suhu += 0.02 + random.uniform(-0.05, 0.05)
         ph += random.uniform(-0.01, 0.01)
         sal += random.uniform(-0.05, 0.05)

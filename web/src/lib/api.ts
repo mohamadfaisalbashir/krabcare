@@ -1,23 +1,14 @@
-// Lapisan pemanggilan RESTful API ke backend FastAPI.
-// Backend berada di monorepo yang sama: ../backend/ (FastAPI).
-//
-// Semua path sudah diselaraskan dengan route di backend/app/routers/*.
+// Pemanggilan REST API ke backend FastAPI (../backend/).
+// Semua path mengikuti route di backend/app/routers/*.
 
 const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /**
- * Alamat backend, dihitung SAAT DIPANGGIL dan bukan konstanta modul.
+ * Alamat backend, dihitung saat dipanggil, bukan konstanta modul.
  *
- * Next meng-inline NEXT_PUBLIC_* ke bundel saat BUILD (lihat web/Dockerfile),
- * dan nilai default proyek ini `http://localhost:8000/api/v1`. Buka dashboard
- * dari HP di WiFi yang sama, dan browser HP itu menembak localhost-nya SENDIRI
- *, tidak ada backend di sana, jadi setiap permintaan mati sebagai
- * "Failed to fetch". Halamannya tetap terbuka (HTML-nya sudah sampai), sehingga
- * gejalanya menyamar jadi "gagal membuat kolam" / "error jaringan".
- *
- * Jadi: kalau alamat yang di-build menunjuk ke localhost padahal halamannya
- * dibuka dari host lain, host-nya ditukar ke host halaman. Alamat yang memang
- * disetel ke domain sungguhan (produksi) tidak disentuh sama sekali.
+ * NEXT_PUBLIC_* di-inline saat build (web/Dockerfile), defaultnya localhost.
+ * Kalau halaman dibuka dari host lain (misal HP di WiFi yang sama), host di
+ * alamat itu ditukar ke host halaman. Alamat berdomain asli tidak disentuh.
  */
 function resolveApiBaseUrl(): string {
   const fallback = "http://localhost:8000/api/v1";
@@ -42,7 +33,7 @@ function resolveApiBaseUrl(): string {
       return url.toString().replace(/\/$/, "");
     }
   } catch {
-    // Alamat tidak bisa di-parse, pakai apa adanya, biar errornya jujur.
+    // Alamat tidak bisa di-parse, pakai apa adanya.
   }
   return CONFIGURED_API_BASE_URL;
 }
@@ -64,12 +55,7 @@ export function logout(): void {
   window.location.href = "/login";
 }
 
-/**
- * Konfirmasi sebelum keluar akun, lalu buang token.
- *
- * Pakai window.confirm bawaan browser, dialog modal sendiri butuh state,
- * focus trap, dan penanganan Escape untuk hasil yang sama.
- */
+/** Konfirmasi sebelum keluar akun, lalu buang token. */
 export function confirmLogout(): void {
   if (window.confirm("Keluar dari akun ini? Anda perlu masuk lagi untuk membuka dashboard.")) {
     logout();
@@ -77,17 +63,10 @@ export function confirmLogout(): void {
 }
 
 /**
- * `detail` FastAPI punya DUA bentuk, dan itu bukan detail sepele.
- *
- * HTTPException yang kita lempar sendiri mengisinya dengan string. TAPI galat
- * validasi Pydantic (422) mengisinya dengan ARRAY objek
- * `{loc, msg, type, ...}`, dan `new Error(array)` menghasilkan "[object
- * Object]". Itulah kenapa email yang ditolak pola backend terasa seperti tidak
- * divalidasi sama sekali: pesannya memang ada, cuma tidak pernah terbaca.
- *
- * `loc` dipakai untuk menyebut nama field-nya, karena satu form bisa punya
- * beberapa field dan "String should match pattern" saja tidak memberi tahu yang
- * mana.
+ * `detail` FastAPI punya dua bentuk: string dari HTTPException kita, atau
+ * array `{loc, msg, type}` dari validasi Pydantic (422). Tanpa penanganan ini
+ * bentuk array jadi "[object Object]". `loc` dipakai untuk tahu field mana
+ * yang ditolak.
  */
 function pesanError(detail: unknown, status: number): string {
   if (typeof detail === "string" && detail) return detail;
@@ -96,13 +75,10 @@ function pesanError(detail: unknown, status: number): string {
     const pertama = detail[0] as { loc?: unknown[]; msg?: string };
     const msg = pertama?.msg;
     if (msg) {
-      // loc = ["body", "email"] -> "email". Segmen pertama selalu sumbernya
-      // (body/query/path), jadi yang berguna bagi pengguna adalah yang terakhir.
+      // loc = ["body", "email"] -> "email". Segmen terakhir adalah nama field.
       const field = Array.isArray(pertama.loc) ? pertama.loc[pertama.loc.length - 1] : null;
-      // Kalimat siap pakai MENGGANTIKAN msg, bukan diawali olehnya. `msg`
-      // Pydantic itu bahasa Inggris dan untuk pola email isinya regex mentah,
-      // jadi "Email tidak valid: String should match pattern '^[A-Za-z0-9!#$..."
-      // adalah yang dilihat pembudidaya, bukan pesan, tapi isi kode program.
+      // Kalimat kita menggantikan msg, bukan ditempel di depannya: msg Pydantic
+      // berbahasa Inggris dan untuk pola email isinya regex mentah.
       return PESAN_FIELD[String(field)] ?? msg;
     }
   }
@@ -111,15 +87,8 @@ function pesanError(detail: unknown, status: number): string {
 }
 
 /**
- * Field backend -> kalimat Indonesia utuh untuk galat validasi 422.
- *
- * Sengaja kalimat penuh, bukan label yang ditempel di depan pesan Pydantic:
- * satu-satunya pembaca pesan ini adalah pembudidaya di lapangan, dan pesan
- * asli Pydantic berbahasa Inggris. Field yang belum ada di sini tetap jatuh
- * ke `msg` aslinya, pesan Inggris masih lebih berguna daripada tidak ada.
- *
- * Aturannya sama dengan pesan lain di aplikasi ini: sebutkan APA yang salah
- * dan bentuk yang benar, bukan aturan formalnya.
+ * Field backend -> kalimat Indonesia untuk galat validasi 422.
+ * Field yang belum terdaftar di sini jatuh ke `msg` asli Pydantic.
  */
 const PESAN_FIELD: Record<string, string> = {
   email: "Email tidak valid. Tulis lengkap dengan domainnya, contoh: nama@email.com",
@@ -148,11 +117,9 @@ async function request<T>(
       },
     });
   } catch {
-    // fetch hanya melempar untuk kegagalan JARINGAN (server mati, CORS preflight
-    // ditolak, DNS gagal), status HTTP berapa pun tetap resolve. Pesan bawaannya
-    // "Failed to fetch" tanpa konteks apa pun, dan pemanggil membungkusnya lagi
-    // jadi "Gagal membuat kolam", sehingga penyebab sebenarnya tidak pernah
-    // terlihat. Sebut alamatnya supaya bisa dicek langsung.
+    // fetch cuma melempar untuk kegagalan jaringan (server mati, CORS ditolak,
+    // DNS gagal); status HTTP apa pun tetap resolve. Sebut alamatnya, karena
+    // "Failed to fetch" bawaan browser tidak menyebut apa-apa.
     throw new Error(
       `Tidak bisa menghubungi server di ${base}. Pastikan backend hidup dan alamat ini terjangkau dari perangkat Anda.`
     );
@@ -175,7 +142,7 @@ async function request<T>(
 }
 
 export const api = {
-  // ── Auth (routers/auth.py) ────────────────────────────────────────
+  // Auth (routers/auth.py)
 
   /** POST /auth/login → TokenOut */
   login: (email: string, password: string) =>
@@ -208,9 +175,9 @@ export const api = {
       body: JSON.stringify({ old_password, new_password }),
     }),
 
-  /** DELETE /auth/me → 204. PERMANEN, dan menghapus kolam + notifikasi user ini.
-   *  Device-nya selamat (FK SET NULL) beserta riwayat sensornya, ia cuma
-   *  kembali jadi belum diklaim dan bisa dipasang admin ke pemilik lain. */
+  /** DELETE /auth/me → 204. Permanen: kolam + notifikasi user ikut terhapus.
+   *  Device dan riwayat sensornya tetap ada (FK SET NULL), statusnya kembali
+   *  belum diklaim. */
   deleteAccount: () => request<void>("/auth/me", { method: "DELETE" }),
 
   /** POST /auth/verify-email → 204. Aktifkan akun lewat token dari email. */
@@ -241,11 +208,11 @@ export const api = {
       body: JSON.stringify({ token, new_password }),
     }),
 
-  // ── Kolam (routers/kolam.py) ──────────────────────────────────────
+  // Kolam (routers/kolam.py)
 
-  /** POST /kolam → KolamOut. Kolam DAN klaim device-nya sekaligus.
-   *  Satu transaksi di backend: device_code yang salah -> 404/409 dan kolamnya
-   *  TIDAK jadi dibuat, jadi tidak perlu rollback dari sisi klien. */
+  /** POST /kolam → KolamOut. Membuat kolam sekaligus mengklaim device-nya.
+   *  Satu transaksi di backend: device_code salah -> 404/409 dan kolam tidak
+   *  jadi dibuat, klien tidak perlu rollback. */
   createKolam: (nama: string, device_code: string) =>
     request<import("./types").Kolam>("/kolam", {
       method: "POST",
@@ -259,9 +226,9 @@ export const api = {
       body: JSON.stringify({ nama }),
     }),
 
-  /** DELETE /kolam/:id → 204. PERMANEN.
-   *  Device-nya tidak ikut terhapus (FK SET NULL), ia cuma jadi tak terklaim,
-   *  beserta seluruh riwayat sensornya. Notifikasi kolam ini ikut hilang (CASCADE). */
+  /** DELETE /kolam/:id → 204. Permanen. Device dan riwayat sensornya tetap ada
+   *  (FK SET NULL), statusnya kembali belum diklaim. Notifikasi kolam ikut
+   *  terhapus (CASCADE). */
   deleteKolam: (kolamId: number) =>
     request<void>(`/kolam/${kolamId}`, { method: "DELETE" }),
 
@@ -282,7 +249,7 @@ export const api = {
   getKolamDevices: (kolamId: number) =>
     request<import("./types").Device[]>(`/kolam/${kolamId}/devices`),
 
-  // ── Devices (routers/devices.py, khusus admin) ───────────────────
+  // Devices (routers/devices.py, khusus admin)
 
   /** GET /devices → DeviceAdminOut[], semua device, sudah diklaim maupun belum. */
   listDevices: () =>
@@ -318,11 +285,11 @@ export const api = {
       method: "DELETE",
     }),
 
-  // ── Readings (routers/readings.py) ────────────────────────────────
+  // Readings (routers/readings.py)
 
   /** GET /readings → SensorReadingOut[].
-   *  `param` + `status` menyaring di SQL (ambang Tabel 2.1 ada juga di backend),
-   *  jadi satu halaman `limit` baris tetap penuh setelah difilter. */
+   *  `param` + `status` disaring di SQL (ambang Tabel 2.1 juga ada di backend),
+   *  supaya satu halaman tetap penuh setelah difilter. */
   getReadings: (params?: {
     device_id?: number;
     device_code?: string;
@@ -349,7 +316,7 @@ export const api = {
     );
   },
 
-  // ── Quality (routers/quality.py) ──────────────────────────────────
+  // Quality (routers/quality.py)
 
   /** GET /quality/latest → LatestQualityOut[] */
   getLatestQuality: (deviceId?: number) => {
@@ -365,7 +332,7 @@ export const api = {
     );
   },
 
-  // ── Amonia (routers/quality.py) ───────────────────────────────────
+  // Amonia (routers/quality.py)
 
   /** GET /quality/ammonia-risk → DeviceAmmoniaOut[] (terukur terkini + ramalan) */
   getAmmoniaRisk: (deviceId?: number) => {
@@ -398,14 +365,14 @@ export const api = {
     );
   },
 
-  // ── Notifications (routers/notifications.py) ──────────────────────
+  // Notifications (routers/notifications.py)
 
   /** GET /notifications → NotificationOut[] */
   getNotifications: (params?: {
     unread_only?: boolean;
     limit?: number;
     offset?: number;
-    /** Disaring di SQL. Menyaring di klien setelah limit membuat tab filter
+    /** Disaring di SQL. Menyaring di klien setelah limit bikin tab filter
      *  tampak kosong padahal barisnya ada di halaman berikutnya. */
     source?: import("./types").NotifSource;
   }) => {

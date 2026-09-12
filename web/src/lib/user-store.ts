@@ -5,16 +5,12 @@ import { api } from "./api";
 import type { User } from "./types";
 
 /**
- * Satu salinan data user untuk seluruh halaman.
+ * Satu salinan data user untuk seluruh halaman, supaya Topbar, AccountChip,
+ * dan halaman Profil tidak memanggil GET /auth/me sendiri-sendiri dan nama
+ * yang baru disimpan langsung ikut berubah di header.
  *
- * Sebelumnya Topbar, AccountChip, dan halaman Profil masing-masing memanggil
- * GET /auth/me sendiri dan menyimpannya di state lokal. Akibatnya menyimpan nama
- * baru cuma memperbarui kartu di halaman Profil, sementara header dua baris di
- * atasnya masih menampilkan nama lama sampai halaman dimuat ulang.
- *
- * Bukan Context, bukan pustaka state: useSyncExternalStore sudah bawaan React,
- * dan sebuah modul memang satu-satunya instance per tab. Yang dibutuhkan cuma
- * "satu nilai + beri tahu yang mendengarkan".
+ * useSyncExternalStore, bukan Context atau pustaka state: sudah bawaan React
+ * dan modul ini satu instance per tab.
  */
 let user: User | null = null;
 let sedangMemuat = false;
@@ -38,8 +34,8 @@ export function setUser(next: User | null) {
 }
 
 export function useUser(): User | null {
-  // getServerSnapshot mengembalikan null: di server memang belum ada tokennya,
-  // dan nilai yang beda antara server & hydrate akan memicu peringatan React.
+  // getServerSnapshot null: di server belum ada token, dan nilai yang beda
+  // antara server dan hydrate memicu peringatan React.
   const nilai = useSyncExternalStore(
     subscribe,
     () => user,
@@ -47,9 +43,8 @@ export function useUser(): User | null {
   );
 
   useEffect(() => {
-    // Penjaga `sedangMemuat`: tiga komponen bisa mount berbarengan, dan tanpa
-    // ini ketiganya menembak GET /auth/me sekaligus, persis pemborosan yang
-    // ingin dihilangkan berkas ini.
+    // Penjaga `sedangMemuat`: beberapa komponen bisa mount berbarengan dan
+    // tanpa ini semuanya menembak GET /auth/me sekaligus.
     if (user !== null || sedangMemuat) return;
     sedangMemuat = true;
     api

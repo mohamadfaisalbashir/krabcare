@@ -23,18 +23,17 @@ async def get_readings(
 ) -> list[Row]:
     """Histori reading + device_code, terbaru dulu.
 
-    `allowed_device_ids=None` = tidak dibatasi (gateway/admin). Kalau diisi, device
-    di luar himpunan itu menghasilkan list kosong, bukan 404, ini endpoint list.
+    `allowed_device_ids=None` = tidak dibatasi (gateway/admin). Kalau diisi,
+    device di luar himpunan itu menghasilkan list kosong, bukan 404.
 
-    `param` membuang baris yang parameternya NULL supaya tidak menghabiskan jatah
-    halaman, `status` menyaring pakai ambang Tabel 2.1, keduanya WAJIB di SQL,
-    bukan di klien: filter yang jalan setelah LIMIT membuat halaman 25 baris bisa
-    menyisakan 2 baris.
+    `param` membuang baris yang parameternya NULL supaya tidak menghabiskan
+    jatah halaman, `status` menyaring pakai ambang Tabel 2.1. Keduanya di SQL,
+    bukan di klien: filter setelah LIMIT bisa menyisakan 2 baris dari 25.
 
-    ponytail: paginasi OFFSET. Kalau ada reading baru masuk di antara dua halaman,
-    satu baris bisa terlihat dua kali atau terlewat, bisa diterima untuk log
-    kronologis. Kalau kelak butuh ketepatan penuh, pola keyset cursor-nya sudah
-    ada di web/src/lib/export.ts (fetchAllReadings).
+    ponytail: paginasi OFFSET, jadi reading yang masuk di antara dua halaman
+    bisa membuat satu baris terlihat dua kali atau terlewat. Bisa diterima untuk
+    log kronologis; pola keyset cursor-nya ada di web/src/lib/export.ts
+    (fetchAllReadings) kalau kelak butuh ketepatan penuh.
     """
     stmt = select(SensorReading, Device.device_code).join(
         Device, SensorReading.device_id == Device.id
@@ -55,7 +54,7 @@ async def get_readings(
         if status is not None:
             stmt = stmt.where(predikat_status(param, status))
 
-    # device_id sebagai tiebreaker: `time` cuma unik DI DALAM satu device, jadi
+    # device_id sebagai tiebreaker: `time` cuma unik di dalam satu device, jadi
     # tanpa ini dua baris berwaktu sama bisa bertukar posisi antar permintaan dan
     # OFFSET melewatkan atau menggandakannya.
     stmt = (

@@ -6,8 +6,8 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# JANGAN meng-import app.main di sini: dia memicu scheduler dan meng-import
-# ml.fuzzy secara transitif, tidak dibutuhkan migrasi dan bisa bikin gagal.
+# Jangan meng-import app.main di sini: ia menyeret ml.fuzzy secara transitif,
+# yang tidak dibutuhkan migrasi dan bisa membuatnya gagal.
 from app.core.config import settings
 from app.db.base import Base
 import app.models  # noqa: F401, wajib, supaya semua tabel terdaftar di metadata
@@ -28,10 +28,10 @@ target_metadata = Base.metadata
 
 
 def include_object(object, name, type_, reflected, compare_to):
-    """Saring objek yang bukan bikinan kita supaya autogenerate tidak menawarkan DROP.
+    """Saring objek bukan bikinan kita supaya autogenerate tidak menawarkan DROP.
 
-    Index `*_time_idx` dibuat otomatis create_hypertable() TimescaleDB, jadi
-    sengaja tidak dideklarasikan di model, kalau dideklarasikan malah bentrok.
+    Index `*_time_idx` dibuat otomatis oleh create_hypertable() TimescaleDB,
+    jadi tidak dideklarasikan di model.
     """
     if type_ == "index" and reflected and name and name.endswith("_time_idx"):
         return False
@@ -39,13 +39,13 @@ def include_object(object, name, type_, reflected, compare_to):
 
 
 def compare_type(context, inspected_column, metadata_column, inspected_type, metadata_type):
-    """Pengecualian yang DISENGAJA: TEXT (DB) vs Enum non-native (model) dianggap sama.
+    """Anggap TEXT (DB) dan Enum non-native (model) sebagai tipe yang sama.
 
-    `devices.device_type` & `users.role` di DB bertipe TEXT + CHECK, sedangkan
+    `devices.device_type` dan `users.role` di DB bertipe TEXT + CHECK, sedangkan
     SAEnum(native_enum=False) dirender jadi VARCHAR(n) + CHECK. Di Postgres
     keduanya identik, jadi tidak perlu migrasi kosmetik.
 
-    Sengaja sesempit mungkin, kombinasi lain balik None (default Alembic) supaya
+    Dibuat sesempit mungkin; kombinasi lain balik None (default Alembic) supaya
     perubahan tipe yang sungguhan tetap terdeteksi.
     """
     if (

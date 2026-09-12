@@ -1,29 +1,25 @@
 """tabel ammonia_risks + backfill dari sensor_readings
 
-LATAR:
 Sensor amonia (MQ-137) dibuang dari hardware, jadi TAN tidak pernah terukur dan
-sistem ini TIDAK BOLEH mengeluarkan angka "amonia = X mg/L". Yang bisa dihitung
-adalah FRAKSI amonia total yang berbentuk NH3 toksik pada pH/suhu/salinitas
-tertentu, persamaan kesetimbangan Bower & Bidwell (1978) / Spotte & Adams
-(1983), lihat app/services/ammonia_speciation.py.
+sistem ini tidak boleh mengeluarkan angka "amonia = X mg/L". Yang bisa dihitung
+cuma fraksi amonia total yang berbentuk NH3 toksik pada pH/suhu/salinitas
+tertentu (Bower & Bidwell 1978 / Spotte & Adams 1983), lihat
+app/services/ammonia_speciation.py.
 
-Perhitungannya deterministik dan bisa diulang kapan saja, jadi secara teori
-tabel ini tidak wajib ada. Ia tetap dibuat karena yang diminta adalah LOG
-HISTORIS: parameter mentah datang dari hardware, angka risikonya dari software,
-dan keduanya harus bisa ditelusuri berpasangan di kemudian hari, termasuk baris
-ramalan, yang tidak punya reading padanannya sama sekali.
+Perhitungannya deterministik, tapi tabelnya tetap dibuat karena yang dibutuhkan
+log historis: parameter mentah dari hardware dan angka risikonya dari software
+harus bisa ditelusuri berpasangan, termasuk baris ramalan yang tidak punya
+reading padanannya.
 
-Satu tabel, tiga peran, dibedakan `horizon_minutes`:
-  0   = kondisi TERUKUR, satu baris per sensor_readings (ditulis saat ingest)
-  >0  = RAMALAN FTS, satu baris per horizon (ditulis saat siklus scheduler)
+Satu tabel, dua peran, dibedakan `horizon_minutes`:
+  0  = kondisi terukur, satu baris per sensor_readings
+  >0 = ramalan FTS, satu baris per horizon
 
-Hypertable dikonversi SEKARANG selagi tabel masih kosong; mengonversi tabel yang
-sudah berisi data jauh lebih repot.
+Hypertable dikonversi sekarang selagi tabelnya masih kosong.
 
-Backfill memanggil assess_ammonia_risk() lewat Python, BUKAN menyalin rumusnya
-ke SQL, dua salinan rumus kesetimbangan adalah dua sumber kebenaran yang pasti
-lepas sinkron. Reading yang salah satu sensornya NULL dilewati, tidak diisi
-nilai default palsu.
+Backfill memanggil assess_ammonia_risk() lewat Python, bukan menyalin rumusnya
+ke SQL, supaya rumus kesetimbangan tidak punya dua salinan. Reading yang salah
+satu sensornya NULL dilewati, tidak diisi nilai default.
 
 Revision ID: c5e2a94f18b7
 Revises: b3f1c7a9d204
@@ -94,12 +90,11 @@ def upgrade() -> None:
 def _backfill_dari_readings() -> None:
     """Isi baris horizon 0 dari seluruh sensor_readings yang parameternya lengkap.
 
-    Tanpa ini log historis amonia lahir kosong sampai reading berikutnya masuk,
-    padahal datanya sudah ada sejak lama di sensor_readings.
+    Tanpa ini log historis amonia kosong sampai reading berikutnya masuk,
+    padahal datanya sudah ada di sensor_readings.
     """
-    # Import di dalam fungsi: env.py sudah menaruh package `app` di path, tapi
-    # menaruhnya di atas berkas membuat migrasi ini gagal di-load kalau modul
-    # servicenya suatu saat dipindah, dan migrasi lama harus tetap bisa jalan.
+    # Import di dalam fungsi: kalau modul servicenya suatu saat dipindah,
+    # import di kepala berkas membuat migrasi lama ini gagal di-load.
     from app.services.ammonia_speciation import MODEL_VERSION, assess_ammonia_risk
 
     bind = op.get_bind()
@@ -154,7 +149,7 @@ def _backfill_dari_readings() -> None:
 
 
 def downgrade() -> None:
-    # Aman dibuang: seluruh isinya turunan deterministik dari sensor_readings
-    # (baris terukur) dan fuzzy_predictions (baris ramalan), bisa dihitung ulang.
+    # Aman dibuang: isinya turunan deterministik dari sensor_readings (baris
+    # terukur) dan fuzzy_predictions (baris ramalan), bisa dihitung ulang.
     op.drop_index("idx_ammonia_risks_device_target", table_name="ammonia_risks")
     op.drop_table("ammonia_risks")

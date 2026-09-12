@@ -8,16 +8,9 @@ import { useUser } from "@/lib/user-store";
 /**
  * Blok profil yang bisa ditekan: nama + email + lingkaran inisial.
  *
- * SATU komponen untuk dua latar, bukan dua komponen, itulah yang dulu membuat
- * "logo profil posisinya beda-beda di HP": banner dashboard memakai komponen
- * ini (bulatan brand-500 + cincin, dibungkus padding tautan), sedangkan Topbar
- * menggambar bulatannya sendiri (brand-600, tanpa cincin, tanpa padding). Di
- * layar sempit nama & emailnya sama-sama disembunyikan, jadi yang tersisa cuma
- * dua lingkaran yang duduk di titik berbeda. `tone` cuma mengganti warnanya;
- * geometri dan jarak dipakai bersama, jadi tidak bisa lepas sinkron lagi.
- *
- * Sebagai efek sampingnya semua halaman ber-Topbar sekarang punya jalan ke
- * /profil, sebelumnya hanya dashboard yang punya.
+ * Satu komponen untuk dua latar (banner dashboard dan Topbar). `tone` cuma
+ * mengganti warnanya; geometri dan jaraknya dipakai bersama supaya posisi
+ * lingkarannya tidak berbeda antar halaman di layar sempit.
  */
 export default function AccountChip({
   tone = "gelap",
@@ -32,9 +25,8 @@ export default function AccountChip({
   return (
     <Link
       href="/profil"
-      // Nama & email disembunyikan di layar sempit, jadi di sana tautan ini
-      // hanya berupa lingkaran huruf. aria-label-nya wajib, bukan hiasan,
-      // tanpa itu pembaca layar cuma mendengar satu huruf.
+      // Di layar sempit nama & email disembunyikan dan tautan ini cuma berupa
+      // lingkaran huruf, jadi aria-label wajib.
       aria-label={user ? `Buka profil ${user.nama}` : "Buka halaman profil"}
       className={clsx(
         "group flex shrink-0 items-center gap-3 rounded-lg px-2 py-1.5 transition-colors",
@@ -64,10 +56,9 @@ export default function AccountChip({
           </div>
         )}
       </div>
-      {/* Di atas latar gelap: brand-500 (yang lebih terang justru lebih terbaca)
-          + cincin putih tipis supaya tetap terpisah kalau jatuh di bagian banner
-          yang cerah. Di atas panel putih: brand-600, teks putih di atas
-          brand-500 hanya 2.88:1. */}
+      {/* Di atas latar gelap: brand-500 plus cincin putih tipis supaya tetap
+          terpisah kalau jatuh di bagian banner yang cerah. Di atas panel putih:
+          brand-600, karena teks putih di atas brand-500 cuma 2.88:1. */}
       <div
         className={clsx(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-display text-sm font-semibold text-white transition",

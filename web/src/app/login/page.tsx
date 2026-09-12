@@ -16,27 +16,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // true = belum tahu, sedang mengecek token lama di localStorage.
-  // Form BARU ditampilkan setelah ini false, supaya tidak sempat berkedip
-  // "form login" lalu langsung raib dialihkan ke dashboard.
+  // true = sedang mengecek token lama di localStorage. Form baru ditampilkan
+  // setelah ini false, supaya tidak berkedip sebelum dialihkan ke dashboard.
   const [mengecekSesi, setMengecekSesi] = useState(true);
 
   useEffect(() => {
-    // Tanpa ini, pengguna yang token-nya MASIH VALID (belum kedaluwarsa,
-    // belum dihapus) tetap disodori form login tiap kali mendarat di
-    // /login -- termasuk lewat "/" yang SELALU redirect ke sini tanpa
-    // pernah peduli status login (lihat app/page.tsx). Ini yang membuat
-    // aplikasi terasa "logout tiap tutup tab": token di localStorage
-    // sebenarnya tidak pernah hilang, cuma halaman ini sebelumnya tidak
-    // pernah repot-repot mengeceknya.
+    // Tanpa ini, pengguna yang tokennya masih valid tetap disodori form login
+    // tiap mendarat di /login, termasuk lewat "/" yang selalu redirect ke sini
+    // (app/page.tsx), sehingga aplikasi terasa logout tiap tutup tab.
     if (!window.localStorage.getItem("access_token")) {
       setMengecekSesi(false);
       return;
     }
-    // GET /auth/me, bukan cuma cek localStorage: token BISA ada tapi sudah
-    // kedaluwarsa/dicabut. 401 di sini otomatis membuat request() di
-    // lib/api.ts menghapus token lewat logout(), jadi cabang .catch() di
-    // bawah aman menampilkan form apa adanya.
+    // GET /auth/me, bukan cuma cek localStorage: token bisa ada tapi sudah
+    // kedaluwarsa. 401 di sini membuat request() (lib/api.ts) menghapus token
+    // lewat logout(), jadi cabang .catch() aman menampilkan form.
     api
       .getMe()
       .then((me) => {
@@ -53,8 +47,8 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      // Backend mengembalikan TokenOut { access_token, token_type }
-      // TANPA user object, data user diambil terpisah lewat GET /auth/me.
+      // Backend mengembalikan TokenOut { access_token, token_type } tanpa user
+      // object; data user diambil terpisah lewat GET /auth/me.
       const { access_token } = await api.login(email, password);
       window.localStorage.setItem("access_token", access_token);
       const me = await api.getMe();
@@ -75,29 +69,26 @@ export default function LoginPage() {
     }
   }
 
-  // Belum pasti statusnya (masih mengecek /auth/me): jangan tampilkan form
-  // dulu. Kalau ternyata tokennya valid, halaman ini cuma transit sepersekian
-  // detik menuju dashboard/perangkat, bukan destinasi yang perlu terlihat.
+  // Masih mengecek /auth/me, jangan tampilkan form dulu. Kalau tokennya
+  // valid, halaman ini cuma transit menuju dashboard atau perangkat.
   if (mengecekSesi) return null;
 
   return (
     <main className="grid min-h-screen grid-cols-1 lg:grid-cols-[2fr_1fr]">
-      {/* Panel kiri -- identitas, foto tambak sebagai latar */}
+      {/* Panel kiri: identitas, foto tambak sebagai latar */}
       <section className="relative hidden overflow-hidden bg-hero-deep lg:flex lg:flex-col lg:justify-between lg:p-12">
-        {/* Fotonya panorama 1024x247 (rasio 4.15) sementara panel ini jauh lebih
-            tinggi daripada lebar, jadi bg-cover memangkas sekitar 70% lebarnya.
-            bg-left, BUKAN bg-center: kepiting dan akar bakaunya ada di ujung
-            kiri foto dan akan terpotong habis kalau dijangkarkan ke tengah.
-            Blur tipis menyamarkan pembesaran vertikal ~4x; scale-105 menutup
-            tepi menerawang akibat blur itu. */}
+        {/* Fotonya panorama 1024x247 sementara panel ini jauh lebih tinggi
+            daripada lebar, jadi bg-cover memangkas sekitar 70% lebarnya.
+            bg-left, bukan bg-center: kepiting dan akar bakaunya ada di ujung
+            kiri foto. Blur tipis menyamarkan pembesaran vertikal ~4x, dan
+            scale-105 menutup tepi menerawang akibat blur itu. */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 scale-105 bg-[url('/kepiting.png')] bg-cover bg-left blur-[2px]"
         />
-        {/* Peredam gelap: syarat keterbacaan, bukan gaya. Teks putih di atas
-            foto siang hari tanpa ini tidak lolos WCAG AA. Gradien, supaya sisi
-            kiri tempat teks berada paling pekat dan fotonya tetap terlihat di
-            sisi kanan. */}
+        {/* Peredam gelap, syarat keterbacaan: teks putih di atas foto siang
+            hari tanpa ini tidak lolos WCAG AA. Gradien, supaya sisi kiri
+            tempat teks berada paling pekat dan fotonya tetap terlihat di kanan. */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 bg-gradient-to-r from-hero-deep/90 via-hero-deep/75 to-hero-deep/55"
@@ -115,7 +106,7 @@ export default function LoginPage() {
         </div>
       </section>
 
-      {/* Panel kanan -- form login */}
+      {/* Panel kanan: form login */}
       <section className="flex items-center justify-center bg-bg p-6 sm:p-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
@@ -141,10 +132,8 @@ export default function LoginPage() {
             />
 
             <div>
-              {/* Tombol intip sandi sekarang milik komponen Input, lihat
-                  components/ui/Input.tsx. Versi tempelan yang dulu di sini
-                  memakai offset tetap top-[38px] yang meleset di mobile, dan
-                  tertutup mata bawaan browser yang belum dimatikan. */}
+              {/* Tombol intip sandi ada di komponen Input
+                  (components/ui/Input.tsx), bukan ditempel di sini. */}
               <Input
                 label="Kata sandi"
                 type="password"

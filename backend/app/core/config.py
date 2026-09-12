@@ -36,10 +36,9 @@ class Settings(BaseSettings):
 
     # Autentikasi user (dashboard web / mobile), JWT access token
     JWT_SECRET_KEY: str = "ai-dilarangbaca"
-    # 30 hari. Sebelumnya 24 jam, dan karena tidak ada refresh token, tiap
-    # pemakai praktis harus login ulang tiap hari, terbaca seperti "tiap
-    # menutup browser jadi logout". Token disimpan di localStorage (bukan
-    # sessionStorage), jadi menutup tab memang tidak pernah jadi penyebabnya.
+    # 30 hari. Tidak ada refresh token, jadi masa berlaku pendek berarti login
+    # ulang tiap hari. Token ada di localStorage, bukan sessionStorage, jadi
+    # menutup tab tidak menghapusnya.
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30
 
     # Reset password via email
@@ -52,10 +51,9 @@ class Settings(BaseSettings):
     FRONTEND_RESET_PASSWORD_URL: str = "http://localhost:3000/reset-password"
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 30
     FRONTEND_VERIFY_EMAIL_URL: str = "http://localhost:3000/verifikasi-email"
-    # Sengaja pendek. Konsekuensinya link sering keburu kedaluwarsa karena
-    # pengiriman email saja bisa memakan sebagian jatahnya, jadi tombol kirim
-    # ulang di halaman /verifikasi-email itu bagian penting dari alurnya,
-    # bukan pelengkap. Bisa ditimpa lewat .env tanpa mengubah kode.
+    # Sengaja pendek, jadi link bisa keburu kedaluwarsa karena pengiriman email
+    # saja memakan sebagian jatahnya. Tombol kirim ulang di /verifikasi-email
+    # bagian penting dari alurnya. Bisa ditimpa lewat .env.
     EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES: int = 5
 
     # Push notification (Firebase Cloud Messaging)
@@ -80,13 +78,9 @@ class Settings(BaseSettings):
             problems.append("POSTGRES_PASSWORD")
         if self.DEBUG:
             problems.append("DEBUG harus false di production")
-        # Default keduanya localhost:3000 (lihat komentar di atas field-nya) --
-        # kalau VPS lupa mengisi .env, email verifikasi/reset password akan
-        # terkirim dengan link localhost yang tidak pernah bisa dibuka
-        # pengguna, DIAM-DIAM (tidak ada error apa pun saat start maupun saat
-        # kirim, cuma link di email yang salah). Ditolak di sini supaya
-        # kesalahannya kelihatan saat deploy, bukan lewat keluhan "link
-        # verifikasi localhost" dari pengguna.
+        # Default keduanya localhost:3000. Kalau .env di VPS lupa diisi, email
+        # verifikasi dan reset password terkirim dengan link localhost tanpa
+        # error apa pun. Ditolak di sini supaya ketahuan saat deploy.
         if "localhost" in self.FRONTEND_VERIFY_EMAIL_URL:
             problems.append("FRONTEND_VERIFY_EMAIL_URL masih localhost")
         if "localhost" in self.FRONTEND_RESET_PASSWORD_URL:

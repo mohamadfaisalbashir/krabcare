@@ -1,12 +1,11 @@
 /**
  * `markOnly` dipakai sidebar saat terkuncup jadi rail ikon.
  *
- * Sengaja menghilangkan wordmark lewat conditional render, BUKAN membungkusnya
- * dengan elemen baru: login/page.tsx:46 mewarnai ulang wordmark lewat selektor
- * `[&_span]:text-white [&_span_span]:text-brass-300`, yang bergantung pada persis
- * satu span luar + satu span bersarang. Menambah pembungkus akan merusak logo di
- * layar login tanpa error apa pun. Saat markOnly false, pohon elemennya identik
- * dengan sebelumnya.
+ * Wordmark dihilangkan lewat conditional render, bukan dibungkus elemen baru:
+ * login/page.tsx:46 mewarnainya lewat selektor `[&_span]:text-white
+ * [&_span_span]:text-brass-300` yang bergantung pada tepat satu span luar dan
+ * satu span bersarang. Pembungkus tambahan merusak logo di layar login tanpa
+ * error apa pun.
  */
 export default function Logo({
   className,

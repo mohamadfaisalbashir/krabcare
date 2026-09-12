@@ -1,12 +1,12 @@
-# Sertifikat Let's Encrypt diurus Caddy otomatis, syaratnya: DOMAIN sudah
-# mengarah ke IP VPS DAN port 80/443 terbuka SEBELUM container dijalankan.
+# Sertifikat Let's Encrypt diurus Caddy otomatis. Syaratnya DOMAIN sudah
+# mengarah ke IP VPS dan port 80/443 terbuka sebelum container dijalankan.
 # backend:8000 dijangkau lewat jaringan internal Docker, bukan port host.
 {$DOMAIN} {
     reverse_proxy backend:8000
 }
 
 # Web (Next.js) di domain terpisah dari API, sejalan dengan CORS_ORIGINS di
-# env.production.example. web:3000 dijangkau lewat jaringan internal Docker.
+# env.production.example. web:3000 lewat jaringan internal Docker.
 {$WEB_DOMAIN} {
     reverse_proxy web:3000
 }

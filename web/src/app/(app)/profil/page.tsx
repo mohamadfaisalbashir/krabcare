@@ -13,9 +13,8 @@ import FormMessage, { type Message } from "@/components/ui/FormMessage";
 
 
 export default function ProfilPage() {
-  // Dibaca dari store bersama, bukan state lokal: header di atas halaman ini
-  // memakai sumber yang sama, jadi menyimpan nama baru langsung terlihat di
-  // keduanya tanpa perlu memuat ulang halaman.
+  // Dari store bersama, bukan state lokal: header memakai sumber yang sama,
+  // jadi nama baru langsung terlihat di keduanya.
   const user = useUser();
   const [nama, setNama] = useState("");
   const [savingNama, setSavingNama] = useState(false);
@@ -26,15 +25,14 @@ export default function ProfilPage() {
   const [ketikanHapus, setKetikanHapus] = useState("");
   const [menghapusAkun, setMenghapusAkun] = useState(false);
   const [hapusMessage, setHapusMessage] = useState<Message>(null);
-  // Dua state terpisah: kedua form sekarang berada di kolom yang berbeda, jadi
-  // satu state bersama akan memunculkan pesan di seberang form yang disubmit.
+  // Dua state terpisah karena kedua form ada di kolom berbeda; satu state
+  // bersama akan memunculkan pesan di seberang form yang disubmit.
   const [namaMessage, setNamaMessage] = useState<Message>(null);
   const [passwordMessage, setPasswordMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
 
   // Store yang mengambil datanya. Di sini cuma menyalin nama ke kolom form
-  // begitu user-nya sampai (dan tidak menimpanya lagi setelah itu, supaya
-  // ketikan yang sedang berjalan tidak terhapus oleh render berikutnya).
+  // sekali, supaya ketikan yang sedang berjalan tidak tertimpa render berikutnya.
   const [namaTerisi, setNamaTerisi] = useState(false);
   useEffect(() => {
     if (user && !namaTerisi) {
@@ -92,9 +90,9 @@ export default function ProfilPage() {
   /**
    * Hapus akun sendiri (DELETE /auth/me).
    *
-   * Dua lapis penjaga, seperti hapus kolam: mengetik ulang email menjaga dari
-   * salah AKUN, dialognya menjaga dari salah TEKAN. Tidak ada undo di backend,
-   * kolam & notifikasi ikut terhapus lewat FK CASCADE.
+   * Dua lapis penjaga seperti hapus kolam: mengetik ulang email menjaga dari
+   * salah akun, dialognya dari salah tekan. Tidak ada undo; kolam dan
+   * notifikasi ikut terhapus lewat FK CASCADE.
    */
   async function handleHapusAkun() {
     if (
@@ -113,8 +111,8 @@ export default function ProfilPage() {
     setMenghapusAkun(true);
     try {
       await api.deleteAccount();
-      // logout() membuang token DAN melempar ke /login. Tidak perlu pesan
-      // sukses: akunnya sudah tidak ada, halamannya keburu berpindah.
+      // logout() membuang token dan melempar ke /login, jadi tidak perlu pesan
+      // sukses.
       logout();
     } catch (err) {
       setHapusMessage({
@@ -234,17 +232,12 @@ export default function ProfilPage() {
               </form>
             </Card>
 
-            {/* Kartu NETRAL, tidak lagi bertint merah. Merahnya sekarang hanya
-                pada tombolnya, persis sebobot tombol "Keluar akun" di atas yang
-                memakai kelas warna yang sama (border-status-bahaya/30 +
-                bg-status-bahayaBg + text-status-bahaya). Sebelumnya seluruh
-                kartu ikut merah, sehingga tindakan paling jarang dipakai di
-                halaman ini justru jadi yang paling menyita perhatian.
+            {/* Kartunya netral, merahnya cuma di tombol, sebobot tombol "Keluar
+                akun" di atas. Kalau seluruh kartu merah, tindakan paling jarang
+                dipakai di halaman ini jadi yang paling menyita perhatian.
 
-                TIDAK dirender untuk admin. Backend sudah menolaknya dengan 403
-                (routers/auth.py: akun admin adalah satu-satunya pintu ke panel
-                /perangkat, menghapusnya mengunci pendaftaran device untuk semua
-                orang), jadi menampilkan tombol yang pasti gagal cuma menjebak. */}
+                Tidak dirender untuk admin: backend menolaknya dengan 403
+                (routers/auth.py), jadi tombolnya pasti gagal. */}
             {user && user.role !== "admin" && (
               <Card>
                 <div className="mb-2 flex items-center gap-2.5">
@@ -254,10 +247,8 @@ export default function ProfilPage() {
                   </h3>
                 </div>
 
-                {/* Terlipat sampai diminta. Isinya ancaman permanen, dan
-                    membentangkannya terus-menerus di bawah "Ubah nama" membuat
-                    tindakan paling berbahaya di halaman ini jadi yang paling
-                    kelihatan. Satu ketukan sudah cukup jadi pemisah niat. */}
+                {/* Terlipat sampai diminta. Isinya tindakan permanen, dan satu
+                    ketukan sudah cukup jadi pemisah niat. */}
                 {!bukaHapus ? (
                   <button
                     type="button"

@@ -1,8 +1,8 @@
 """Baca indeks risiko toksisitas amonia (tabel ammonia_risks).
 
-Perhitungannya TIDAK LAGI di sini, sekarang dihitung di edge (Raspi,
-raspi/ammonia_nh3.py) dan disimpan lewat quality_ingest_service.ingest_ammonia_risks.
-Modul ini murni QUERY, dipakai routers/quality.py untuk menampilkan hasilnya.
+Perhitungannya di edge (raspi/ammonia_nh3.py), disimpan lewat
+quality_ingest_service.ingest_ammonia_risks. Modul ini murni query, dipakai
+routers/quality.py.
 """
 
 from datetime import datetime
@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AmmoniaRisk, Device
 
-#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan). SAMA dengan
-#: HORIZON_TERUKUR di raspi/edge_pipeline.py, WAJIB tetap 0 di dua sisi.
+#: horizon_minutes untuk baris "kondisi terukur", bukan ramalan. Harus sama
+#: dengan HORIZON_TERUKUR di raspi/edge_pipeline.py.
 HORIZON_TERUKUR = 0
 
 
@@ -32,11 +32,12 @@ async def get_latest_and_forecast(
     device_id: int | None = None,
     allowed_device_ids: set[int] | None = None,
 ) -> list[dict]:
-    """Per device: satu baris terukur TERBARU + seluruh horizon run ramalan TERAKHIR.
+    """Per device: satu baris terukur terbaru + semua horizon dari run ramalan
+    terakhir.
 
     `allowed_device_ids=None` = tidak dibatasi (gateway/admin).
     """
-    # Terukur: DISTINCT ON per device, pola yang sama dengan
+    # DISTINCT ON per device, pola yang sama dengan
     # quality_service._latest_per_device.
     terukur_stmt = select(AmmoniaRisk).where(
         AmmoniaRisk.horizon_minutes == HORIZON_TERUKUR
@@ -126,10 +127,10 @@ async def get_history(
     if allowed_device_ids is not None:
         stmt = stmt.where(AmmoniaRisk.device_id.in_(allowed_device_ids))
 
-    # Urut pakai target_time (waktu yang DINILAI), bukan `time` (kapan dihitung):
-    # baris ramalan lahir di masa kini untuk waktu di masa depan, dan log yang
-    # diurutkan pakai `time` akan menaruhnya berdampingan dengan baris terukur
-    # yang sama sekali beda maknanya. device_id + horizon sebagai tiebreaker.
+    # Urut pakai target_time (waktu yang dinilai), bukan `time` (kapan
+    # dihitung): baris ramalan lahir sekarang untuk waktu di masa depan, jadi
+    # urutan pakai `time` menaruhnya berdampingan dengan baris terukur.
+    # device_id + horizon sebagai tiebreaker.
     stmt = (
         stmt.order_by(
             AmmoniaRisk.target_time.desc(),

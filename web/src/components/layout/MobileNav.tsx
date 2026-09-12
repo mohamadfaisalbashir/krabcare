@@ -8,7 +8,7 @@ import { isNavActive } from "@/lib/nav";
 import { useUser } from "@/lib/user-store";
 import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
-// Label sengaja lebih pendek dari Sidebar, ruang horizontalnya jauh lebih sempit.
+// Label lebih pendek dari Sidebar, ruang horizontalnya jauh lebih sempit.
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/log-historis", label: "Log", icon: History },
@@ -22,8 +22,7 @@ const ADMIN_NAV_ITEM = { href: "/perangkat", label: "Device", icon: Cpu };
 export default function MobileNav() {
   const pathname = usePathname();
   const user = useUser();
-  // Sama seperti Sidebar: admin cuma butuh Perangkat + Profil, gak punya
-  // kolam sendiri buat Dashboard/Log/Notifikasi.
+  // Sama seperti Sidebar: admin tidak punya kolam, jadi cuma Perangkat + Profil.
   const navItems =
     user?.role === "admin"
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
@@ -47,8 +46,8 @@ export default function MobileNav() {
               active ? "bg-brand-50 text-brand-700" : "text-muted"
             )}
           >
-            {/* Bar bawah horizontal, jadi aksennya di sisi ATAS tab dan
-                tumbuh melebar (scale-x), bukan di kiri seperti sidebar. */}
+            {/* Bar bawah horizontal, jadi aksennya di sisi atas tab dan tumbuh
+                melebar (scale-x), bukan di kiri seperti sidebar. */}
             <span
               aria-hidden
               className={clsx(

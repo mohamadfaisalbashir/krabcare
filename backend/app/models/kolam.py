@@ -8,7 +8,8 @@ from app.db.base import Base
 
 
 class Kolam(Base):
-    """Unit budidaya (satu rak vertikal = satu master node + slave node di bawahnya), dimiliki satu user."""
+    """Unit budidaya milik satu user: satu rak vertikal, yaitu satu master node
+    beserta slave node di bawahnya."""
 
     __tablename__ = "kolam"
     # Lihat catatan index di device.py.

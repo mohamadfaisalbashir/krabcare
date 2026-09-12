@@ -13,7 +13,7 @@ class Device(Base):
     """Node/perangkat IoT: slave node (ESP32C3), master node (ESP32), atau gateway (Raspberry Pi)."""
 
     __tablename__ = "devices"
-    # Index dibuat SQL init. Wajib dideklarasi ulang di sini supaya autogenerate
+    # Index dibuat SQL init. Dideklarasikan ulang di sini supaya autogenerate
     # Alembic tidak menawarkan DROP INDEX.
     __table_args__ = (
         Index("idx_devices_parent", "parent_device_id"),

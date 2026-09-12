@@ -1,19 +1,11 @@
 """prediksi per parameter di fuzzy_predictions
 
-Menyimpan nilai ramalan FTS per parameter (pH, suhu, salinitas), bukan cuma
-skor agregat hasil peleburan Mamdani.
+Simpan nilai ramalan FTS per parameter (pH, suhu, salinitas), bukan cuma skor
+agregat hasil peleburan Mamdani. Halaman detail kolam butuh angka itu untuk
+menampilkan tren tiap parameter, jadi disimpan, bukan dihitung ulang.
 
-LATAR: ml_pipeline_service.run_pipeline_for_device() sudah memanggil
-forecast_multi_step() untuk ketiga parameter, lalu langsung meleburnya jadi satu
-kategori dan MEMBUANG nilai per parameternya. Halaman detail kolam butuh angka
-itu untuk menampilkan tren tiap parameter ("cenderung stabil di kisaran 7.1-7.2"),
-jadi kolomnya disimpan, bukan dihitung ulang.
-
-Presisi disamakan dengan sensor_readings (ph 4,2 / suhu 4,1 / salinitas 5,2)
-supaya nilai ramalan dan nilai terukur dibulatkan sama.
-
-Nullable: baris prediksi yang sudah ada sebelum migrasi ini tetap valid dan
-ditampilkan sebagai "belum ada data prediksi" di web.
+Presisi disamakan dengan sensor_readings (ph 4,2 / suhu 4,1 / salinitas 5,2).
+Nullable, supaya baris prediksi sebelum migrasi ini tetap valid.
 
 Revision ID: 027f8214c47a
 Revises: 3de7a89a502f

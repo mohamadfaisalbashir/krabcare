@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Migrasi database yang aman untuk produksi: backup DULU, baru upgrade.
-# `set -e` memastikan backup gagal = migrasi TIDAK dijalankan.
+# Migrasi database untuk produksi
 set -euo pipefail
 
 cd "$(dirname "$0")/.."

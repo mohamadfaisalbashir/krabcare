@@ -31,14 +31,12 @@ export default function DaftarPage() {
       return;
     }
 
-    // Akunnya SUDAH jadi di titik ini. Login langsung dicoba, dan hasilnya yang
-    // memberi tahu mana yang berlaku, tanpa halaman ini perlu tahu apa pun soal
-    // konfigurasi SMTP server:
+    // Akunnya sudah jadi di titik ini. Login langsung dicoba, dan hasilnya yang
+    // menentukan, tanpa halaman ini perlu tahu konfigurasi SMTP server:
     //   berhasil -> backend melewati verifikasi (SMTP belum diatur), masuk saja
     //   ditolak  -> akun menunggu link aktivasi, tampilkan "cek email"
-    // Galat di sini TIDAK boleh dilaporkan sebagai "pendaftaran gagal": akunnya
-    // sudah terlanjur dibuat, dan mengulang formulir cuma akan kena "Email
-    // sudah terdaftar".
+    // Galat di sini jangan dilaporkan sebagai "pendaftaran gagal": mengulang
+    // formulir cuma akan kena "Email sudah terdaftar".
     try {
       const { access_token } = await api.login(email, password);
       window.localStorage.setItem("access_token", access_token);
@@ -107,11 +105,10 @@ export default function DaftarPage() {
             onChange={(e) => setNama(e.target.value)}
             required
           />
-          {/* pattern WAJIB di samping type="email": type="email" saja meloloskan
-              "a@b" (tanpa titik & TLD), yang lalu ditolak pola backend di
-              schemas/user.py dan baru ketahuan setelah request bolak-balik.
-              Pola ini versi ringkas dari pola backend, cukup untuk menangkap
-              kesalahan ketik di browser; backend tetap penjaga terakhirnya. */}
+          {/* pattern wajib di samping type="email": type="email" saja meloloskan
+              "a@b" tanpa titik dan TLD, yang lalu ditolak pola backend di
+              schemas/user.py setelah request bolak-balik. Ini versi ringkas
+              dari pola backend, yang tetap jadi penjaga terakhir. */}
           <Input
             label="Email"
             type="email"

@@ -1,8 +1,7 @@
 #!/bin/sh
-# Jalanin migrasi Alembic dulu sebelum server naik, biar skema DB selalu
-# sinkron sama model tiap deploy, gak perlu diinget manual (lihat insiden
-# fuzzy_predictions.predicted_ph 04 Sep 2026: migrasi ketinggalan, /quality/latest
-# 500 di production).
+# Jalankan migrasi Alembic sebelum server naik, supaya skema DB selalu sinkron
+# dengan model tiap deploy. Migrasi yang ketinggalan pernah bikin
+# /quality/latest 500 di production (fuzzy_predictions.predicted_ph, 4 Sep 2026).
 set -e
 alembic upgrade head
 exec "$@"

@@ -1,11 +1,11 @@
-"""Schema indeks risiko toksisitas amonia, FRAKSI NH3, bukan konsentrasi mg/L."""
+"""Schema indeks risiko toksisitas amonia: fraksi NH3, bukan konsentrasi mg/L."""
 
 from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-#: Ditempel di setiap response supaya angkanya tidak pernah lepas dari batasannya.
-#: Jangan dipendekkan: inilah yang membedakan "estimasi fraksi" dari klaim
+#: Ditempel di setiap response supaya angkanya tidak lepas dari batasannya.
+#: Jangan dipendekkan: ini yang membedakan estimasi fraksi dari klaim
 #: pengukuran yang tidak dimiliki sistem ini (amonia.md:7-8).
 DISCLAIMER = (
     "Ini estimasi fraksi risiko dari model kesetimbangan kimia, BUKAN "
@@ -15,11 +15,11 @@ DISCLAIMER = (
 
 
 class AmmoniaRiskOut(BaseModel):
-    """Estimasi FRAKSI amonia tak-terionisasi (bukan konsentrasi mg/L).
+    """Estimasi fraksi amonia tak terionisasi, bukan konsentrasi mg/L.
 
-    Dihitung dari pH, suhu, dan salinitas menggunakan persamaan kesetimbangan
-    kimia (Bower & Bidwell 1978 / Spotte & Adams 1983). Tidak memerlukan dan
-    tidak menghasilkan nilai TAN, lihat catatan `disclaimer`.
+    Dihitung dari pH, suhu, dan salinitas dengan persamaan kesetimbangan kimia
+    (Bower & Bidwell 1978 / Spotte & Adams 1983). Tidak memerlukan dan tidak
+    menghasilkan nilai TAN, lihat `disclaimer`.
     """
 
     time: datetime
@@ -53,10 +53,10 @@ class AmmoniaRiskLogOut(AmmoniaRiskOut):
 
 
 class AmmoniaRiskIn(BaseModel):
-    """Payload ingest satu baris risiko amonia, dihitung & dikirim Raspi (edge_pipeline.py).
+    """Payload ingest satu baris risiko amonia, dihitung Raspi (edge_pipeline.py).
 
-    Bentuknya sengaja sejajar field demi field dengan AmmoniaRiskOut/tabel
-    ammonia_risks, backend di sini cuma menyimpan, tidak menghitung ulang."""
+    Field-nya sejajar dengan AmmoniaRiskOut dan tabel ammonia_risks; backend
+    cuma menyimpan, tidak menghitung ulang."""
 
     device_code: str
     time: datetime

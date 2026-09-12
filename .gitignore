@@ -1,4 +1,4 @@
-# ── Python (backend/, ml/) ──────────────────────────────
+# Python (backend/, ml/)
 __pycache__/
 *.py[cod]
 *.egg-info/
@@ -11,20 +11,19 @@ env/
 .ruff_cache/
 *.log
 
-# ── Environment / secrets ───────────────────────────────
+# Environment / secrets
 .env
 .env.*
-# env.production.example TIDAK diabaikan: namanya sengaja tanpa titik di depan
-# supaya lolos pola `.env.*`. Itu satu-satunya template yang ikut `git clone`.
+env.production.example
 
-# ── Docker ───────────────────────────────────────────────
+# Docker
 *.pid
 
-# ── Database ─────────────────────────────────────────────
+# Database
 *.sqlite3
 pgdata/
 
-# ── Node / Next.js (web/) ───────────────────────────────
+# Node / Next.js (web/)
 web/node_modules/
 web/tsconfig.tsbuildinfo
 web/.next/
@@ -34,25 +33,25 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# ── ML artifacts ─────────────────────────────────────────
+# ML artifacts
 ml/**/*.pkl
 ml/**/*.joblib
 ml/**/mlruns/
 
-# ── Editor / OS ──────────────────────────────────────────
+# Editor / OS 
 .vscode/
 .idea/
 *.iml
 .DS_Store
 Thumbs.db
 
-# ── Claude Code (cache/session lokal, bukan konvensi proyek) ────
-.claude/
-
-# ── Backup database ─────────────────────────────────────
+# Backup database
 backups/
 
-# ── Eksperimen riset lokal (WLR vs FTS, dsb), sengaja terisolasi dari
-# program utama, tidak pernah di-commit (lihat experiments/wlr_vs_fts/README.md)
+# Eksperimen riset lokal (WLR vs FTS, dsb)
 experiments/
 data/
+
+# Postman
+.postman/
+postman/

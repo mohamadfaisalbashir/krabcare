@@ -1,6 +1,5 @@
-// Ambang & penyajian tiga parameter kualitas air. Dipakai kartu parameter,
-// panel prediksi, dan halaman log historis, dikumpulkan di sini supaya
-// angkanya tidak menyebar dan ikut berbeda antar halaman.
+// Ambang & penyajian tiga parameter kualitas air. Satu tempat supaya angkanya
+// tidak berbeda antara kartu parameter, panel prediksi, dan log historis.
 import type { StatusLabel } from "./types";
 
 export type ParamKey = "ph" | "temperature_c" | "salinity_ppt";
@@ -18,20 +17,13 @@ export const RANGE: Record<
 };
 
 /**
- * `color` dipakai kedua grafik (HistoryChart & CombinedChart) sebagai stroke SVG,
- * jadi harus hex, kelas Tailwind tidak bisa dipakai di sana. Disimpan di sini,
- * bukan di masing-masing komponen, supaya satu parameter selalu berwarna sama.
+ * `color` dipakai kedua grafik sebagai stroke SVG, jadi harus hex (kelas
+ * Tailwind tidak bisa dipakai di sana).
  *
- * Diverifikasi dengan validator palet: separasi buta warna terburuk ΔE 15.3
- * (protan) / 23.0 (tritan), jauh di atas ambang 8, jadi tidak perlu pembeda
- * garis putus-putus. Biru salinitas sengaja lebih pekat dari #2B7A9E yang lama,
- * yang gagal chroma floor dan cenderung terbaca abu-abu.
- *
- * pH SENGAJA tetap hijau meski warna merek aplikasi sudah jadi cyan #19A8B2.
- * Ini palet kategorikal, bukan warna merek: tugasnya membedakan tiga garis di
- * satu grafik. Menyamakan pH dengan #19A8B2 membuatnya bertabrakan dengan biru
- * salinitas, terukur ΔE 12.1 pada penglihatan normal, di bawah ambang 15,
- * artinya kedua garis sulit dibedakan bahkan tanpa buta warna.
+ * Palet kategorikal, bukan warna merek. Separasi buta warna terburuk ΔE 15.3
+ * (protan) / 23.0 (tritan), di atas ambang 8, jadi tidak perlu garis putus.
+ * pH tetap hijau: disamakan dengan cyan merek #19A8B2 jaraknya ke biru
+ * salinitas cuma ΔE 12.1, di bawah ambang 15.
  */
 export const PARAM_UI: Record<
   ParamKey,
@@ -43,15 +35,11 @@ export const PARAM_UI: Record<
 };
 
 /**
- * Sumbu Y kedua grafik.
+ * Sumbu Y kedua grafik. Bukan formatValue: tick adalah hasil bagi domain dan
+ * bisa jatuh di 7.05, yang dibulatkan 1 desimal jadi tercetak "7". Dua desimal
+ * tetap ≤5 karakter, muat di sumbu selebar 44px.
  *
- * Sengaja BUKAN formatValue. Tick sumbu bukan pembacaan sensor, ia hasil bagi
- * domain dan bisa jatuh di 7.05. Dibulatkan ke 1 desimal angka itu tercetak "7"
- * padahal garisnya ada di 7.05. Dua desimal jujur dan tetap ≤5 karakter, jadi
- * masih muat di sumbu selebar 44px.
- *
- * toFixed lalu Number itulah yang memangkas ekor float recharts
- * (2.1999999999999997 → "2.2"), penyebab sumbu salinitas terlihat terpotong.
+ * toFixed lalu Number memangkas ekor float recharts (2.1999999999999997 → 2.2).
  */
 export function chartValueLabel(value: number): string {
   return String(Number(value.toFixed(2)));
@@ -76,25 +64,17 @@ export function statusOf(param: ParamKey, value: number): StatusLabel {
 }
 
 /**
- * Tampilkan maksimal 1 desimal tanpa nol di belakang: 7.63 → "7.6",
- * 7.70 → "7.7", 25.00 → "25". Nilai dari backend bertipe Numeric (pH dan
- * salinitas 2 desimal, suhu 1), jadi tanpa perapian ini satu layar bisa
- * mencampur "7.63" dan "22.4" dan terbaca tidak konsisten.
- *
- * Hanya untuk TAMPILAN. Ekspor CSV sengaja memakai nilai mentah supaya
- * presisi penuhnya tidak hilang, lihat toCsv() di lib/export.ts.
+ * Maksimal 1 desimal tanpa nol di belakang: 7.63 → "7.6", 25.00 → "25".
+ * Hanya untuk tampilan; ekspor CSV memakai nilai mentah (toCsv() di export.ts).
  */
 export function formatValue(value: number): string {
   return String(Number(value.toFixed(1)));
 }
 
 /**
- * Posisi sebuah nilai di dalam rentang toleransi, dinyatakan 0-100 persen.
- *
- * Dipakai kartu parameter untuk menggambar penanda di atas track rentang.
- * DIJEPIT di kedua ujung: nilai di luar toleransi (yang memang mungkin,
- * itulah status "Bahaya") kalau tidak dijepit akan menaruh penandanya di luar
- * batang dan terlihat seperti bug, bukan seperti peringatan.
+ * Posisi nilai di dalam rentang toleransi, 0-100 persen, untuk penanda di
+ * track kartu parameter. Dijepit di kedua ujung supaya nilai berstatus
+ * "Bahaya" tidak menaruh penandanya di luar batang.
  */
 export function rangePercent(param: ParamKey, value: number): number {
   const { min, max } = RANGE[param];
@@ -102,11 +82,8 @@ export function rangePercent(param: ParamKey, value: number): number {
 }
 
 /**
- * Pita optimal di atas track yang sama, sebagai [mulai%, lebar%].
- *
- * Satu sumber dengan rangePercent supaya penanda nilai dan pita hijau tidak
- * bisa memakai skala yang berbeda, kalau itu terjadi, kartunya akan
- * menunjukkan penanda di luar pita untuk nilai yang statusnya "Aman".
+ * Pita optimal di track yang sama, sebagai [mulai%, lebar%]. Lewat rangePercent
+ * supaya penanda nilai dan pita hijau tidak memakai skala berbeda.
  */
 export function optimalBand(param: ParamKey): [number, number] {
   const [lo, hi] = RANGE[param].optimal;
@@ -125,14 +102,8 @@ const STABLE_THRESHOLD: Record<ParamKey, number> = {
 
 /**
  * Kalimat tren dari deret ramalan satu parameter, beserta statusnya.
- *
- * Tinggal di sini, bukan di PredictionPanel: isinya cuma PARAM_UI, formatValue,
- * dan statusOf yang ketiganya sudah ada di berkas ini, tidak menyentuh React,
- * dan dengan begitu ikut terjaring `npm test` (parameter.test.ts).
- *
- * Status dikembalikan TERPISAH, tidak disisipkan ke kalimat. Panel menaruhnya
- * di pojok kanan atas kolom. Menulisnya lagi di ujung kalimat cuma mengulang
- * hal yang sama dua kali di satu kolom selebar ~12rem.
+ * Status dikembalikan terpisah, tidak disisipkan ke kalimat: panel sudah
+ * menampilkannya sebagai badge di pojok kolom.
  */
 export function trendSentence(
   param: ParamKey,
@@ -142,8 +113,7 @@ export function trendSentence(
   const first = values[0];
   const last = values[values.length - 1];
   const status = statusOf(param, last);
-  // Satuan pH KEBETULAN sama dengan nama pendeknya, dan "pH berkisar di angka
-  // 7.8 pH" menyebut hal yang sama dua kali dalam satu kalimat.
+  // Satuan pH sama dengan nama pendeknya, hindari "7.8 pH pH".
   const satuan = unit === short ? "" : ` ${unit}`;
 
   if (Math.abs(last - first) < STABLE_THRESHOLD[param]) {

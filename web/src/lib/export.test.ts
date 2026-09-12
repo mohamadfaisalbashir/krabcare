@@ -1,9 +1,6 @@
-// Uji lib/export.ts + lib/tanggal.ts lewat `node --test`.
-//
-// Keduanya sengaja bebas import runtime (lihat catatan di kepala export.ts),
-// jadi berkas ini bisa memuatnya tanpa bundler, DOM, atau backend hidup.
-// downloadCsv/downloadXlsx TIDAK diuji di sini: keduanya butuh DOM dan isinya
-// cuma perekat Blob -> <a download>.
+// Uji lib/export.ts + lib/tanggal.ts lewat `node --test`. Keduanya bebas
+// import runtime, jadi tidak butuh bundler, DOM, atau backend hidup.
+// downloadCsv/downloadXlsx tidak diuji: keduanya butuh DOM.
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -21,7 +18,7 @@ import type { SensorReading } from "./types.ts";
 
 const CHUNK = 1000;
 
-/** Baris palsu. `time` naik seiring index. Received_at default +2 detik. */
+/** Baris palsu. `time` naik seiring index, received_at default +2 detik. */
 function baris(i: number, latensiDtk = 2): SensorReading {
   const t = new Date(Date.UTC(2026, 8, 9, 0, 0, 0) + i * 60_000);
   return {
@@ -45,8 +42,8 @@ function amoniaUntuk(i: number, pct: number | null, risk: string | null) {
 const TANPA_AMONIA = petaAmoniaDari([]);
 
 test("fetchAllReadings mengembalikan baris TERLAMA dulu", async () => {
-  // Server membalas terbaru-dulu. Halaman 1 = index 1999..1000,
-  // halaman 2 = index 1000..1 (index 1000 duplikat batas halaman).
+  // Server membalas terbaru dulu. Halaman 1 = index 1999..1000, halaman 2 =
+  // index 1000..1, jadi index 1000 muncul dua kali di batas halaman.
   const halaman: SensorReading[][] = [
     Array.from({ length: CHUNK }, (_, k) => baris(1999 - k)),
     Array.from({ length: CHUNK }, (_, k) => baris(1000 - k)),
@@ -59,7 +56,7 @@ test("fetchAllReadings mengembalikan baris TERLAMA dulu", async () => {
   assert.equal(truncated, false, "dua halaman, halaman kedua tidak penuh setelah dedup");
   // 1000 + 1000 - 1 duplikat batas halaman.
   assert.equal(rows.length, 1999);
-  // Inti pengujian: urutannya kronologis naik, bukan turun.
+  // Inti pengujian: urutan kronologis naik, bukan turun.
   assert.equal(rows[0].time, baris(1).time);
   assert.equal(rows[rows.length - 1].time, baris(1999).time);
   for (let i = 1; i < rows.length; i++) {
@@ -122,10 +119,8 @@ test("toCsv: amonia terpasang ke baris sensor berwaktu sama", () => {
 });
 
 test("toCsv: amonia yang mesetnya beberapa detik dari reading (dua request ingest terpisah) tetap terpasang", () => {
-  // Kasus nyata di lapangan: POST /ingest/readings dan POST /ingest/quality
-  // adalah DUA request terpisah, jedanya beberapa detik membuat `time` di
-  // ammonia_risks TIDAK identik bit-per-bit dengan `time` di sensor_readings.
-  // Sebelumnya ini bikin kolom amonia kosong 100% di ekspor walau datanya ada.
+  // POST /ingest/readings dan POST /ingest/quality dua request terpisah, jadi
+  // `time` di ammonia_risks tidak identik dengan yang di sensor_readings.
   const geser = (i: number, ms: number) => new Date(new Date(baris(i).time).getTime() + ms).toISOString();
   const peta = petaAmoniaDari([
     { device_id: 1, time: geser(0, 4000), fraction_nh3_pct: 2.4, risk_level: "normal" },
@@ -163,9 +158,8 @@ test("toCsv: di antara beberapa kandidat, yang dipasangkan adalah yang PALING DE
 });
 
 test("toCsv: baris tanpa pasangan amonia jadi sel KOSONG, bukan 0", () => {
-  // Petanya berisi amonia untuk baris(5), sedangkan yang diekspor baris(0).
-  // Sel kosong dibaca pandas sebagai NaN. "0" akan terbaca sebagai "amonianya
-  // nol persen", klaim yang tidak pernah diukur.
+  // Peta berisi amonia untuk baris(5), yang diekspor baris(0). Sel kosong
+  // dibaca pandas sebagai NaN; "0" akan terbaca sebagai nol persen.
   const csv = toCsv([baris(0)], ["ph"], {}, amoniaUntuk(5, 3.7, "perhatian"));
   const sel = csv.split("\n")[1].split(",");
   assert.equal(sel[6], "");
@@ -173,8 +167,8 @@ test("toCsv: baris tanpa pasangan amonia jadi sel KOSONG, bukan 0", () => {
 });
 
 test("petaAmoniaDari: kunci memisahkan device, bukan cuma waktu", () => {
-  // Dua device bisa punya pembacaan pada detik yang sama persis. Kalau kuncinya
-  // cuma `time`, salah satunya menimpa yang lain diam-diam.
+  // Dua device bisa punya pembacaan pada detik yang sama. Kalau kuncinya cuma
+  // `time`, salah satunya menimpa yang lain.
   const peta = petaAmoniaDari([
     { device_id: 1, time: baris(0).time, fraction_nh3_pct: 1.1, risk_level: "normal" },
     { device_id: 2, time: baris(0).time, fraction_nh3_pct: 9.9, risk_level: "berbahaya" },
@@ -185,7 +179,7 @@ test("petaAmoniaDari: kunci memisahkan device, bukan cuma waktu", () => {
 });
 
 test("latensiDetik boleh negatif kalau jam device lebih cepat dari server", () => {
-  // Bukan dijepit ke 0: angka negatif justru bukti jam Raspi perlu disinkronkan.
+  // Bukan dijepit ke 0: nilai negatif berarti jam Raspi perlu disinkronkan.
   assert.equal(latensiDetik(baris(0, -5)), -5);
 });
 
@@ -197,16 +191,16 @@ test("namaBerkas memakai ekstensi sesuai format", () => {
     )
   );
   assert.ok(namaBerkas("semua", [...p], "2026-09-01", "2026-09-09", "xlsx").endsWith(".xlsx"));
-  // Ketiga parameter ikut -> segmen parameter dibuang.
+  // Ketiga parameter ikut, segmen parameter dibuang.
   const semua = namaBerkas("semua", ["ph", "temperature_c", "salinity_ppt"], "a", "b", "csv");
   assert.equal(semua, "log-sensor_semua_a_b.csv");
-  // Daftar kosong = pilihan "Amonia saja". Tanpa cabang khusus, namanya jadi
+  // Daftar kosong = "Amonia saja". Tanpa cabang khusus namanya jadi
   // "log-sensor_semua__a_b.csv" dengan garis bawah ganda.
   assert.equal(namaBerkas("semua", [], "a", "b", "csv"), "log-sensor_semua_amonia_a_b.csv");
 });
 
 test("toCsv tanpa parameter sensor tetap membawa kolom amonia", () => {
-  // Inilah bentuk berkas saat pengguna memilih "Amonia saja".
+  // Bentuk berkas saat pengguna memilih "Amonia saja".
   const csv = toCsv([baris(0)], [], {}, amoniaUntuk(0, 4.2, "perhatian"));
   const [header, isi] = csv.split("\n");
   assert.equal(
@@ -219,8 +213,8 @@ test("toCsv tanpa parameter sensor tetap membawa kolom amonia", () => {
 });
 
 test("format tanggal dd-mm-yyyy, tanggal & bulan satu digit tetap dipad", () => {
-  // Waktu LOKAL, jadi dibangun sebagai waktu lokal supaya uji ini tidak
-  // bergantung zona waktu mesin yang menjalankannya.
+  // Dibangun sebagai waktu lokal supaya uji ini tidak bergantung zona waktu
+  // mesin yang menjalankannya.
   const lokal = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) =>
     new Date(y, m - 1, d, h, mi, s).toISOString();
 

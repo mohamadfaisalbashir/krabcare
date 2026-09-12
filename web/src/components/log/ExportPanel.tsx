@@ -22,7 +22,7 @@ import {
   type GetPage,
 } from "@/lib/export";
 
-/** yyyy-mm-dd untuk <input type="date">, dari tanggal LOKAL bukan UTC. */
+/** yyyy-mm-dd untuk <input type="date">, dari tanggal lokal bukan UTC. */
 function isoDay(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
@@ -37,11 +37,10 @@ const AMONIA_MAX_PAGES = 20;
 /**
  * Ambil seluruh riwayat amonia terukur pada satu rentang waktu.
  *
- * Jauh lebih sederhana dari fetchAllReadings: endpoint ini punya `offset`, jadi
- * paginasinya biasa saja dan tidak perlu keyset cursor. `only_measured` menyaring
- * ke horizon 0, yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS.
- * device_id sengaja tidak dikirim: scope backend sudah membatasi ke device milik
- * user, sama seperti pengambilan halaman log historis.
+ * Lebih sederhana dari fetchAllReadings karena endpoint ini punya `offset`,
+ * jadi tidak perlu keyset cursor. `only_measured` menyaring ke horizon 0,
+ * yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS. device_id tidak
+ * dikirim: scope backend sudah membatasi ke device milik user.
  */
 async function ambilAmonia(start: string, end: string) {
   const semua: AmmoniaRiskLog[] = [];
@@ -66,9 +65,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
   const [from, setFrom] = useState(isoDay(weekAgo));
   const [to, setTo] = useState(isoDay(today));
-  // "amonia" = amonia SAJA. Kolom amonia sebenarnya selalu ikut di berkas apa
-  // pun, tapi tanpa pilihan ini keberadaannya tidak pernah kelihatan di layar
-  // dan orang menyangka amonia tidak bisa diunduh.
+  // "amonia" = amonia saja. Kolomnya selalu ikut di berkas apa pun, tapi tanpa
+  // pilihan ini keberadaannya tidak kelihatan di layar.
   const [paramSel, setParamSel] = useState<ParamKey | "semua" | "amonia">("semua");
   const [format, setFormat] = useState<ExportFormat>("csv");
   const [busy, setBusy] = useState(false);
@@ -92,8 +90,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
     setBusy(true);
     setProgress(0);
     try {
-      // getPage sebagai parameter, bukan import di dalam lib/export.ts: modul itu
-      // tetap bebas dependensi (bisa diuji node --test) dan progres jadi gratis.
+      // getPage sebagai parameter, bukan import di lib/export.ts, supaya modul
+      // itu tetap bebas dependensi dan bisa diuji `node --test`.
       const getPage: GetPage = async (p) => {
         const rows = await api.getReadings(p);
         setProgress((n) => n + rows.length);
@@ -107,8 +105,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       );
 
       // flatMap menyambung sensor demi sensor, jadi berkas gabungan melompat
-      // mundur ke awal rentang tiap kali ganti sensor. Diurutkan lagi supaya
-      // seluruh berkas benar-benar kronologis dari yang paling lama.
+      // mundur tiap ganti sensor. Diurutkan lagi supaya kronologis.
       const rows = results
         .flatMap((r) => r.rows)
         .sort((a, b) => a.time.localeCompare(b.time));
@@ -131,8 +128,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
       if (results.some((r) => r.truncated)) {
         // Paging berjalan dari terbaru ke terlama, jadi yang terpotong adalah
-        // data PALING LAMA, dan karena berkasnya sekarang mulai dari yang
-        // terlama, potongan itu ada di AWAL berkas, bukan di akhir.
+        // data paling lama, dan potongan itu ada di awal berkas.
         setNote(
           `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai. ` +
             "Data paling lama terpotong, jadi berkas ini tidak mulai dari tanggal " +

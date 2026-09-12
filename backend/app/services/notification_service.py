@@ -19,20 +19,16 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("app.services.notification_service")
 
-#: Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali. SALINAN dari
-#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py, klasifikasi sekarang dihitung
-#: di edge, tapi keputusan "kapan kirim notifikasi" tetap di backend, jadi
-#: konstanta ini WAJIB tetap sinkron dengan sumber itu kalau kategorinya
-#: pernah berubah.
+#: Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali. Salinan dari
+#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py, harus tetap sinkron.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
-#: Label Indonesia yang dipakai di pesan notifikasi & di seluruh frontend
-#: (categoryToLabel() di lib/types.ts) -- SALINAN yang harus tetap sinkron,
-#: sama seperti ANOMALY_CATEGORIES di atas.
+#: Label Indonesia untuk pesan notifikasi dan seluruh frontend
+#: (categoryToLabel() di lib/types.ts). Harus tetap sinkron.
 CATEGORY_LABEL: dict[str, str] = {"baik": "Aman", "sedang": "Waspada", "buruk": "Bahaya"}
 
-#: Kunci UNIQUE tabel notifications (lihat database/init/08_notifications.sql:16).
-#: Ketiga jalur pembuatan notifikasi memakainya untuk on_conflict_do_nothing.
+#: Kunci UNIQUE tabel notifications (database/init/08_notifications.sql:16).
+#: Dipakai ketiga jalur pembuatan notifikasi untuk on_conflict_do_nothing.
 _UNIQUE_KEY = [
     Notification.device_id,
     Notification.source,
@@ -44,9 +40,9 @@ _UNIQUE_KEY = [
 async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notification | None:
     """INSERT satu notifikasi; None kalau kunci uniknya sudah ada.
 
-    db.add() polos akan melempar IntegrityError kalau ingest yang sama diulang
-    (gateway retry), dan karena ini dipanggil di dalam loop dispatch, satu
-    tabrakan akan 500 seluruh request dan membuang sisa notifikasi batch itu.
+    db.add() polos melempar IntegrityError kalau gateway mengulang ingest yang
+    sama, dan karena ini dipanggil di dalam loop, satu tabrakan akan membuat
+    seluruh request 500 dan membuang sisa notifikasi batch itu.
     """
     stmt = (
         pg_insert(Notification)
@@ -78,19 +74,14 @@ async def create_classification_notification(
     quality_score: float,
     sensor_reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi status sekarang, hanya dibuat saat kategori BERUBAH.
+    """Notifikasi status sekarang, hanya dibuat saat kategori berubah.
 
-    Tanpa transition-check ini, tiap siklus scheduler akan memberi notifikasi
-    selama anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
+    Tanpa transition-check ini, tiap siklus scheduler memberi notifikasi selama
+    anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
 
-    Pesannya SELALU menyebut transisi eksplisit ("dari X ke Y") memakai label
-    yang sama dengan yang dilihat pengguna di dashboard (Aman/Waspada/Bahaya) --
-    bukan lagi "berstatus SEDANG/BURUK"/"kembali NORMAL" yang generik. Itu
-    otomatis mencakup keempat perpindahan yang diminta (aman<->waspada,
-    bahaya<->waspada), plus dua lompatan ekstrem aman<->bahaya kalau suatu saat
-    memang terjadi (fuzzy Mamdani interpolasi halus, jadi jarang, tapi bukan
-    berarti tidak mungkin) -- tanpa perlu daftar kasus khusus yang gampang
-    ketinggalan salah satu kombinasi.
+    Pesannya menyebut transisi eksplisit ("dari X ke Y") dengan label yang sama
+    dengan dashboard (Aman/Waspada/Bahaya). Bentuk ini otomatis mencakup semua
+    kombinasi perpindahan, tanpa daftar kasus khusus.
     """
     previous = await _last_classification_category(db, device.id)
     if previous == category:
@@ -99,9 +90,8 @@ async def create_classification_notification(
     label_baru = CATEGORY_LABEL.get(category, category)
 
     if previous is None:
-        # Belum ada pembanding -- ini bukan "perubahan", jadi diam kalau
-        # kondisi awalnya memang baik. Anomali di percobaan pertama device
-        # tetap diberitahu (bukan transisi, tapi tetap layak diketahui).
+        # Belum ada pembanding, jadi ini bukan perubahan: diam kalau kondisi
+        # awalnya baik. Anomali di pembacaan pertama device tetap diberitahu.
         if category == "baik":
             return None
         message = (
@@ -130,7 +120,8 @@ async def create_classification_notification(
     )
 
 
-#: Ambang toleransi dan optimal parameter air, SAMA dengan yang ada di web/src/lib/parameter.ts
+#: Ambang toleransi dan optimal parameter air. Salinan dari RANGE di
+#: web/src/lib/parameter.ts, harus tetap sinkron.
 PARAM_CONFIG: dict[str, dict] = {
     "ph": {
         "label": "pH air",
@@ -197,7 +188,7 @@ async def create_parameter_notification(
     value_str: str,
     reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi status satu parameter, hanya dibuat saat kategori BERUBAH."""
+    """Notifikasi status satu parameter, hanya dibuat saat kategorinya berubah."""
     previous = await _last_parameter_category(db, device.id, parameter)
     if previous == category:
         return None
@@ -238,9 +229,10 @@ async def create_prediction_notifications(
 ) -> list[Notification]:
     """Peringatan dini dari horizon yang diramal anomali.
 
-    `anomalies`: [{"target_time", "category", "horizon_minutes"}, ...]. Dedup cukup
-    lewat UNIQUE (device_id, source, event_time, parameter) karena target_time absolut,
-    beda dari klasifikasi yang butuh transition-check. Return yang benar-benar baru.
+    `anomalies`: [{"target_time", "category", "horizon_minutes"}, ...]. Dedup
+    cukup lewat UNIQUE (device_id, source, event_time, parameter) karena
+    target_time absolut, tidak perlu transition-check seperti klasifikasi.
+    Return notifikasi yang benar-benar baru.
     """
     if not anomalies:
         return []
@@ -255,11 +247,10 @@ async def create_prediction_notifications(
             "quality_category": a["category"],
             "event_time": a["target_time"],
             "message": (
-                # CATEGORY_LABEL, bukan a['category'] mentah. Nilai mentahnya
-                # "sedang"/"buruk" (istilah database), sedangkan seluruh UI
-                # memakai Waspada/Bahaya. Tanpa terjemahan ini pesan prediksi
-                # jadi satu-satunya tempat yang menyebut istilah berbeda, dan
-                # pewarnaan kata status di halaman notifikasi tidak menemukannya.
+                # CATEGORY_LABEL, bukan a['category'] mentah: nilai mentahnya
+                # istilah database ("sedang"/"buruk") sedangkan UI memakai
+                # Waspada/Bahaya, dan pewarnaan kata status di halaman
+                # notifikasi mencari istilah UI.
                 f"Prediksi: kualitas air {device.device_code} berpotensi "
                 f"{CATEGORY_LABEL.get(a['category'], a['category']).upper()} "
                 f"sekitar {a['target_time'].strftime('%H:%M')} ({a['horizon_minutes']} menit lagi)."
@@ -320,14 +311,12 @@ async def dispatch_from_quality_ingest(
     predictions: list["FuzzyPredictionIn"],
     ammonia_risks: list["AmmoniaRiskIn"] | None = None,
 ) -> None:
-    """Pemicu notifikasi untuk klasifikasi, prediksi, & parameter yang BARU DITERIMA lewat
-    POST /ingest/quality (dikirim edge, lihat raspi/edge_pipeline.py).
+    """Pemicu notifikasi untuk klasifikasi, prediksi, dan parameter yang baru
+    diterima lewat POST /ingest/quality (dikirim edge, raspi/edge_pipeline.py).
 
-    Dulu dipanggil dari ml_pipeline_service.py setiap siklus scheduler backend
-    menghitung sendiri; sekarang backend cuma menerima hasil hitungnya, jadi
-    titik pemicunya pindah ke sini, tapi ATURANNYA sama persis (transition
-    check untuk klasifikasi & per-parameter, dedup UNIQUE untuk prediksi).
-    Device yang belum diklaim (kolam_id NULL) dilewati: notifikasi butuh pemilik.
+    Aturannya: transition check untuk klasifikasi dan per-parameter, dedup
+    UNIQUE untuk prediksi. Device yang belum diklaim (kolam_id NULL) dilewati
+    karena notifikasi butuh pemilik.
     """
     device_codes = sorted(
         {c.device_code for c in classifications}
@@ -461,12 +450,11 @@ async def list_notifications(
     offset: int = 0,
     source: str | None = None,
 ) -> list[Notification]:
-    """Notifikasi milik `user`, terbaru dulu. `offset` untuk paginasi "muat lebih banyak".
+    """Notifikasi milik `user`, terbaru dulu. `offset` untuk "muat lebih banyak".
 
-    `source` WAJIB disaring di SQL, bukan di klien. Halaman ini cuma 20 baris:
-    menyaring setelah LIMIT membuat tab "Parameter" tampak kosong padahal
-    barisnya ada di halaman berikutnya, persis keluhan "data notifikasi
-    parameter sering hilang".
+    `source` disaring di SQL, bukan di klien: satu halaman cuma 20 baris, jadi
+    menyaring setelah LIMIT membuat tab tampak kosong padahal barisnya ada di
+    halaman berikutnya.
     """
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
@@ -509,7 +497,7 @@ async def delete_notification(db: AsyncSession, user: User, notification_id: int
 
 
 async def delete_all_notifications(db: AsyncSession, user: User) -> int:
-    """Hapus SEMUA notifikasi milik `user`. Kembalikan jumlah baris yang terhapus."""
+    """Hapus semua notifikasi milik `user`. Kembalikan jumlah baris terhapus."""
     result = await db.execute(select(Notification).where(Notification.user_id == user.id))
     rows = list(result.scalars().all())
     for row in rows:

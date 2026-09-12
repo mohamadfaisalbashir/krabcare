@@ -1,11 +1,8 @@
-// Format tanggal & waktu untuk seluruh tampilan: dd-mm-yyyy.
+// Format tanggal & waktu untuk seluruh tampilan: dd-mm-yyyy, jam lokal.
 //
-// Dibangun dari getDate()/getMonth()/getFullYear(), BUKAN toLocaleString.
-// Locale "id-ID" memberi "9 Sep 2026" dan locale bawaan browser bisa memberi
-// apa saja tergantung setelan mesin pengguna, dua-duanya bukan dd-mm-yyyy.
-// Angkanya juga sengaja jam LOKAL, bukan UTC: pengguna membaca jam kolamnya.
-//
-// TANPA import runtime supaya bisa dimuat `node --test` (lihat lib/export.ts).
+// Dibangun dari getDate()/getMonth()/getFullYear(), bukan toLocaleString, yang
+// hasilnya ikut setelan locale mesin pengguna dan bukan dd-mm-yyyy.
+// Tanpa import runtime supaya bisa dimuat `node --test` (lihat lib/export.ts).
 
 function bagian(iso: string) {
   const d = new Date(iso);

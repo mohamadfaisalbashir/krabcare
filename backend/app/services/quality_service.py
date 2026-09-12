@@ -88,10 +88,10 @@ async def get_prediction_horizons(
     device_id: int | None = None,
     allowed_device_ids: set[int] | None = None,
 ) -> list[dict]:
-    """Semua horizon dari run forecast TERAKHIR per device, urut horizon_minutes ASC.
+    """Semua horizon dari run forecast terakhir per device, urut horizon_minutes.
 
     Perlu query sendiri karena satu run menulis banyak baris dengan `time` sama,
-    DISTINCT ON di get_latest_quality() hanya memulangkan salah satunya.
+    dan DISTINCT ON di get_latest_quality() cuma memulangkan salah satunya.
     """
     latest_time_subq = (
         select(FuzzyPrediction.device_id, func.max(FuzzyPrediction.time).label("max_time"))

@@ -13,9 +13,9 @@ import FormMessage, { type Message } from "@/components/ui/FormMessage";
 // Link aktivasi dari email berbentuk {FRONTEND_VERIFY_EMAIL_URL}?token=<raw>
 // (backend: auth_service.register_user -> _kirim_email_verifikasi).
 //
-// Bedanya dengan reset-password: di sana pengguna masih harus mengisi sesuatu,
-// di sini tidak ada yang perlu diisi. Jadi tokennya diverifikasi SENDIRI saat
-// halaman terbuka, dan formulir hanya muncul kalau token itu bermasalah.
+// Beda dengan reset-password: di sini tidak ada yang perlu diisi, jadi
+// tokennya diverifikasi sendiri saat halaman terbuka dan formulir cuma muncul
+// kalau tokennya bermasalah.
 function VerifikasiEmail() {
   const router = useRouter();
   const token = useSearchParams().get("token") ?? "";
@@ -30,15 +30,13 @@ function VerifikasiEmail() {
   // Kirim ulang link, untuk token kedaluwarsa/terlanjur dipakai.
   const [email, setEmail] = useState("");
   const [mengirim, setMengirim] = useState(false);
-  // Message, bukan string: backend sekarang membedakan berhasil dan gagal
-  // (sudah aktif / belum terdaftar / SMTP mati), jadi keduanya tidak boleh
-  // tampil dengan gaya yang sama seperti sebelumnya.
+  // Message, bukan string: backend membedakan berhasil dan gagal (sudah aktif
+  // / belum terdaftar / SMTP mati), jadi gayanya tidak boleh sama.
   const [terkirim, setTerkirim] = useState<Message>(null);
 
-  // React 18 StrictMode memanggil efek dua kali di dev. Token ini SEKALI PAKAI:
-  // panggilan kedua pasti gagal dan menimpa hasil sukses panggilan pertama
-  // dengan "sudah pernah dipakai". Penjaga ref-nya bukan kerapian, tanpa itu
-  // aktivasi yang berhasil terlihat seperti gagal.
+  // React 18 StrictMode memanggil efek dua kali di dev, sementara token ini
+  // sekali pakai: panggilan kedua gagal dan menimpa hasil sukses yang pertama.
+  // Penjaga ref-nya wajib.
   const sudahJalan = useRef(false);
 
   useEffect(() => {

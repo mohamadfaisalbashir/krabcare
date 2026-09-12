@@ -24,12 +24,11 @@ async def find_devices_by_code(db: AsyncSession, device_codes: list[str]) -> dic
 def _comparison_key(values: Iterable) -> tuple:
     """Key perbandingan yang tahan beda representasi timezone.
 
-    Kolom waktu bertipe TIMESTAMPTZ, jadi RETURNING selalu balik timezone-aware
-    (UTC), sedangkan payload ingest boleh saja mengirim datetime naive, Postgres
-    memperlakukannya sebagai UTC saat menyimpan, jadi di sini dipakai asumsi yang
-    sama. Tanpa normalisasi ini, baris ber-timestamp naive SELALU dianggap
-    duplikat padahal barusan berhasil masuk (ketahuan saat impor dataset NERR:
-    satu batch balas inserted=1000 sekaligus skipped_duplicates=1000).
+    Kolom waktu bertipe TIMESTAMPTZ, jadi RETURNING selalu timezone-aware (UTC),
+    sedangkan payload ingest boleh mengirim datetime naive. Postgres
+    memperlakukan yang naive sebagai UTC, jadi asumsi yang sama dipakai di sini.
+    Tanpa normalisasi ini, baris naive selalu dianggap duplikat padahal barusan
+    berhasil masuk.
     """
     return tuple(
         (v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc))
@@ -44,9 +43,9 @@ async def insert_skip_duplicates(
 ) -> tuple[int, list[dict]]:
     """Insert `rows` dengan ON CONFLICT DO NOTHING pada `conflict_columns`.
 
-    Return (jumlah baris masuk, baris `rows` yang di-skip karena duplikat).
-    Perbandingannya dikerjakan di sini, bukan di pemanggil, supaya kedua sisi
-    key dinormalkan dengan aturan yang sama (lihat _comparison_key).
+    Return (jumlah baris masuk, baris yang di-skip karena duplikat).
+    Perbandingannya di sini, bukan di pemanggil, supaya kedua sisi key
+    dinormalkan dengan aturan yang sama (lihat _comparison_key).
     """
     key_fields = [col.key for col in conflict_columns]
     stmt = (

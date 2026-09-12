@@ -1,13 +1,9 @@
 // Ekspor data mentah sensor ke CSV & XLSX. Seluruhnya di klien: backend tidak
 // punya endpoint ekspor, dan /readings dibatasi 1000 baris per permintaan.
 //
-// Modul ini sengaja TANPA import runtime di ATAS (hanya `import type`, yang
-// terhapus saat kompilasi) supaya `node --test` bisa memuatnya tanpa me-resolve
-// apa pun. write-excel-file karenanya di-import DINAMIS di dalam downloadXlsx,
-// bukan di kepala berkas: ia satu-satunya bagian yang butuh DOM + bundler, dan
-// import statis di sini akan mematikan seluruh berkas tesnya. Efek sampingnya
-// kebetulan menguntungkan, pustakanya baru diunduh browser saat pengguna
-// benar-benar memilih XLSX.
+// Tidak ada import runtime di kepala berkas (hanya `import type`) supaya
+// `node --test` bisa memuatnya tanpa me-resolve apa pun. write-excel-file
+// karena itu di-import dinamis di dalam downloadXlsx.
 import type { SensorReading } from "./types";
 import type { ParamKey } from "./parameter";
 import { formatWaktuDetik } from "./tanggal.ts";
@@ -15,15 +11,9 @@ import { formatWaktuDetik } from "./tanggal.ts";
 /** RFC 4180 + default pandas. Ganti ";" kalau Excel-ID jadi konsumen utama. */
 export const CSV_SEP = ",";
 /**
- * BOM UTF-8 di depan berkas CSV. Tanpa ini Excel membaca berkasnya sebagai
- * ANSI dan huruf beraksen jadi mojibake. Padanannya di pandas:
- * encoding="utf-8-sig".
- *
- * Ditulis sebagai escape \uFEFF, BUKAN karakternya langsung. Nilainya
- * persis sama saat dijalankan, tapi di dalam berkas sumber karakter itu
- * tidak terlihat sama sekali: pembaca kode mengira string kosong, dan
- * pemindai karakter tersembunyi melaporkannya sebagai penanda mencurigakan.
- * Escape-nya menyebutkan diri sendiri.
+ * BOM UTF-8 di depan berkas CSV. Tanpa ini Excel membacanya sebagai ANSI dan
+ * huruf beraksen jadi mojibake. Padanan pandas: encoding="utf-8-sig".
+ * Ditulis sebagai escape \uFEFF supaya terlihat di kode sumber.
  */
 export const CSV_BOM = "\uFEFF";
 
@@ -33,10 +23,9 @@ const CHUNK = 1000;
 export const MAX_PAGES = 20;
 
 /**
- * `<input type="date">` memberi "2026-09-01". `new Date("2026-09-01")` itu
- * tengah malam UTC, sedangkan `new Date("2026-09-01T00:00:00")` tengah malam
- * LOKAL, di WIB selisihnya 7 jam, di kedua ujung rentang. Bentuk kedua yang
- * benar: pengguna memilih tanggal menurut jamnya sendiri.
+ * `<input type="date">` memberi "2026-09-01". Tanpa akhiran T00:00:00 itu
+ * dibaca sebagai tengah malam UTC, selisih 7 jam dari WIB di kedua ujung
+ * rentang. Pengguna memilih tanggal menurut jamnya sendiri.
  */
 export function dayRangeToIso(from: string, to: string) {
   return {
@@ -53,21 +42,17 @@ export type GetPage = (p: {
 }) => Promise<SensorReading[]>;
 
 /**
- * Ambil SEMUA reading satu device dalam rentang waktu, menembus batas 1000.
+ * Ambil semua reading satu device dalam rentang waktu, menembus batas 1000.
  *
- * /readings tidak punya offset maupun cursor, tapi punya filter `end_time`.
- * Jadi paging dilakukan mundur: tiap putaran meminta 1000 baris terbaru yang
- * <= cursor, lalu cursor digeser ke baris tertua yang baru didapat.
+ * /readings tidak punya offset atau cursor, cuma filter `end_time`, jadi paging
+ * jalan mundur: tiap putaran minta 1000 baris terbaru yang <= cursor, lalu
+ * cursor digeser ke baris tertua yang didapat.
  *
- * WAJIB per device. PK sensor_readings adalah (device_id, time), jadi `time`
- * unik hanya DI DALAM satu device, jaminan itulah yang membuat duplikat di
- * batas halaman selalu tepat satu baris dan selalu di posisi pertama. Query
- * lintas device tidak punya jaminan itu dan akan menggandakan atau menghilangkan
- * baris di tiap batas.
+ * Harus per device: PK sensor_readings (device_id, time) bikin `time` unik
+ * hanya di dalam satu device, dan itu yang menjamin duplikat di batas halaman
+ * selalu tepat satu baris di posisi pertama.
  *
- * Hasilnya DIBALIK sebelum dikembalikan: paging jalan mundur (terbaru dulu),
- * sedangkan berkas ekspor harus mulai dari data TERLAMA. Dibalik di sini, satu
- * tempat, bukan di pemanggil, supaya urutannya tidak bisa beda antar pemakai.
+ * Hasilnya dibalik di sini supaya berkas ekspor selalu mulai dari data terlama.
  */
 export async function fetchAllReadings(
   getPage: GetPage,
@@ -81,17 +66,16 @@ export async function fetchAllReadings(
   for (let i = 0; i < MAX_PAGES; i++) {
     const page = await getPage({ device_id, start_time, end_time: cursor, limit: CHUNK });
 
-    // end_time bersifat inklusif (<=), jadi baris pertama halaman ini sama
-    // dengan baris terakhir halaman sebelumnya. Buang tepat satu.
+    // end_time inklusif (<=), jadi baris pertama halaman ini sama dengan baris
+    // terakhir halaman sebelumnya. Buang tepat satu.
     rows.push(...(rows.length && page[0]?.time === cursor ? page.slice(1) : page));
 
-    // Halaman tidak penuh berarti jendela waktunya sudah habis. Syarat ini juga
-    // sudah mencakup halaman kosong dan halaman yang isinya cuma duplikat.
+    // Halaman tidak penuh berarti jendela waktunya habis. Sudah mencakup halaman
+    // kosong dan halaman yang isinya cuma duplikat.
     if (page.length < CHUNK) return { rows: rows.reverse(), truncated: false };
 
-    // Verbatim, jangan lewat Date: `time` punya presisi mikrodetik dan
-    // toISOString() memotongnya ke milidetik, cursor jadi bergeser lebih awal
-    // dan baris di celah itu hilang diam-diam.
+    // Verbatim, jangan lewat Date: `time` presisi mikrodetik, toISOString()
+    // memotongnya ke milidetik dan baris di celah itu hilang.
     cursor = page[page.length - 1].time;
   }
 
@@ -104,12 +88,9 @@ function cell(s: string): string {
 }
 
 /**
- * Selisih jam device (`time`) dan jam backend (`received_at`), dalam detik.
- *
- * Inilah latensi gateway->backend yang jadi tujuan kolom ini. Bisa NEGATIF
- * kalau jam Raspberry Pi berjalan lebih cepat dari jam server, dan itu justru
- * yang perlu terlihat, jadi JANGAN dijepit ke 0: angka negatif adalah bukti
- * jamnya perlu disinkronkan, bukan noise yang harus disembunyikan.
+ * Latensi gateway->backend: selisih `time` (jam device) dan `received_at`
+ * (jam backend) dalam detik. Jangan dijepit ke 0; nilai negatif berarti jam
+ * Raspberry Pi lebih cepat dari jam server dan itu perlu terlihat.
  */
 export function latensiDetik(r: SensorReading): number {
   return (new Date(r.received_at).getTime() - new Date(r.time).getTime()) / 1000;
@@ -118,20 +99,13 @@ export function latensiDetik(r: SensorReading): number {
 /**
  * Toleransi pencocokan reading sensor <-> baris amonia, dalam milidetik.
  *
- * Amonia hidup di tabel lain (`ammonia_risks`) dan diambil lewat endpoint
- * lain, tapi SEHARUSNYA dihitung dari pembacaan sensor yang sama persis
- * (lihat raspi/edge_pipeline.py: satu variabel `waktu` dipakai untuk
- * keduanya). Kenyataan di lapangan: gateway mengirimkannya lewat DUA request
- * HTTP terpisah (POST /ingest/readings lalu POST /ingest/quality), dan jeda
- * beberapa detik di antara keduanya membuat `time` yang tersimpan di
- * ammonia_risks tidak selalu identik BIT-PER-BIT dengan `time` di
- * sensor_readings. Pencocokan kunci string persis sebelumnya membuat kolom
- * amonia di ekspor kosong 100% walau datanya ADA di database.
+ * Keduanya dihitung dari pembacaan yang sama (raspi/edge_pipeline.py), tapi
+ * dikirim lewat dua request terpisah, jadi `time` di ammonia_risks tidak
+ * selalu identik dengan `time` di sensor_readings. Cocokkan yang terdekat,
+ * bukan yang sama persis.
  *
- * Diganti jadi "amonia terdekat pada device yang sama, dalam jendela ini".
- * 30 detik dipilih karena interval antar-reading pada sistem ini biasanya
- * 60 detik ke atas, jadi jendela ini tidak akan salah pasang ke reading
- * tetangga, tapi cukup longgar untuk menyerap jeda dua-request di atas.
+ * 30 detik: interval antar-reading biasanya 60 detik ke atas, jadi tidak akan
+ * salah pasang ke reading tetangga.
  */
 export const TOLERANSI_AMONIA_MS = 30_000;
 
@@ -159,10 +133,9 @@ export function petaAmoniaDari(
 }
 
 /**
- * Amonia device tertentu yang waktunya PALING DEKAT dengan `time`, kalau ada
- * yang jatuh dalam TOLERANSI_AMONIA_MS. Binary search: array per-device sudah
- * terurut naik (dijamin petaAmoniaDari), jadi tetangga terdekat cuma bisa ada
- * tepat di titik potong itu atau satu langkah sebelumnya.
+ * Amonia device tertentu yang waktunya paling dekat dengan `time`, kalau ada
+ * yang jatuh dalam TOLERANSI_AMONIA_MS. Binary search; array per-device sudah
+ * terurut naik, jadi kandidatnya cuma titik potong atau satu langkah sebelumnya.
  */
 export function cariAmonia(
   peta: PetaAmonia,
@@ -209,17 +182,13 @@ export function headerFor(params: ParamKey[]): string[] {
   ];
 }
 
-/**
- * Kolom parameter dinamai persis seperti field backend (ph, temperature_c,
- * salinity_ppt) supaya berkasnya langsung cocok dipakai pandas.
- */
+/** Kolom parameter dinamai seperti field backend supaya langsung cocok di pandas. */
 export function toCsv(
   rows: SensorReading[],
   params: ParamKey[],
   kolamByDevice: Record<number, string>,
-  // Wajib, bukan opsional berdefault Map kosong. Kalau boleh dilewat, pemanggil
-  // yang lupa akan menghasilkan berkas dengan dua kolom amonia yang kosong
-  // semua, dan itu terbaca seperti "tidak ada data amonia", bukan seperti bug.
+  // Wajib, bukan opsional. Pemanggil yang lupa menghasilkan dua kolom amonia
+  // kosong, yang terbaca seperti "tidak ada data" alih-alih bug.
   amonia: PetaAmonia
 ): string {
   const lines = [headerFor(params).join(CSV_SEP)];
@@ -227,8 +196,8 @@ export function toCsv(
   for (const r of rows) {
     const values = params.map((p) => {
       const v = r[p];
-      // Nilai mentah, bukan formatValue: itu untuk tampilan. CSV membawa
-      // presisi penuh. null jadi sel kosong (dibaca pandas sebagai NaN).
+      // Nilai mentah, bukan formatValue: CSV membawa presisi penuh.
+      // null jadi sel kosong (dibaca pandas sebagai NaN).
       return v == null ? "" : String(v);
     });
     const a = cariAmonia(amonia, r.device_id, r.time);
@@ -259,10 +228,9 @@ export function namaBerkas(
   to: string,
   format: ExportFormat
 ): string {
-  // Segmen parameter dihilangkan kalau ketiganya ikut, namanya sudah panjang.
-  // Daftar KOSONG berarti pengguna memilih "Amonia saja": kolom amonia selalu
-  // ikut tanpa bergantung pilihan ini, jadi tidak ada parameter sensor yang
-  // perlu disebut, dan tanpa cabang ini namanya berakhir dengan garis bawah ganda.
+  // Segmen parameter dilewat kalau ketiganya ikut, namanya sudah panjang.
+  // Daftar kosong berarti "Amonia saja"; tanpa cabang itu namanya berakhir
+  // dengan garis bawah ganda.
   const paramPart =
     params.length === 0 ? "_amonia" : params.length === 3 ? "" : `_${params.join("-")}`;
   return `log-sensor_${deviceLabel}${paramPart}_${from}_${to}.${format}`;
@@ -272,7 +240,7 @@ function unduh(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement("a"), { href: url, download: filename });
   a.click();
-  // Revoke langsung pernah membatalkan unduhan di Safari. Tunda satu tick.
+  // Revoke langsung membatalkan unduhan di Safari. Tunda satu tick.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
@@ -281,17 +249,13 @@ export function downloadCsv(csv: string, filename: string): void {
 }
 
 /**
- * XLSX lewat write-excel-file v4 (import dinamis, lihat catatan di kepala berkas).
+ * XLSX lewat write-excel-file v4 (import dinamis, lihat kepala berkas).
  *
- * Subpath `/browser` WAJIB: paketnya tidak punya export root ".", cuma
- * "./browser", "./node", "./universal". `import("write-excel-file")` polos
- * gagal resolve.
+ * Subpath `/browser` wajib: paketnya tidak punya export root ".", cuma
+ * "./browser", "./node", "./universal".
  *
- * Kedua kolom waktu ditulis sebagai `Date` asli dengan format tampilan
- * dd-mm-yyyy, BUKAN teks. Itu bedanya dengan CSV: di Excel kolomnya tampil
- * dd-mm-yyyy persis seperti yang diminta, tapi tetap terurut & terfilter
- * sebagai tanggal. Teks "09-09-2026" akan terurut sebagai teks, dan Januari
- * 2027 mendarat di antara dua tanggal September 2026.
+ * Kedua kolom waktu ditulis sebagai `Date`, bukan teks, supaya di Excel tetap
+ * terurut dan terfilter sebagai tanggal.
  */
 export async function downloadXlsx(
   rows: SensorReading[],
@@ -342,9 +306,8 @@ export async function downloadXlsx(
     },
     ...params.map((p) => ({
       header: header(p),
-      // undefined, BUKAN null: sel kosong harus benar-benar kosong supaya
-      // Excel tidak membacanya sebagai 0, pembacaan sensor yang hilang
-      // bukan pembacaan bernilai nol.
+      // undefined, bukan null: sel harus benar-benar kosong supaya Excel tidak
+      // membacanya sebagai 0.
       cell: (r: SensorReading) => ({ value: r[p] ?? undefined, type: Number }),
     })),
     {

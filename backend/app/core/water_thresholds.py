@@ -1,14 +1,11 @@
 """Ambang Tabel 2.1 (Bab 2.2.1) untuk menyaring log historis di SQL.
 
-SALINAN KEDUA dari angka yang sama, satunya lagi di web/src/lib/parameter.ts
-(RANGE + statusOf). Python dan TypeScript tidak bisa berbagi konstanta, jadi
-kalau ambang di sini diubah, parameter.ts WAJIB diubah dengan angka yang sama:
-kalau melenceng, satu pembacaan bisa tampil "aman" di kartu tapi ikut tersaring
-sebagai "bahaya" di log historis.
+Salinan dari RANGE + statusOf di web/src/lib/parameter.ts. Kalau ambang di sini
+diubah, parameter.ts harus diubah dengan angka yang sama; kalau melenceng, satu
+pembacaan bisa tampil "aman" di kartu tapi tersaring "bahaya" di log historis.
 
-Ada di backend supaya halaman log bisa dipaginasi: filter status HARUS jalan di
-query yang sama dengan LIMIT/OFFSET, kalau tidak satu halaman 25 baris bisa
-menyisakan 2 baris setelah disaring di klien.
+Ada di backend supaya halaman log bisa dipaginasi: filter status harus jalan di
+query yang sama dengan LIMIT/OFFSET.
 """
 
 import enum
@@ -28,7 +25,7 @@ class ParamKey(str, enum.Enum):
 
 
 class StatusFilter(str, enum.Enum):
-    """Status ambang per pembacaan, BUKAN kategori Mamdani (lihat WaterQualityCategory)."""
+    """Status ambang per pembacaan, bukan kategori Mamdani (WaterQualityCategory)."""
 
     AMAN = "aman"
     WASPADA = "waspada"
@@ -48,7 +45,7 @@ def kolom(param: ParamKey) -> InstrumentedAttribute:
 
 
 def predikat_status(param: ParamKey, status: StatusFilter) -> ColumnElement[bool]:
-    """Cermin persis statusOf() di web & mobile: batas inklusif di kedua sisi.
+    """Cermin statusOf() di web & mobile: batas inklusif di kedua sisi.
 
     pH 6.5 -> waspada, 7.5 -> aman, 8.5 -> aman, 9.0 -> waspada, 9.1 -> bahaya.
     """

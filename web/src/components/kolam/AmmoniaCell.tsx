@@ -16,7 +16,7 @@ import {
 } from "@/lib/ammonia";
 
 /** Sama dengan MARKER/ACCENT di ParameterStrip & PredictionPanel: titik dan
- *  garis membawa warna, KATA yang membawa makna. */
+ *  garis membawa warna, kata yang membawa makna. */
 const WARNA: Record<StatusLabel, string> = {
   Aman: "bg-status-aman",
   Waspada: "bg-status-waspada",
@@ -24,15 +24,11 @@ const WARNA: Record<StatusLabel, string> = {
 };
 
 /**
- * Kolom keempat di baris "Parameter" dan di baris "Prediksi".
+ * Kolom keempat di baris "Parameter" dan baris "Prediksi".
  *
- * Satu komponen dua mode, bukan dua komponen: keduanya harus ikut berubah
- * bersamaan kalau istilah atau ambangnya diubah, dan dua salinan sudah pasti
- * membuat salah satunya ketinggalan.
- *
- * Bentuknya meniru tetangganya persis, nama di kiri, status di pojok kanan,
- * lalu isinya, supaya baris amonia terbaca sebagai kolom keempat dari
- * instrumen yang sama, bukan tempelan.
+ * Satu komponen dua mode supaya istilah dan ambangnya tidak bisa berbeda antar
+ * baris. Bentuknya mengikuti tetangganya: nama di kiri, status di pojok kanan,
+ * lalu isinya.
  */
 export default function AmmoniaCell({
   mode,
@@ -52,10 +48,9 @@ export default function AmmoniaCell({
     <div className="group px-1 py-4 sm:px-5 sm:py-3">
       <div className="flex items-center gap-2">
         <p className="truncate text-sm font-medium text-ink">{AMONIA_UI.label}</p>
-        {/* Badge status pojok kanan cuma untuk baris "Parameter" (terkini).
-            Baris "Prediksi" tidak punya badge ini lagi, sama seperti ketiga
-            kolom tetangganya di PredictionPanel, statusnya sekarang bulatan
-            per horizon di dalam body. */}
+        {/* Badge status pojok kanan cuma untuk baris "Parameter". Baris
+            "Prediksi" memakai bulatan per horizon di dalam body, sama seperti
+            ketiga kolom tetangganya di PredictionPanel. */}
         {mode === "terkini" && (
           <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
             {isi.status ? (
@@ -90,9 +85,9 @@ function renderTerkini(risk: AmmoniaRisk | null): {
   const status = riskToStatus(risk?.risk_level);
   const nilai = risk?.fraction_nh3_pct ?? null;
 
-  // Pita "optimal" = wilayah di bawah ambang perhatian. Skalanya satu dengan
-  // penanda nilai (skalaPersen), jadi keduanya tidak bisa saling bertentangan,
-  // aturan yang sama dengan optimalBand()/rangePercent() di parameter.ts.
+  // Pita "optimal" = wilayah di bawah ambang perhatian. Satu skala dengan
+  // penanda nilai (skalaPersen), aturan yang sama dengan optimalBand() dan
+  // rangePercent() di parameter.ts.
   const lebarAman = skalaPersen(AMBANG.perhatian);
   const mulaiBahaya = skalaPersen(AMBANG.berbahaya);
 
@@ -100,14 +95,11 @@ function renderTerkini(risk: AmmoniaRisk | null): {
     status,
     body: (
       <>
-        {/* "%" polos, BUKAN AMONIA_UI.unit ("% dari TAN") -- unit penuh itu 5x
-            lebih lebar daripada "pH"/"°C"/"ppt" di tiga parameter tetangganya,
-            dan karena baris ini `justify-end` (rata kanan di mobile), unit
-            yang jauh lebih lebar mendorong ANGKA BESARNYA jauh lebih ke kiri
-            dibanding tiga parameter lain -- itulah kenapa keempat angka tidak
-            pernah sejajar satu kolom saat ditumpuk di layar sempit. Makna
-            "dari TAN"-nya tidak hilang: sudah ada di catatan/label bagian
-            "Parameter" (AMONIA_DISCLAIMER) dan di label pita 0-X% di bawah. */}
+        {/* "%" polos, bukan AMONIA_UI.unit ("% dari TAN"). Unit penuh itu jauh
+            lebih lebar daripada "pH", "°C", dan "ppt" di kolom tetangganya, dan
+            karena baris ini rata kanan di mobile, angkanya jadi terdorong ke
+            kiri dan tidak sejajar dengan kolom lain. Makna "dari TAN" tetap ada
+            di AMONIA_DISCLAIMER dan di label pita di bawah. */}
         <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
           <span className="font-mono text-3xl font-semibold leading-none text-ink">
             {nilai != null ? formatFraksi(nilai) : "N/A"}
@@ -147,9 +139,8 @@ function renderTerkini(risk: AmmoniaRisk | null): {
           </div>
         </div>
 
-        {/* Peringatan ekstrapolasi. Hanya muncul kalau memang di luar envelope
-            persamaannya (pH 7,8-8,3 / 5-35 °C / 5-35 ppt), di dalam rentang,
-            baris ini tidak ada dan kolomnya tetap serapi tetangganya. */}
+        {/* Peringatan ekstrapolasi, cuma muncul kalau di luar rentang berlaku
+            persamaannya (pH 7,8-8,3 / 5-35 °C / 5-35 ppt). */}
         {risk && !risk.in_valid_range && (
           <p className="mt-2 text-[11px] leading-snug text-muted">
             Di luar rentang tervalidasi persamaan, angka ini hasil ekstrapolasi.
@@ -160,8 +151,8 @@ function renderTerkini(risk: AmmoniaRisk | null): {
   };
 }
 
-/** Sama tiga horizon dengan HORIZONS di PredictionPanel, supaya kolom amonia
- *  tidak bicara tentang rentang waktu yang berbeda dari tetangganya. */
+/** Tiga horizon yang sama dengan HORIZONS di PredictionPanel, supaya kolom
+ *  amonia memakai rentang waktu yang sama dengan tetangganya. */
 const HORIZONS: readonly number[] = [15, 30, 60];
 
 function renderPrediksi(forecast: AmmoniaRisk[]): {
@@ -169,15 +160,14 @@ function renderPrediksi(forecast: AmmoniaRisk[]): {
   body: React.ReactNode;
 } {
   return {
-    // Tidak ada satu status ringkasan lagi untuk kolom ini (lihat komentar di
-    // PredictionPanel), badge di kepala kolom sudah disembunyikan untuk mode
-    // prediksi, jadi field ini praktis tidak dipakai, dipertahankan cuma
-    // supaya tipe kembaliannya tetap sama dengan renderTerkini.
+    // Mode prediksi tidak punya status ringkasan (lihat PredictionPanel) dan
+    // badge kepala kolomnya disembunyikan. Field ini cuma menjaga tipe
+    // kembaliannya tetap sama dengan renderTerkini.
     status: null,
     body: (
       <>
-        {/* Garis aksen netral, sama seperti PredictionPanel: warnanya pindah
-            jadi bulatan per horizon di bawah, bukan satu warna ringkasan. */}
+        {/* Garis aksen netral, sama seperti PredictionPanel. Warna statusnya ada
+            di bulatan per horizon di bawah. */}
         <div aria-hidden className="mt-3 h-0.5 rounded-full bg-ink" />
 
         <div className="mt-3 space-y-1.5">

@@ -21,7 +21,7 @@ class PushToken(Base):
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )
-    # NOT NULL: satu-satunya penulis (notification_service) selalu isi func.now().
+    # NOT NULL: penulis satu-satunya (notification_service) selalu isi func.now().
     last_used_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )

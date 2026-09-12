@@ -1,25 +1,15 @@
-# Override khusus DEVELOPMENT. Compose memuat file ini OTOMATIS saat menjalankan
-# `docker compose up` tanpa flag -f, dan TIDAK memuatnya saat kita menyebut
-# -f secara eksplisit untuk production
-# (docker compose -f docker-compose.yml -f docker-compose.prod.yml ...).
+# Override khusus development. Compose memuatnya otomatis pada `docker compose
+# up` tanpa flag -f, dan melewatinya saat -f disebut eksplisit untuk production.
 #
 # Bind mount kode ada di sini, bukan di file base, karena Compose menggabung
-# (bukan menimpa) list `volumes`, entri di base tidak bisa dihapus dari file
-# override, sehingga prod akan selalu kebawa kode dari host kalau mount ini
-# ditaruh di base.
+# (bukan menimpa) list `volumes`: entri di base tidak bisa dihapus dari file
+# override, jadi prod akan selalu kebawa kode dari host.
 #
-# Binding IPv6 juga ada di sini, dan alasannya sama: file base mengikat
-# "127.0.0.1:PORT" saja (IPv4). Di Windows `localhost` menyelesaikan ke ::1
-# LEBIH DULU (record AAAA sebelum A), jadi browser mengetuk [::1]:3000 dan
-# [::1]:8000 dan ditolak. Halaman kadang masih terbuka karena browser mundur ke
-# IPv4, tapi fetch ke http://localhost:8000/api/v1 tidak selalu ikut mundur,
-# hasilnya halaman putih / gagal login yang terbaca seperti "web tidak bisa
-# dibuka".
-#
-# Ditambahkan di override, BUKAN di base: Compose MENGGABUNG list `ports`, jadi
-# entri ini menambah alamat dengar tanpa menghapus yang IPv4, dan prod (yang
-# dijalankan dengan -f eksplisit) tidak memuat file ini sama sekali, di VPS
-# tetap hanya Caddy yang terekspos.
+# Binding IPv6 juga di sini, alasannya sama. File base cuma mengikat
+# "127.0.0.1:PORT" (IPv4), sedangkan di Windows `localhost` diselesaikan ke ::1
+# lebih dulu, jadi browser mengetuk [::1]:3000 dan [::1]:8000 lalu ditolak.
+# Compose menggabung list `ports`, jadi entri di sini menambah alamat dengar
+# tanpa menghapus yang IPv4, dan prod tidak memuat file ini sama sekali.
 services:
   backend:
     ports:

@@ -1,9 +1,3 @@
-"""
-CARA PAKAI:
-    py accuracy.py log.csv
-    py test_wlr_accuracy.py data.csv --tz-offset 7 --tolerance-minutes 1 --sample-rows 5
-"""
-
 from __future__ import annotations
 
 import argparse
@@ -18,8 +12,6 @@ from datetime import datetime, timedelta, timezone
 from ammonia_nh3 import assess_ammonia_risk
 from wlr_forecast import PARAMETERS, WLRForecaster
 
-#: Nama kolom virtual untuk hasil turunan (bukan output langsung WLRForecaster),
-#: dipakai sebagai key kedua di dict `matched` sama seperti parameter lain.
 AMMONIA_KEY = "fraction_nh3_pct"
 
 
@@ -36,12 +28,12 @@ class Reading:
 
 
 def load_csv(path: str, tz_offset_hours: float) -> dict[tuple[str, str], list[Reading]]:
-    """Baca CSV log sensor asli, kelompokkan per (device_code, kolam), urutkan tiap
-    grup secara kronologis. 'waktu_lokal' naive diberi offset tz_offset_hours."""
+    """Baca CSV log sensor asli, kelompokkan per (device_code, kolam), urutkan
+    tiap grup kronologis. 'waktu_lokal' naive diberi offset tz_offset_hours."""
     tz = timezone(timedelta(hours=tz_offset_hours))
     groups: dict[tuple[str, str], list[Reading]] = defaultdict(list)
 
-    # encoding='utf-8-sig' buat buang BOM di awal file (umum dari export Excel/Sheets)
+    # encoding='utf-8-sig' membuang BOM di awal file (umum dari export Excel).
     with open(path, newline="", encoding="utf-8-sig") as f:
         for row in csv.DictReader(f):
             t = datetime.fromisoformat(row["waktu_lokal"].strip()).replace(tzinfo=tz)
@@ -67,12 +59,12 @@ def nearest_reading(readings: list[Reading], target: datetime, tolerance_minutes
 def walk_forward(
     readings: list[Reading], tolerance_minutes: float
 ) -> dict[tuple[int, str], list[tuple[datetime, float, float]]]:
-    """Replay satu grup (device_code, kolam) ke satu WLRForecaster (simulasi produksi),
-    cocokkan tiap prediksi ke aktualnya. Return {(horizon, parameter): [(waktu_target, aktual, prediksi), ...]}."""
+    """Replay satu grup (device_code, kolam) ke satu WLRForecaster, lalu cocokkan
+    tiap prediksi ke aktualnya.
+
+    Return {(horizon, parameter): [(waktu_target, aktual, prediksi), ...]}."""
     forecaster = WLRForecaster()
-    # pending: (target_time, horizon, {param: predicted_value}), disimpan satu baris
-    # LENGKAP per horizon (bukan per parameter) supaya ph+suhu+salinitas hasil forecast
-    # yang SAMA bisa dipakai bareng buat hitung prediksi amonia.
+    # pending digunakan supaya ph, suhu, dan salinitas dari forecast yang sama bisa dipakai menghitung amonia
     pending: list[tuple[datetime, int, dict[str, float]]] = []
     matched: dict[tuple[int, str], list[tuple[datetime, float, float]]] = defaultdict(list)
 
@@ -94,8 +86,7 @@ def walk_forward(
                         if actual is not None:
                             matched[(h, param)].append((target_time, actual, pred))
 
-                    # Amonia: cuma bisa dihitung kalau ketiga parameter hasil forecast
-                    # ADA (rumus speciation butuh ph+suhu+salinitas sekaligus).
+                    # Amonia cuma bisa dihitung kalau ketiga parameter hasil forecast ada, serta rumus speciation butuh ketiganya.
                     if all(p in pred_row for p in PARAMETERS):
                         pred_ammonia = _ammonia_pct(
                             pred_row["ph"], pred_row["temperature_c"], pred_row["salinity_ppt"]

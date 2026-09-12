@@ -1,35 +1,29 @@
-"""
-Ammonia speciation (Opsi 1): un-ionized ammonia (NH3) FRACTION from
-pH, temperature, and salinity, no TAN measurement required.
+"""Spesiasi amonia: fraksi NH3 tak terionisasi dari pH, suhu, dan salinitas.
 
-SCIENTIFIC SCOPE, READ BEFORE MODIFYING
-------------------------------------------
-This module computes what FRACTION of Total Ammonia Nitrogen (TAN) would
-be in the toxic un-ionized form (NH3) at a given pH/temperature/salinity.
-It does NOT and CANNOT compute an absolute ammonia concentration (mg/L),
-because TAN is not measured by this system (ammonia gas sensor removed
-from hardware per UAT 2025-11-20). Any caller wanting mg/L must supply
-an assumed or measured TAN value explicitly, this module deliberately
-offers no such function.
+Modul ini menghitung berapa persen Total Ammonia Nitrogen (TAN) yang berada
+dalam bentuk NH3 yang toksik. Ia tidak menghitung konsentrasi amonia (mg/L),
+karena TAN tidak diukur sistem ini (sensor gas amonia dilepas dari hardware
+per UAT 2025-11-20). Pemanggil yang butuh mg/L harus menyediakan nilai TAN
+sendiri; modul ini tidak menyediakan fungsi untuk itu.
 
-References:
+Rujukan:
 [1] Emerson et al. 1975, J. Fish. Res. Board Can. 32(12):2379-2383.
 [2] Bower & Bidwell 1978, J. Fish. Res. Board Can. 35(7):1012-1016.
-[3] Spotte & Adams 1983, Mar. Ecol. Prog. Ser. 10:207-210 (corrected
-    per Florida DEP SOP).
+[3] Spotte & Adams 1983, Mar. Ecol. Prog. Ser. 10:207-210 (dikoreksi
+    menurut Florida DEP SOP).
 """
 
 from dataclasses import dataclass
 from enum import Enum
 
 
-# Validity envelope of the salinity-corrected equation.
+# Rentang berlaku persamaan terkoreksi salinitas.
 VALID_SALINITY_PPT = (5.0, 35.0)
 VALID_TEMPERATURE_C = (5.0, 35.0)
 VALID_PH = (7.8, 8.3)
 
-#: Ikut disimpan di kolom `model_version` tabel ammonia_risks, kalau rumus atau
-#: ambangnya diganti, naikkan nilainya supaya baris lama masih bisa dibedakan.
+#: Disimpan di kolom `model_version` tabel ammonia_risks. Naikkan kalau rumus
+#: atau ambangnya diganti, supaya baris lama masih bisa dibedakan.
 MODEL_VERSION = "speciation-bb78"
 
 
@@ -69,7 +63,7 @@ def _pka_freshwater(temperature_c: float) -> float:
 
 
 def nh3_fraction(ph: float, temperature_c: float, salinity_ppt: float) -> tuple[float, float]:
-    """Returns (fraction, pKa_used). Fraction is 0.0-1.0."""
+    """Kembalikan (fraction, pKa_used). Fraction dalam rentang 0.0-1.0."""
     pka = _pka_freshwater(temperature_c) if salinity_ppt == 0 else _pka_saline(
         temperature_c, salinity_ppt
     )
@@ -86,12 +80,11 @@ def _in_valid_range(ph: float, temperature_c: float, salinity_ppt: float) -> boo
 
 
 def classify_risk(fraction_pct: float) -> RiskLevel:
-    """Threshold pada fraksi NH3 (%), BUKAN pada konsentrasi mg/L.
+    """Ambang pada fraksi NH3 (%), bukan pada konsentrasi mg/L.
 
-    Ambang berikut ilustratif berdasarkan tabel sensitivitas (lihat dokumen
-    estimasi_amonia.md Bagian 6.1), bukan baku mutu resmi krustasea. Kalau
-    pembimbing/mitra punya ambang definitif untuk Scylla spp., ganti di sini
-    dan catat sumbernya.
+    Angkanya ilustratif, dari tabel sensitivitas di estimasi_amonia.md Bagian
+    6.1, bukan baku mutu resmi krustasea. Ganti di sini kalau ada ambang
+    definitif untuk Scylla spp., dan catat sumbernya.
     """
     if fraction_pct < 6.0:
         return RiskLevel.NORMAL
@@ -103,7 +96,7 @@ def classify_risk(fraction_pct: float) -> RiskLevel:
 def assess_ammonia_risk(
     ph: float, temperature_c: float, salinity_ppt: float
 ) -> AmmoniaRiskResult:
-    """Entry point utama Opsi 1. TIDAK memerlukan dan TIDAK menerima TAN."""
+    """Entry point utama. Tidak memerlukan dan tidak menerima nilai TAN."""
     fraction, pka = nh3_fraction(ph, temperature_c, salinity_ppt)
     fraction_pct = fraction * 100.0
     return AmmoniaRiskResult(

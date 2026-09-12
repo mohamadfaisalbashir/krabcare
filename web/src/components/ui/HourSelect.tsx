@@ -7,16 +7,14 @@ import clsx from "clsx";
 /**
  * Pemilih jam bulat, menggantikan <select> dengan 24 <option>.
  *
- * Alasannya cuma satu: tinggi popup <select> bawaan diatur browser dan TIDAK
- * bisa dibatasi CSS, jadi 24 pilihan membuka daftar setinggi hampir seluruh
- * layar. Di sini daftarnya elemen biasa, sehingga `max-h-48` benar-benar
- * berlaku (kira-kira 8 baris, sisanya digulir).
+ * Tinggi popup <select> bawaan diatur browser dan tidak bisa dibatasi CSS,
+ * jadi 24 pilihan membuka daftar setinggi hampir seluruh layar. Di sini
+ * daftarnya elemen biasa, jadi `max-h-48` benar-benar berlaku.
  *
- * Karena ini menggantikan kontrol form bawaan, semua yang biasanya gratis harus
- * ditulis sendiri dan tidak boleh dipangkas: peran listbox untuk pembaca layar,
- * navigasi panah, Enter/Esc, Home/End, tutup saat klik di luar, dan fokus yang
- * kembali ke tombol setelah memilih. Itulah harga menolak <select>, dan itu
- * sebabnya komponen ini tidak dipakai untuk daftar yang pendek.
+ * Konsekuensinya semua yang biasanya gratis ditulis sendiri dan tidak boleh
+ * dipangkas: peran listbox, navigasi panah, Enter/Esc, Home/End, tutup saat
+ * klik di luar, dan fokus kembali ke tombol setelah memilih. Karena itu
+ * komponen ini tidak dipakai untuk daftar pendek.
  */
 export default function HourSelect({
   value,
@@ -28,16 +26,15 @@ export default function HourSelect({
   value: string;
   onChange: (v: string) => void;
   options: string[];
-  /** Dibacakan pembaca layar; tidak tampil karena labelnya sudah ada di kiri baris. */
+  /** Dibacakan pembaca layar. Tidak tampil, labelnya sudah ada di kiri baris. */
   label: string;
-  /** "00" -> "00.00". Formatternya milik pemanggil supaya komponen ini tidak
-   *  ikut memutuskan notasi jam. */
+  /** "00" -> "00.00". Milik pemanggil supaya komponen ini tidak ikut
+   *  memutuskan notasi jam. */
   format: (h: string) => string;
 }) {
   const [buka, setBuka] = useState(false);
   // Baris yang sedang disorot keyboard. Terpisah dari `value`: menyorot dengan
-  // panah tidak boleh langsung mengubah pilihan, kalau tidak Esc jadi tidak
-  // punya arti karena nilainya sudah terlanjur berubah.
+  // panah tidak boleh mengubah pilihan, kalau tidak Esc jadi tidak berarti.
   const [sorot, setSorot] = useState(() => Math.max(0, options.indexOf(value)));
 
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -45,8 +42,8 @@ export default function HourSelect({
   const daftarRef = useRef<HTMLUListElement>(null);
   const id = useId();
 
-  // Tutup saat klik di luar. mousedown, bukan click: klik yang dimulai di dalam
-  // daftar lalu dilepas di luar (seret saat menggulir) tidak boleh ikut menutup.
+  // Tutup saat klik di luar. mousedown, bukan click: klik yang dimulai di
+  // dalam daftar lalu dilepas di luar tidak boleh ikut menutup.
   useEffect(() => {
     if (!buka) return;
     function onDown(e: MouseEvent) {
@@ -108,7 +105,7 @@ export default function HourSelect({
         tombolRef.current?.focus();
         break;
       case "Tab":
-        // Tab keluar dari kontrol: tutup, tapi JANGAN tahan fokusnya.
+        // Tab keluar dari kontrol: tutup, tapi jangan tahan fokusnya.
         setBuka(false);
         break;
     }
@@ -144,8 +141,8 @@ export default function HourSelect({
           aria-label={label}
           aria-activedescendant={`${id}-opt-${sorot}`}
           tabIndex={-1}
-          // max-h-48 inilah seluruh alasan komponen ini ada: kira-kira setengah
-          // tinggi daftar 24 baris, sisanya digulir.
+          // max-h-48 adalah alasan komponen ini ada: sekitar setengah tinggi
+          // daftar 24 baris, sisanya digulir.
           className="absolute z-30 mt-1 max-h-48 min-w-full overflow-y-auto rounded-lg border border-border bg-surface py-1 shadow-lg"
         >
           {options.map((h, i) => {
@@ -158,7 +155,7 @@ export default function HourSelect({
                 role="option"
                 aria-selected={terpilih}
                 // onMouseDown, bukan onClick: mousedown mendahului blur, jadi
-                // pilihannya sempat terbaca sebelum apa pun menutup daftarnya.
+                // pilihannya terbaca sebelum daftarnya tertutup.
                 onMouseDown={(e) => {
                   e.preventDefault();
                   pilih(i);

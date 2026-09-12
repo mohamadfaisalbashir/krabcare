@@ -18,7 +18,7 @@ class FuzzyPrediction(Base):
     """
 
     __tablename__ = "fuzzy_predictions"
-    # Lihat catatan index di device.py. Index *_time_idx sengaja TIDAK didaftarkan:
+    # Lihat catatan index di device.py. Index *_time_idx tidak didaftarkan:
     # itu bikinan create_hypertable(), disaring include_object di alembic/env.py.
     __table_args__ = (
         Index("idx_fuzzy_predictions_device_target", "device_id", sa_text("target_time DESC")),
@@ -31,9 +31,8 @@ class FuzzyPrediction(Base):
     horizon_minutes: Mapped[int] = mapped_column(primary_key=True)
     target_time: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     predicted_quality_score: Mapped[float | None] = mapped_column(Numeric(5, 2))
-    # Nilai ramalan per parameter (hasil FTS sebelum dilebur Mamdani jadi skor
-    # agregat di atas). Presisi disamakan dengan sensor_readings supaya nilai
-    # ramalan dan nilai terukur dibulatkan sama.
+    # Nilai ramalan per parameter, hasil FTS sebelum dilebur Mamdani jadi skor
+    # agregat di atas. Presisi disamakan dengan sensor_readings.
     predicted_ph: Mapped[float | None] = mapped_column(Numeric(4, 2))
     predicted_temperature_c: Mapped[float | None] = mapped_column(Numeric(4, 1))
     predicted_salinity_ppt: Mapped[float | None] = mapped_column(Numeric(5, 2))

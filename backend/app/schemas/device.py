@@ -10,9 +10,9 @@ from app.models.enums import DeviceType
 class DeviceCreateIn(BaseModel):
     """Payload admin menambah device baru, pengganti INSERT manual ke DB.
 
-    device_code HARUS persis sama dengan yang dikirim firmware (case-sensitive,
-    lihat README), device baru lahir belum terklaim kolam mana pun
-    (kolam_id null), baru terhubung lewat POST /kolam/:id/devices/:code.
+    device_code harus sama persis dengan yang dikirim firmware (case-sensitive,
+    lihat README). Device baru belum terklaim kolam mana pun (kolam_id null),
+    baru terhubung lewat POST /kolam/:id/devices/:code.
     """
 
     device_code: str = Field(min_length=1, max_length=100)
@@ -36,8 +36,8 @@ class DeviceOut(BaseModel):
 
 
 class DeviceAdminOut(DeviceOut):
-    """DeviceOut + status klaim, dipakai panel admin (GET /devices) supaya
-    device yang sudah diklaim dan yang belum bisa ditampilkan dalam satu list."""
+    """DeviceOut + status klaim, dipakai panel admin (GET /devices) supaya device
+    yang sudah diklaim dan yang belum tampil dalam satu daftar."""
 
     kolam_id: int | None
     kolam_nama: str | None

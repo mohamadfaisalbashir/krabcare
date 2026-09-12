@@ -47,7 +47,7 @@ class LatestQualityOut(BaseModel):
 
 
 class DevicePredictionsOut(BaseModel):
-    """Seluruh horizon (jam+1..jam+N) dari run prediksi TERAKHIR satu device."""
+    """Seluruh horizon (jam+1..jam+N) dari run prediksi terakhir satu device."""
 
     device_id: int
     device_code: str | None
@@ -83,8 +83,8 @@ class FuzzyPredictionIn(BaseModel):
 
 
 class QualityIngestIn(BaseModel):
-    """Batch ingest dari edge (Raspi, raspi/edge_pipeline.py): klasifikasi, prediksi,
-    risiko amonia, boleh isi salah satu, sebagian, atau semuanya."""
+    """Batch ingest dari edge (raspi/edge_pipeline.py): klasifikasi, prediksi,
+    dan risiko amonia. Boleh diisi sebagian."""
 
     classifications: list[FuzzyClassificationIn] = Field(default_factory=list)
     predictions: list[FuzzyPredictionIn] = Field(default_factory=list)
@@ -92,14 +92,15 @@ class QualityIngestIn(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "QualityIngestIn":
-        """Tolak payload yang semuanya kosong (kalau lolos, request jadi no-op diam)."""
+        """Tolak payload kosong, kalau lolos request jadi no-op tanpa tanda."""
         if not self.classifications and not self.predictions and not self.ammonia_risks:
             raise ValueError("Minimal harus ada satu classification, prediction, atau ammonia_risk")
         return self
 
 
 class QualityIngestResultOut(BaseModel):
-    """Ringkasan ingest kualitas air, dipisah per jenis karena semuanya masuk satu request."""
+    """Ringkasan ingest kualitas air, dipisah per jenis karena satu request
+    bisa membawa ketiganya sekaligus."""
 
     received_classifications: int
     received_predictions: int

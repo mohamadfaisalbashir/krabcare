@@ -1,7 +1,6 @@
-// Tipe data diselaraskan dengan Pydantic schema di backend/app/schemas/
-// Lihat AUDIT_REPORT.md untuk detail mapping field yang sudah diperbaiki.
+// Tipe data mengikuti Pydantic schema di backend/app/schemas/.
 
-// ── Enum & Mapping ──────────────────────────────────────────────────
+// Enum & mapping
 
 /** Kategori kualitas air dari backend (models/enums.py → WaterQualityCategory). */
 export type WaterQualityCategory = "baik" | "sedang" | "buruk";
@@ -22,7 +21,7 @@ export function categoryToLabel(cat: WaterQualityCategory): StatusLabel {
   return CATEGORY_TO_LABEL[cat] ?? "Waspada";
 }
 
-// ── Auth (schemas/user.py) ──────────────────────────────────────────
+// Auth (schemas/user.py)
 
 /** TokenOut */
 export interface TokenOut {
@@ -39,7 +38,7 @@ export interface User {
   created_at: string;
 }
 
-// ── Kolam (schemas/kolam.py) ────────────────────────────────────────
+// Kolam (schemas/kolam.py)
 
 /** KolamOut */
 export interface Kolam {
@@ -49,7 +48,7 @@ export interface Kolam {
   created_at: string;
 }
 
-// ── Device (schemas/device.py) ──────────────────────────────────────
+// Device (schemas/device.py)
 
 /** DeviceOut */
 export interface Device {
@@ -87,7 +86,7 @@ export interface DeviceCreateIn {
   parent_device_id?: number | null;
 }
 
-// ── Sensor Reading (schemas/sensor_reading.py) ──────────────────────
+// Sensor Reading (schemas/sensor_reading.py)
 
 /** SensorReadingOut */
 export interface SensorReading {
@@ -101,7 +100,7 @@ export interface SensorReading {
   salinity_ppt: number | null;
 }
 
-// ── Quality / Fuzzy (schemas/fuzzy.py) ──────────────────────────────
+// Quality / Fuzzy (schemas/fuzzy.py)
 
 /** FuzzyClassificationOut */
 export interface FuzzyClassification {
@@ -141,9 +140,9 @@ export interface DevicePredictions {
   predictions: FuzzyPrediction[];
 }
 
-// ── Amonia (schemas/ammonia.py) ─────────────────────────────────────
+// Amonia (schemas/ammonia.py)
 
-/** AmmoniaRiskOut, FRAKSI NH3 (% dari TAN), BUKAN konsentrasi mg/L. */
+/** AmmoniaRiskOut. Fraksi NH3 (% dari TAN), bukan konsentrasi mg/L. */
 export interface AmmoniaRisk {
   time: string;
   target_time: string;
@@ -174,7 +173,7 @@ export interface DeviceAmmonia {
   disclaimer: string;
 }
 
-// ── Notification (schemas/notification.py) ──────────────────────────
+// Notification (schemas/notification.py)
 
 /** notifications.source, nilai CHECK di database/init/08_notifications.sql. */
 export type NotifSource = "classification" | "prediction" | "parameter";
@@ -194,7 +193,7 @@ export interface Notification {
   created_at: string;
 }
 
-// ── Tipe komposit khusus frontend ───────────────────────────────────
+// Tipe komposit khusus frontend
 
 /** Satu sensor terpasang beserta kolam yang mengklaimnya, dipakai Log Historis. */
 export interface Sensor {
@@ -209,6 +208,6 @@ export interface KolamDashboard {
   devices: Device[];
   quality: LatestQuality | null;
   latestReading: SensorReading | null;
-  /** Risiko amonia terkini (horizon 0) device pertama kolam ini, untuk ikon+nilai di PondCard. */
+  /** Risiko amonia terkini (horizon 0) device pertama kolam ini, untuk PondCard. */
   ammonia: AmmoniaRisk | null;
 }

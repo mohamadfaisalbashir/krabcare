@@ -25,16 +25,16 @@ class AuthError(Exception):
 class EmailBelumTerverifikasi(AuthError):
     """Password benar, tapi akunnya belum diaktifkan lewat link email.
 
-    Kelas sendiri supaya router bisa membalas 403 dengan pesan yang jelas,
-    bukan ikut 401 "Email atau password salah" yang sengaja kabur.
+    Kelas sendiri supaya router membalas 403 dengan pesan jelas, bukan ikut 401
+    "Email atau password salah" yang sengaja kabur.
     """
 
 
 class EmailTidakTerkirim(AuthError):
     """Server email belum dikonfigurasi. Salah server, bukan salah pengguna.
 
-    Kelas sendiri supaya router membalas 503 dan bukan 400: tidak ada yang bisa
-    diperbaiki pengguna dengan mengetik ulang apa pun.
+    Kelas sendiri supaya router membalas 503, bukan 400: tidak ada yang bisa
+    diperbaiki pengguna dengan mengetik ulang.
     """
 
 
@@ -43,11 +43,10 @@ class AkunNonaktif(AuthError):
 
 
 def _terbitkan_token_verifikasi(user: User) -> str:
-    """Pasang token verifikasi baru ke `user`, kembalikan token MENTAH-nya.
+    """Pasang token verifikasi baru ke `user`, kembalikan token mentahnya.
 
-    Yang disimpan cuma sha256-nya, sama seperti token reset password: kalau isi
-    tabel users bocor, token di dalamnya tidak bisa dipakai siapa pun.
-    Pemanggil yang bertanggung jawab commit.
+    Yang disimpan cuma sha256-nya, sama seperti token reset password, supaya
+    isi tabel users yang bocor tidak bisa dipakai. Commit urusan pemanggil.
     """
     raw_token = secrets.token_urlsafe(32)
     user.verify_token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
@@ -60,9 +59,8 @@ def _terbitkan_token_verifikasi(user: User) -> str:
 async def _kirim_email_verifikasi(user: User, raw_token: str) -> None:
     """Kirim link aktivasi ke alamat yang baru didaftarkan."""
     link = f"{settings.FRONTEND_VERIFY_EMAIL_URL}?token={raw_token}"
-    # Menit apa adanya, JANGAN dibagi 60 jadi jam. Masa berlakunya sekarang 5
-    # menit, dan pembagian bilangan bulat membuat emailnya berbunyi
-    # "berlaku 0 jam" alias link yang seolah sudah mati sebelum dibuka.
+    # Menit apa adanya, jangan dibagi 60 jadi jam: masa berlakunya 5 menit dan
+    # pembagian bilangan bulat membuat emailnya berbunyi "berlaku 0 jam".
     menit = settings.EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES
     await send_email(
         user.email,
@@ -76,14 +74,12 @@ async def _kirim_email_verifikasi(user: User, raw_token: str) -> None:
 
 
 async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
-    """Buat user baru; email wajib unik. Akun belum aktif sampai emailnya diverifikasi.
+    """Buat user baru; email wajib unik. Akun belum aktif sampai diverifikasi.
 
-    JALAN KELUAR SAAT SMTP KOSONG. Kalau `SMTP_HOST` belum diatur, send_email()
-    diam saja (lihat core/email.py) dan link aktivasinya tidak akan pernah sampai
-    ke siapa pun. Kalau verifikasi tetap diwajibkan dalam keadaan itu, tidak ada
-    satu orang pun yang bisa mendaftar. Jadi tanpa SMTP akunnya ditandai
-    terverifikasi seketika, dengan peringatan di log. Fiturnya hidup sendiri
-    begitu SMTP_HOST diisi, tanpa mengubah kode.
+    Kalau `SMTP_HOST` belum diatur, send_email() diam saja (core/email.py) dan
+    link aktivasi tidak pernah sampai, jadi tidak ada yang bisa mendaftar.
+    Dalam keadaan itu akun ditandai terverifikasi seketika, dengan peringatan
+    di log. Verifikasi hidup sendiri begitu SMTP_HOST diisi.
     """
     result = await db.execute(select(User).where(func.lower(User.email) == payload.email))
     lama = result.scalar_one_or_none()
@@ -92,15 +88,14 @@ async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
         raise AuthError("Email sudah terdaftar")
 
     if lama is not None:
-        # Pendaftaran yang belum pernah tuntas. Barisnya DIPERBARUI, bukan
-        # ditolak: sebelumnya orang yang link aktivasinya kedaluwarsa jadi buntu
-        # total, tidak bisa masuk karena belum aktif dan tidak bisa daftar lagi
-        # karena emailnya "sudah terdaftar".
+        # Pendaftaran yang belum tuntas: barisnya diperbarui, bukan ditolak.
+        # Kalau ditolak, orang yang link aktivasinya kedaluwarsa jadi buntu:
+        # tidak bisa masuk karena belum aktif, tidak bisa daftar lagi karena
+        # emailnya "sudah terdaftar".
         #
-        # Menimpanya tidak mengambil apa pun dari siapa pun: akun yang belum
-        # terverifikasi belum terbukti milik siapa-siapa dan belum punya kolam
-        # maupun data. Penimpanya pun tetap tidak bisa mengaktifkannya tanpa
-        # akses ke kotak masuk email itu.
+        # Aman ditimpa: akun yang belum terverifikasi belum terbukti milik
+        # siapa pun dan belum punya kolam maupun data, dan yang menimpanya
+        # tetap butuh akses ke kotak masuk email itu untuk mengaktifkannya.
         user = lama
         user.password_hash = await hash_password(payload.password)
         user.nama = payload.nama
@@ -117,8 +112,8 @@ async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
         raw_token = _terbitkan_token_verifikasi(user)
     else:
         user.email_verified_at = datetime.now(timezone.utc)
-        # Token sisa dari pendaftaran sebelumnya dihanguskan. Kalau dibiarkan,
-        # link lama masih bisa diklik pada akun yang sekarang sudah aktif.
+        # Token sisa pendaftaran sebelumnya dihanguskan, kalau tidak link lama
+        # masih bisa diklik pada akun yang sekarang sudah aktif.
         user.verify_token_hash = None
         user.verify_token_expires_at = None
         logger.warning(
@@ -130,7 +125,7 @@ async def register_user(db: AsyncSession, payload: UserRegisterIn) -> User:
     await db.commit()
     await db.refresh(user)
 
-    # Email dikirim SESUDAH commit. Kalau SMTP lambat atau gagal, akunnya sudah
+    # Email dikirim sesudah commit. Kalau SMTP lambat atau gagal, akunnya sudah
     # tersimpan dan pemiliknya tinggal minta kirim ulang.
     if raw_token:
         await _kirim_email_verifikasi(user, raw_token)
@@ -148,10 +143,8 @@ async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
     ):
         raise AuthError("Email atau password salah")
 
-    # Diperiksa SESUDAH password terbukti benar. Kalau dicek lebih dulu, alasan
+    # Diperiksa sesudah password terbukti benar. Kalau dicek lebih dulu, balasan
     # ini jadi cara menebak email mana yang punya akun tanpa tahu passwordnya.
-    # Di titik ini penanya sudah membuktikan tahu passwordnya, jadi
-    # menyembunyikan alasannya cuma membuat pemilik akun buntu.
     if user.email_verified_at is None:
         raise EmailBelumTerverifikasi(
             "Email belum diverifikasi. Cek kotak masuk Anda untuk link aktivasi."
@@ -176,10 +169,10 @@ async def change_password(db: AsyncSession, user: User, payload: PasswordChangeI
 
 
 async def request_password_reset(db: AsyncSession, email: str) -> None:
-    """Terbitkan token reset & kirim linknya. Yang disimpan cuma hash token-nya.
+    """Terbitkan token reset & kirim linknya. Yang disimpan cuma hash tokennya.
 
-    Selalu "sukses" dari sisi pemanggil, email hanya benar-benar dikirim kalau
-    akunnya ada & aktif (anti-enumeration).
+    Selalu "sukses" dari sisi pemanggil; email cuma benar-benar dikirim kalau
+    akunnya ada dan aktif (anti-enumeration).
     """
     result = await db.execute(select(User).where(func.lower(User.email) == email.strip().lower()))
     user = result.scalar_one_or_none()
@@ -204,20 +197,14 @@ async def request_password_reset(db: AsyncSession, email: str) -> None:
 
 
 async def verify_email(db: AsyncSession, token: str) -> None:
-    """Aktifkan akun dari token email. IDEMPOTEN: link yang sama boleh diklik lagi.
+    """Aktifkan akun dari token email. Idempoten: link yang sama boleh diklik lagi.
 
-    Dulu token langsung dihanguskan begitu berhasil, dan klik kedua atas link
-    yang SAMA berakhir "tidak valid atau sudah pernah dipakai" walau akunnya
-    baru saja aktif. Itu bukan kasus langka:
+    Token tidak dihanguskan setelah berhasil, karena klik kedua sering terjadi:
+    pemindai tautan Gmail/antivirus membuka link duluan, atau pengguna memuat
+    ulang tab. Akun yang sudah aktif dianggap sukses.
 
-    - pemindai tautan di Gmail/antivirus kerap membuka link duluan, jadi klik
-      pertama pengguna sudah jadi klik KEDUA;
-    - orang menekan dua kali, atau memuat ulang tab setelah aktivasi.
-
-    Sekarang tokennya dibiarkan hidup sampai kedaluwarsa sendiri, dan akun yang
-    sudah aktif dianggap sukses. Risikonya kecil dan terbatas waktu: token cuma
-    berlaku beberapa menit, dan satu-satunya yang bisa dilakukan pemegangnya
-    adalah mengaktifkan akun yang memang sudah aktif.
+    Risikonya terbatas: token cuma berlaku beberapa menit, dan pemegangnya
+    hanya bisa mengaktifkan akun yang sudah aktif.
     """
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     result = await db.execute(select(User).where(User.verify_token_hash == token_hash))
@@ -226,36 +213,32 @@ async def verify_email(db: AsyncSession, token: str) -> None:
     if user is None or user.verify_token_expires_at is None:
         raise AuthError("Link verifikasi tidak valid atau sudah pernah dipakai")
 
-    # Sudah aktif -> sukses, bukan galat. Diperiksa SEBELUM kedaluwarsa: link
-    # yang sudah terpakai lalu dibuka lagi setelah lewat batas waktu tetap
-    # menceritakan hal yang benar, yaitu akunnya aktif.
+    # Sudah aktif berarti sukses, bukan galat. Diperiksa sebelum kedaluwarsa,
+    # supaya link lama yang dibuka lagi tetap menjawab "akunnya aktif".
     if user.email_verified_at is not None:
         return
 
     if user.verify_token_expires_at < datetime.now(timezone.utc):
         raise AuthError("Link verifikasi sudah kedaluwarsa. Minta kirim ulang.")
 
-    # Token TIDAK dihanguskan di sini, biar kedaluwarsa yang menutupnya.
+    # Token tidak dihanguskan di sini, biar kedaluwarsa yang menutupnya.
     user.email_verified_at = datetime.now(timezone.utc)
     await db.commit()
 
 
 async def resend_verification(db: AsyncSession, email: str) -> None:
-    """Terbitkan ulang link aktivasi, dan SEBUTKAN alasannya kalau gagal.
+    """Terbitkan ulang link aktivasi, dan sebutkan alasannya kalau gagal.
 
-    Berbeda dengan request_password_reset yang sengaja selalu diam. Dulu fungsi
-    ini juga diam untuk semua kegagalan, dan akibatnya pengguna melihat "link
-    sudah dikirim" padahal tidak ada apa pun yang terkirim, tanpa cara tahu
-    kenapa. Itu jalan buntu, bukan keamanan.
+    Beda dengan request_password_reset yang selalu diam. Kalau di sini juga
+    diam, pengguna melihat "link sudah dikirim" padahal tidak ada yang
+    terkirim, tanpa cara tahu kenapa.
 
-    Membocorkan keberadaan email di sini juga tidak menambah apa-apa: endpoint
-    register sudah membalas "Email sudah terdaftar" sejak awal, jadi informasi
-    itu memang sudah bisa didapat. request_password_reset TETAP diam, karena di
-    sana tidak ada endpoint lain yang sudah membocorkannya.
+    Keberadaan email memang jadi terbuka, tapi endpoint register sudah
+    membalas "Email sudah terdaftar" sejak awal. request_password_reset tetap
+    diam karena di sana tidak ada endpoint lain yang membocorkannya.
     """
-    # Diperiksa lebih dulu, sebelum token diterbitkan: percuma membakar token
-    # untuk email yang mustahil dikirim, dan server yang salah konfigurasi harus
-    # mengaku salah, bukan pura-pura berhasil.
+    # Diperiksa sebelum token diterbitkan: percuma membakar token untuk email
+    # yang mustahil dikirim.
     if not settings.SMTP_HOST:
         raise EmailTidakTerkirim(
             "Server email belum dikonfigurasi, jadi link aktivasi tidak bisa dikirim. "

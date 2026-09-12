@@ -1,6 +1,4 @@
--- ============================================================
--- Tabel users, akun dashboard web (admin/pemilik) & mobile (operator lapangan)
--- ============================================================
+-- Tabel users (admin dan operator)
 
 CREATE TABLE IF NOT EXISTS users (
     id             SERIAL PRIMARY KEY,

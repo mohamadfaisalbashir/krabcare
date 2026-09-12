@@ -1,15 +1,14 @@
 """baseline skema init 01-08
 
-Revisi NO-OP dengan sengaja. Skema sampai titik ini (tabel, hypertable, index,
-seed device) dibuat oleh database/init/01_*.sql s.d. 08_*.sql saat volume pgdata
-pertama kali dibuat, BUKAN oleh Alembic. Revisi ini hanya menjadi titik nol
-riwayat migrasi.
+Revisi no-op. Skema sampai titik ini (tabel, hypertable, index, seed device)
+dibuat database/init/01_*.sql sampai 08_*.sql saat volume pgdata pertama kali
+dibuat, bukan oleh Alembic. Revisi ini cuma titik nol riwayat migrasi.
 
-Untuk database yang SUDAH ada (dev maupun VPS), tandai tanpa menjalankan apa pun:
+Untuk database yang sudah ada, tandai tanpa menjalankan apa pun:
     docker compose exec backend alembic stamp head
 
-Mulai revisi berikutnya, SEMUA perubahan skema lewat Alembic.
-database/init/01-08 beku, jangan pernah menambah file 09 ke folder itu.
+Mulai revisi berikutnya, semua perubahan skema lewat Alembic.
+database/init/01-08 beku, jangan menambah file 09 ke folder itu.
 
 Revision ID: 445f8540edcb
 Revises: 

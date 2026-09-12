@@ -22,16 +22,14 @@ const DEVICE_TYPE_LABEL: Record<Device["device_type"], string> = {
 };
 
 /**
- * Tipe yang boleh DIPILIH saat mendaftarkan device baru, gateway TIDAK ikut.
+ * Tipe yang boleh dipilih saat mendaftarkan device baru, tanpa gateway.
  *
- * Gateway (Raspberry Pi) bukan device yang diklaim ke kolam: ia yang MENGIRIM
- * data device lain lewat /ingest/* dengan X-API-Key, dan didaftarkan lewat
- * seed SQL, bukan lewat panel ini. Menawarkannya di dropdown cuma mengundang
- * baris yang tidak akan pernah punya pembacaan sensor.
+ * Gateway (Raspberry Pi) tidak diklaim ke kolam: ia yang mengirim data device
+ * lain lewat /ingest/* dengan X-API-Key, dan didaftarkan lewat seed SQL.
  *
- * DEVICE_TYPE_LABEL di atas TETAP memuat gateway, ia dipakai sebagai label
- * baris untuk gateway yang memang sudah terdaftar, dan enum backend
- * (models/enums.py) juga tidak disentuh supaya device lama tidak jadi tertolak.
+ * DEVICE_TYPE_LABEL tetap memuat gateway karena dipakai sebagai label baris
+ * untuk gateway yang sudah terdaftar. Enum backend (models/enums.py) juga
+ * tidak disentuh supaya device lama tidak tertolak.
  */
 const TIPE_BISA_DIDAFTAR: Device["device_type"][] = ["slave_node", "master_node"];
 
@@ -112,9 +110,8 @@ export default function PerangkatPage() {
   const router = useRouter();
   const user = useUser();
 
-  // Halaman ini cuma buat admin. Item nav-nya sudah disembunyikan untuk role
-  // lain (Sidebar/MobileNav), tapi URL tetap bisa diketik langsung, jadi
-  // dijaga juga di sini, begitu user diketahui BUKAN admin, tendang balik.
+  // Halaman admin. Item nav-nya sudah disembunyikan untuk role lain, tapi URL
+  // tetap bisa diketik langsung, jadi dijaga lagi di sini.
   useEffect(() => {
     if (user && user.role !== "admin") {
       router.replace("/dashboard");
@@ -137,8 +134,8 @@ export default function PerangkatPage() {
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [busyDeviceId, setBusyDeviceId] = useState<number | null>(null);
-  /** Hasil aksi pada BARIS device (pasang/lepas/hapus), terpisah dari
-   *  formMessage yang milik form "Tambah device" di atasnya. */
+  /** Hasil aksi pada baris device (pasang/lepas/hapus), terpisah dari
+   *  formMessage milik form "Tambah device" di atasnya. */
   const [aksiMessage, setAksiMessage] = useState<Message>(null);
 
   function loadDevices() {
@@ -251,7 +248,7 @@ export default function PerangkatPage() {
     setAksiMessage(null);
     try {
       await api.claimDeviceToKolam(assignModalDevice.id, Number(selectedKolamId));
-      // Nama kolam dibaca dari daftar target SEBELUM loadDevices menyegarkannya,
+      // Nama kolam dibaca dari daftar target sebelum loadDevices menyegarkannya,
       // dan device-nya dari state modal sebelum modalnya ditutup.
       const kolam = targetKolams.find((k) => k.id === Number(selectedKolamId));
       setAksiMessage({
@@ -270,8 +267,8 @@ export default function PerangkatPage() {
     }
   }
 
-  // Belum ketahuan role-nya (store masih memuat /auth/me), jangan render
-  // apa pun dulu, sama seperti guard di (app)/layout.tsx.
+  // Role belum diketahui (store masih memuat /auth/me), jangan render apa pun
+  // dulu, sama seperti guard di (app)/layout.tsx.
   if (!user || user.role !== "admin") return null;
 
   const belumDiklaim = devices.filter((d) => d.kolam_id == null);
@@ -335,9 +332,9 @@ export default function PerangkatPage() {
           </form>
         </Card>
 
-        {/* Hasil pasang/lepas/hapus. Di ATAS kedua daftar, karena aksinya
-            memindahkan barisnya antar daftar, pesan yang menempel di barisnya
-            sendiri akan ikut hilang bersama baris itu. */}
+        {/* Hasil pasang/lepas/hapus, ditaruh di atas kedua daftar: aksinya
+            memindahkan baris antar daftar, jadi pesan yang menempel di baris
+            itu akan ikut hilang. */}
         <FormMessage message={aksiMessage} />
 
         {listError && (

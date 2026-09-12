@@ -12,10 +12,9 @@ export const metadata: Metadata = {
   title: "KrabCare · Monitoring kualitas air budidaya kepiting",
   description:
     "Sistem monitoring kualitas air pada budidaya kepiting sistem vertikal (apartemen), multi-kolam dan multi-pengguna.",
-  // Berkas ikonnya di web/public/ (hasil favicon.io), bukan dipindah ke
-  // konvensi app/icon.* Next: satu paket ini sudah punya banyak ukuran +
-  // apple-touch-icon + manifest sekaligus, cukup ditaut lewat metadata,
-  // tanpa perlu Next menebak-nebak dari nama file.
+  // Ikon ada di web/public/ (hasil favicon.io), bukan konvensi app/icon.*
+  // Next: satu paket itu sudah memuat banyak ukuran, apple-touch-icon, dan
+  // manifest, jadi cukup ditaut lewat metadata.
   icons: {
     icon: [
       { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
@@ -30,11 +29,11 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  // Tanpa viewportFit "cover", env(safe-area-inset-*) selalu bernilai 0 di iOS
-  // dan bar navigasi bawah duduk tepat di bawah gesture bar.
+  // Tanpa viewportFit "cover", env(safe-area-inset-*) selalu 0 di iOS dan bar
+  // navigasi bawah duduk tepat di bawah gesture bar.
   viewportFit: "cover",
-  // Warna address bar browser mobile saat situs dibuka, disamakan dengan
-  // brand-500 (#19A8B2) di tailwind.config.ts, bukan biru/putih bawaan.
+  // Warna address bar browser mobile, disamakan dengan brand-500 (#19A8B2)
+  // di tailwind.config.ts.
   themeColor: "#19A8B2",
 };
 

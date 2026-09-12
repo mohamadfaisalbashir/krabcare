@@ -5,15 +5,10 @@ import { ParamKey, PARAM_UI, formatValue, statusOf } from "@/lib/parameter";
 import { formatWaktu } from "@/lib/tanggal";
 
 /**
- * Tooltip bersama kedua grafik halaman detail rak.
+ * Tooltip bersama HistoryChart dan CombinedChart.
  *
- * Sebelumnya `contentStyle` + `labelFormatter` yang identik disalin di
- * HistoryChart dan CombinedChart, dua tempat yang harus diingat berbarengan
- * setiap kali gayanya diubah. Satu komponen menggantikan keduanya.
- *
- * Nilainya tidak cuma diangkakan: statusnya ikut dihitung dengan statusOf(),
- * fungsi yang sama yang dipakai kartu parameter dan StatusBadge. Jadi angka di
- * tooltip tidak pernah bisa mengatakan hal berbeda dari kartu di atasnya.
+ * Statusnya dihitung dengan statusOf(), fungsi yang sama dengan kartu parameter
+ * dan StatusBadge, supaya tooltip tidak bisa berbeda dari kartu di atasnya.
  */
 export default function ChartTooltip({
   active,
@@ -33,8 +28,8 @@ export default function ChartTooltip({
         {payload.map((row) => {
           const key = row.dataKey as ParamKey;
           const cfg = PARAM_UI[key];
-          // Seri yang tidak dikenal (mis. garis bantu) dilewati, bukan bikin
-          // crash lewat PARAM_UI[undefined].
+          // Seri tak dikenal (misal garis bantu) dilewati, bukan bikin crash
+          // lewat PARAM_UI[undefined].
           if (!cfg || typeof row.value !== "number") return null;
           const status = statusOf(key, row.value);
           return (
@@ -51,8 +46,8 @@ export default function ChartTooltip({
                   {cfg.unit}
                 </span>
               </span>
-              {/* Titik status, bukan kata: barisnya sudah padat. Maknanya tetap
-                  tidak bergantung warna saja, title-nya terbaca pembaca layar
+              {/* Titik status, bukan kata, karena barisnya sudah padat. Maknanya
+                  tetap tidak bergantung warna: title-nya terbaca pembaca layar
                   dan muncul saat kursor berhenti di atasnya. */}
               <span
                 title={status}

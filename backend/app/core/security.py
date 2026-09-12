@@ -28,13 +28,11 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# bcrypt 12 rounds memakan ~250-400 ms CPU per operasi, dan itu MEMANG tujuannya
-#, jangan diturunkan untuk mengejar kecepatan. Yang salah sebelumnya bukan
-# biayanya, tapi tempatnya: dipanggil langsung di dalam `async def` sehingga
-# memblokir event loop, jadi satu pendaftaran membekukan SEMUA request lain
-# selama ~700 ms (daftar + auto-login = dua operasi bcrypt berturut-turut).
-# asyncio.to_thread memindahkannya ke thread pool, pola yang sama dengan
-# core/email.py:36.
+# bcrypt 12 rounds memakan ~250-400 ms CPU per operasi dan itu memang tujuannya,
+# jangan diturunkan. Yang penting tempatnya: dipanggil langsung di dalam
+# `async def` akan memblokir event loop, jadi satu pendaftaran (dua operasi
+# bcrypt berturut-turut) membekukan semua request lain selama ~700 ms.
+# asyncio.to_thread memindahkannya ke thread pool, sama seperti core/email.py.
 def _hash_sync(password: str) -> str:
     return _pwd_context.hash(password)
 
@@ -60,9 +58,9 @@ def create_access_token(user_id: int) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
 
 async def _resolve_user_from_token(token: str, db: AsyncSession) -> User | None:
-    """Decode JWT & muat User-nya. Return None (bukan raise) kalau token/user invalid,
-    pemanggil yang menentukan: get_current_user langsung 401, get_data_access_scope
-    masih coba fallback ke X-API-Key dulu."""
+    """Decode JWT dan muat User-nya. Return None, bukan raise, kalau token atau
+    user invalid: get_current_user membalas 401, sedangkan get_data_access_scope
+    masih coba fallback ke X-API-Key."""
     try:
         payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
         user_id = int(payload["sub"])
@@ -124,8 +122,8 @@ async def get_data_access_scope(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme_optional),
     db: AsyncSession = Depends(get_db),
 ) -> DataAccessScope:
-    """Dependency endpoint baca data (readings, quality): terima X-API-Key gateway
-    ATAU Bearer JWT user. 401 kalau dua-duanya tidak ada/tidak valid."""
+    """Dependency endpoint baca data (readings, quality): terima X-API-Key
+    gateway atau Bearer JWT user. 401 kalau keduanya tidak valid."""
     if x_api_key is not None and x_api_key == settings.GATEWAY_API_KEY:
         return DataAccessScope(user=None, allowed_device_ids=None)
 

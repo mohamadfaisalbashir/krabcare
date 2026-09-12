@@ -27,7 +27,7 @@ def _send_email_sync(to_email: str, subject: str, body: str) -> None:
 
 
 async def send_email(to_email: str, subject: str, body: str) -> None:
-    """Versi async. SMTP belum dikonfigurasi -> skip + warning, bukan error."""
+    """Versi async. SMTP belum dikonfigurasi berarti skip + warning, bukan error."""
     if not settings.SMTP_HOST:
         logger.warning(
             "SMTP_HOST belum diset, email ke %s dilewati (subjek: %s).", to_email, subject

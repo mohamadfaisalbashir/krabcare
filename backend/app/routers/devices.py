@@ -1,8 +1,7 @@
-"""Router device, khusus admin: lihat semua device (klaim/belum) & tambah device baru.
+"""Router device, khusus admin: lihat semua device dan tambah device baru.
 
-Menggantikan alur lama (INSERT manual ke tabel devices lewat psql) dengan form
-web. Klaim device ke kolam TETAP lewat POST /kolam/:id/devices/:code (kolam.py),
-router ini cuma soal keberadaan device-nya di DB.
+Klaim device ke kolam lewat POST /kolam/:id/devices/:code (kolam.py); router
+ini cuma soal keberadaan device-nya di DB.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -53,8 +52,7 @@ async def create_device(
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
-    """Daftarkan device_code baru, dipakai admin sebelum device itu dipasang/
-    diklaim, gantinya input manual ke database."""
+    """Daftarkan device_code baru, sebelum device itu dipasang ke kolam."""
     try:
         device = await device_service.create_device(db, payload)
     except DeviceCodeConflictError as exc:

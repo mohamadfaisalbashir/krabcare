@@ -1,4 +1,4 @@
--- Notifikasi in-app (dari hook anomali ml_pipeline_service) + token push (FCM).
+-- Notifikasi in-app + token push (FCM)
 
 CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,

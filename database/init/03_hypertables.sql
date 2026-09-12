@@ -19,7 +19,6 @@ SELECT create_hypertable(
     if_not_exists => TRUE
 );
 
--- Catatan produksi (opsional, belum diaktifkan):
 -- Retention policy otomatis, mis. buang data mentah > 1 tahun:
 --   SELECT add_retention_policy('sensor_readings', INTERVAL '365 days');
 -- Compression untuk chunk lama agar hemat storage:

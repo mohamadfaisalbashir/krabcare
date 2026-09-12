@@ -1,7 +1,6 @@
-"""Kelola device sisi admin: lihat semua device (klaim/belum) & tambah device baru.
+"""Kelola device sisi admin: lihat semua device dan tambah device baru.
 
-Sebelum ini device_code cuma bisa masuk lewat INSERT manual ke DB (lihat
-README), endpoint admin di sini gantiin itu lewat form web.
+Pengganti INSERT manual device_code ke DB (lihat README).
 """
 
 from sqlalchemy import select
@@ -21,7 +20,7 @@ class DeviceNotFoundError(DeviceError):
 
 
 class DeviceCodeConflictError(DeviceError):
-    """device_code sudah dipakai device lain, UNIQUE constraint devices.device_code."""
+    """device_code sudah dipakai device lain (UNIQUE devices.device_code)."""
 
 
 class DeviceAlreadyClaimedError(DeviceError):
@@ -31,9 +30,8 @@ class DeviceAlreadyClaimedError(DeviceError):
 async def list_all_devices(db: AsyncSession) -> list[DeviceAdminOut]:
     """Semua device terdaftar, sudah diklaim maupun belum (kolam_id NULL).
 
-    Panel admin butuh dua-duanya sekaligus (bukan cuma yang belum diklaim),
-    outer join ke Kolam dan User supaya device yang sudah diklaim ikut bawa nama
-    kolamnya dan nama pemiliknya.
+    Outer join ke Kolam dan User supaya device yang sudah diklaim ikut membawa
+    nama kolam dan nama pemiliknya.
     """
     result = await db.execute(
         select(Device, Kolam, User)
@@ -112,7 +110,7 @@ async def claim_device_to_kolam(db: AsyncSession, device_id: int, kolam_id: int)
     if kolam is None:
         raise DeviceError(f"Kolam #{kolam_id} tidak ditemukan")
 
-    # Cek apakah kolam ini sudah terhubung ke device lain
+    # Kolam ini mungkin sudah terhubung ke device lain.
     occupant_res = await db.execute(select(Device).where(Device.kolam_id == kolam.id))
     occupant = occupant_res.scalars().first()
     if occupant is not None and occupant.id != device.id:

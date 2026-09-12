@@ -46,9 +46,8 @@ async def login(payload: UserLoginIn, db: AsyncSession = Depends(get_db)) -> Tok
     try:
         token = await auth_service.authenticate_user(db, payload)
     except EmailBelumTerverifikasi as exc:
-        # 403, bukan 401: kredensialnya BENAR, yang kurang cuma aktivasi. 401
-        # akan memicu logout() otomatis di klien (lib/api.ts) dan melempar
-        # pengguna ke halaman login yang baru saja ia isi dengan benar.
+        # 403, bukan 401: kredensialnya benar, yang kurang cuma aktivasi. 401
+        # memicu logout() otomatis di klien (lib/api.ts).
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc)) from exc
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
@@ -70,10 +69,8 @@ async def resend_verification(
 ) -> dict:
     """Kirim ulang link aktivasi, dan sebutkan alasannya kalau gagal.
 
-    Sengaja TIDAK anti-enumeration, tidak seperti /forgot-password. Alasannya
-    ada di docstring auth_service.resend_verification: balasan seragam di sini
-    membuat pengguna melihat "terkirim" padahal tidak ada yang dikirim, dan
-    endpoint register sudah membocorkan keberadaan email sejak awal.
+    Tidak anti-enumeration, beda dengan /forgot-password. Alasannya ada di
+    docstring auth_service.resend_verification.
     """
     try:
         await auth_service.resend_verification(db, payload.email)
@@ -112,15 +109,14 @@ async def delete_me(
 ) -> None:
     """Hapus akun sendiri, permanen.
 
-    Tidak ada kode pembersihan karena aturan FK sudah menanganinya:
+    Tidak ada kode pembersihan, aturan FK yang menanganinya:
       - kolam.owner_user_id   ON DELETE CASCADE   -> kolam ikut hilang
-      - devices.kolam_id      ON DELETE SET NULL  -> device SELAMAT, jadi tak terklaim
+      - devices.kolam_id      ON DELETE SET NULL  -> device jadi tak terklaim
       - notifications, push_tokens                -> CASCADE
-    Riwayat sensor menempel di devices, jadi ia bertahan dan bisa diakses lagi
+    Riwayat sensor menempel di devices, jadi bertahan dan bisa diakses lagi
     setelah device-nya diklaim ulang.
 
-    Admin ditolak: akun admin hasil seed adalah satu-satunya pintu ke panel
-    /perangkat, dan menghapusnya mengunci pendaftaran device untuk semua orang.
+    Admin ditolak: akun admin hasil seed satu-satunya pintu ke panel /perangkat.
     """
     if current_user.role == UserRole.ADMIN:
         raise HTTPException(
@@ -146,7 +142,8 @@ async def change_password(
 
 @router.post("/forgot-password")
 async def forgot_password(payload: ForgotPasswordIn, db: AsyncSession = Depends(get_db)) -> dict:
-    """Kirim link reset ke email. Respons sama saja terdaftar atau tidak (anti-enumeration)."""
+    """Kirim link reset ke email. Respons sama terdaftar atau tidak
+    (anti-enumeration)."""
     await auth_service.request_password_reset(db, payload.email)
     return {"detail": "Kalau email terdaftar, link reset password sudah dikirim."}
 

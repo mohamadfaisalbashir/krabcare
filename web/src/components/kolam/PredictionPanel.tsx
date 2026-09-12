@@ -5,9 +5,8 @@ import AmmoniaCell from "@/components/kolam/AmmoniaCell";
 import { AmmoniaRisk, FuzzyPrediction, StatusLabel } from "@/lib/types";
 import { ParamKey, PARAM_KEYS, PARAM_UI, trendSentence } from "@/lib/parameter";
 
-/** Ketiga horizon yang dikirim edge (Raspi): 15, 30, 60 menit. Tidak ada
- *  langkah lain untuk difilter, konstanta ini cuma jaga-jaga kalau suatu saat
- *  backend menerima horizon tambahan yang belum perlu ditampilkan di sini. */
+/** Horizon yang dikirim edge (Raspi): 15, 30, 60 menit. Dipakai menyaring,
+ *  kalau-kalau backend menerima horizon lain di kemudian hari. */
 const HORIZON_MINUTES = 60;
 
 /** Tiga horizon yang ditampilkan, satu baris per horizon. */
@@ -19,9 +18,8 @@ const FIELD: Record<ParamKey, keyof FuzzyPrediction> = {
   salinity_ppt: "predicted_salinity_ppt",
 };
 
-/** Warna status, dipakai untuk titik di pojok dan garis aksen di bawah kepala
- *  kolom, dua tempat yang sama-sama BUKAN teks, jadi tidak terikat ambang
- *  kontras 4,5:1 seperti kata statusnya. */
+/** Warna status untuk titik di pojok dan garis aksen di bawah kepala kolom.
+ *  Keduanya bukan teks, jadi tidak terikat ambang kontras 4,5:1. */
 const ACCENT: Record<StatusLabel, string> = {
   Aman: "bg-status-aman",
   Waspada: "bg-status-waspada",
@@ -29,24 +27,21 @@ const ACCENT: Record<StatusLabel, string> = {
 };
 
 /**
- * Ramalan 15/30/60 menit ke depan, satu kolom per parameter, TIGA baris per
- * kolom (satu baris per horizon), bukan satu kalimat tren gabungan.
+ * Ramalan 15/30/60 menit ke depan, satu kolom per parameter, satu baris per
+ * horizon.
  *
- * Nama parameter TANPA status di pojok kanan (dihapus sengaja): dengan tiga
- * horizon sekaligus, satu status ringkasan di pojok jadi tidak mewakili
- * ketiganya. Garis aksen di bawah nama parameter sengaja NETRAL (bg-ink),
- * bukan warna status lagi, warnanya sekarang pindah jadi bulatan kecil di
- * depan MASING-MASING baris horizon, karena status 15/30/60 menit bisa
- * berbeda satu sama lain dan satu garis tidak bisa mewakili ketiganya
- * sekaligus. Arti warnanya dijelaskan di legenda atas panel (RakDetail).
+ * Tanpa status di pojok kanan dan garis aksennya netral (bg-ink): status
+ * 15/30/60 menit bisa berbeda, jadi satu ringkasan tidak mewakili ketiganya.
+ * Warna statusnya ada di bulatan kecil tiap baris horizon, artinya dijelaskan
+ * di legenda atas panel (RakDetail).
  */
 export default function PredictionPanel({
   predictions,
   ammoniaForecast,
 }: {
   predictions: FuzzyPrediction[];
-  /** Risiko amonia per horizon, dihitung backend dari nilai ramalan FTS
-   *  ketiga parameter di baris yang sama. */
+  /** Risiko amonia per horizon, dihitung backend dari ramalan FTS ketiga
+   *  parameter di baris yang sama. */
   ammoniaForecast?: AmmoniaRisk[];
 }) {
   const window = predictions
@@ -54,8 +49,8 @@ export default function PredictionPanel({
     .sort((a, b) => a.horizon_minutes - b.horizon_minutes);
 
   return (
-    // Jumlah kolom mengikuti ParameterStrip di atasnya, dua baris dari satu
-    // instrumen, jadi kolom ke-n di sini harus sejajar dengan kolom ke-n di sana.
+    // Jumlah kolom mengikuti ParameterStrip di atasnya, supaya kolom ke-n di
+    // sini sejajar dengan kolom ke-n di sana.
     <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => {
         const cfg = PARAM_UI[param];
@@ -64,8 +59,8 @@ export default function PredictionPanel({
           <div key={param} className="px-1 py-4 sm:px-5 sm:py-3">
             <p className="truncate text-sm font-medium text-ink">{cfg.label}</p>
 
-            {/* Garis aksen netral: pemisah kolom, bukan lagi pembawa warna
-                status (lihat catatan di atas fungsi). */}
+            {/* Garis aksen netral: pemisah kolom, bukan pembawa warna status
+                (lihat catatan di atas fungsi). */}
             <div aria-hidden className="mt-3 h-0.5 rounded-full bg-ink" />
 
             {/* Satu baris per horizon (15/30/60 menit), masing-masing dengan

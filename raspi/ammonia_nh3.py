@@ -1,12 +1,4 @@
-"""Estimasi fraksi risiko amonia (NH3), jalan di Raspi5.
-
-Duplikat persis dari backend/app/services/ammonia_speciation.py, dua salinan
-ini WAJIB tetap identik (kalau rumus/ambang berubah, ubah dua-duanya, dan
-naikkan MODEL_VERSION di sini SEKALIGUS di sana).
-
-SCIENTIFIC SCOPE. Modul ini menghitung FRAKSI Total Ammonia Nitrogen (TAN)
-yang berbentuk NH3 toksik pada pH/suhu/salinitas tertentu. TIDAK menghitung
-konsentrasi mg/L, karena sensor amonia tidak terpasang di hardware ini.
+"""Estimasi fraksi risiko amonia (NH3), jalan di Raspi 5.
 
 Referensi:
 [1] Hopton, C. M., Nienow, P., & Cockell, C. S. (2025). Ammonia sets limit to life and alters physiology independently of pH in Halomonas meridiana. Scientific Reports, 15, 19549.  
@@ -20,8 +12,6 @@ VALID_SALINITY_PPT = (5.0, 35.0)
 VALID_TEMPERATURE_C = (5.0, 35.0)
 VALID_PH = (7.8, 8.3)
 
-#: SAMA dengan MODEL_VERSION backend/app/services/ammonia_speciation.py, jangan
-#: dibedakan, ini rumus yang sama, cuma beda tempat jalannya.
 MODEL_VERSION = "speciation-bb78"
 
 
@@ -88,7 +78,7 @@ def classify_risk(fraction_pct: float) -> RiskLevel:
 
 
 def assess_ammonia_risk(ph: float, temperature_c: float, salinity_ppt: float) -> AmmoniaRiskResult:
-    """Entry point utama. TIDAK memerlukan dan TIDAK menerima TAN."""
+    """Entry point utama. Tidak memerlukan dan tidak menerima nilai TAN."""
     fraction, pka = nh3_fraction(ph, temperature_c, salinity_ppt)
     fraction_pct = fraction * 100.0
     return AmmoniaRiskResult(

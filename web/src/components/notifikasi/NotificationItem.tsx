@@ -36,19 +36,15 @@ const STATUS_STYLE: Record<
 };
 
 /**
- * Kata status -> label warna. DUA kosakata dipetakan ke tiga warna yang sama.
+ * Kata status -> label warna. Dua kosakata dipetakan ke tiga warna yang sama:
+ * "Aman/Waspada/Bahaya" (istilah tampilan, dipakai pesan sekarang) dan
+ * "Baik/Sedang/Buruk" (istilah database, ada di baris notifikasi lama).
  *
- * "Aman/Waspada/Bahaya" itu istilah tampilan, dan itu yang dipakai pesan yang
- * dibuat sekarang. "Baik/Sedang/Buruk" istilah database (quality_category), dan
- * pernah ikut tercetak ke dalam pesan prediksi sebelum diperbaiki. Keduanya
- * dikenali supaya baris lama maupun baru sama-sama berwarna.
- *
- * ponytail: pencocokan kata polos. "Sedang" juga kata biasa dalam bahasa
- * Indonesia ("sedang memuat"), jadi kalau suatu hari ada template pesan yang
- * memakainya sebagai keterangan waktu, kata itu ikut jadi kuning. Aman untuk
- * sekarang karena seluruh pesan lahir dari empat template di
- * notification_service.py dan tidak satu pun memakainya begitu. Kalau template
- * bertambah, persempit ke pola HURUF BESAR saja.
+ * ponytail: pencocokan kata polos. "Sedang" juga kata biasa ("sedang memuat"),
+ * jadi template pesan baru yang memakainya begitu akan ikut jadi kuning. Aman
+ * sekarang karena semua pesan lahir dari empat template di
+ * notification_service.py. Kalau template bertambah, persempit ke pola huruf
+ * besar saja.
  */
 const KATA_STATUS: Record<string, StatusLabel> = {
   aman: "Aman",
@@ -60,19 +56,15 @@ const KATA_STATUS: Record<string, StatusLabel> = {
 };
 
 /**
- * Warnai kata status di mana pun ia muncul di dalam pesan.
+ * Warnai kata status di mana pun ia muncul di dalam pesan. Pesan backend
+ * menyebut status di tengah kalimat ("berubah dari Aman ke Waspada"), jadi
+ * satu badge di pinggir tidak cukup untuk kalimat yang menyebut dua status.
  *
- * Pesan backend menyebut statusnya di tengah kalimat ("berubah dari Aman ke
- * Waspada"), jadi satu badge di pinggir tidak cukup: kalimat yang menyebut DUA
- * status hanya bisa dibedakan kalau kata-katanya sendiri yang diwarnai.
+ * Regex case-insensitive karena backend memakai huruf kapital awal pada
+ * kalimat transisi dan huruf besar semua pada kalimat lain. Grup tangkap di
+ * split() membuat pemisahnya ikut masuk hasil, jadi tidak ada teks yang hilang.
  *
- * Regex-nya case-insensitive karena backend memakai dua bentuk: huruf kapital
- * awal pada kalimat transisi, dan HURUF BESAR semua pada kalimat pertama kali
- * dan kalimat prediksi. Grup tangkap di dalam split() membuat pemisahnya ikut
- * masuk ke hasil, jadi teks di antaranya tidak ada yang hilang.
- *
- * Warna diambil dari STATUS_STYLE yang sudah ada di berkas ini, sumber yang
- * sama dengan ikon di sebelah kiri, supaya kata dan ikon tidak bisa berbeda.
+ * Warna dari STATUS_STYLE di berkas ini, sumber yang sama dengan ikon di kiri.
  */
 function PesanBerwarna({ teks }: { teks: string }) {
   const bagian = teks.split(/(Aman|Waspada|Bahaya|Baik|Sedang|Buruk)/gi);
@@ -125,12 +117,10 @@ export default function NotificationItem({
           <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
             {SOURCE_LABEL[item.source] ?? item.source}
           </span>
-          {/* Chip diwarnai KONDISI, bukan warna merek. Chip inilah yang
-              menyebut hal apa yang sedang dilaporkan ("Suhu", "Kualitas
-              Kolam"), jadi warnanya harus ikut mengatakan kondisi hal itu,
-              sebelumnya semua chip parameter berwarna sama entah aman entah
-              bahaya. style.bg/style.text sudah dihitung di atas dari
-              quality_category yang sama dengan ikonnya. */}
+          {/* Chip diwarnai kondisi, bukan warna merek. Chip ini yang menyebut
+              hal apa yang dilaporkan ("Suhu", "Kualitas Kolam"), jadi warnanya
+              harus ikut mengatakan kondisinya. style.bg dan style.text dihitung
+              di atas dari quality_category yang sama dengan ikonnya. */}
           {item.parameter && PARAM_LABELS[item.parameter] && (
             <span
               className={clsx(
@@ -142,12 +132,10 @@ export default function NotificationItem({
               {PARAM_LABELS[item.parameter]}
             </span>
           )}
-          {/* Syaratnya `!item.parameter` saja, TANPA memeriksa source. Dulu
-              syaratnya menuntut source === "classification", dan baris prediksi
-              (parameter NULL, source "prediction") jatuh di antara dua cabang:
-              tidak cocok chip parameter, tidak cocok chip ini, jadi satu-satunya
-              yang tampil chip abu-abu SOURCE_LABEL dan warnanya hilang sama
-              sekali. Prediksi meramal kategori kualitas air keseluruhan, subjek
+          {/* Syaratnya `!item.parameter` saja, tanpa memeriksa source. Kalau
+              menuntut source === "classification", baris prediksi (parameter
+              NULL, source "prediction") tidak cocok chip mana pun dan warnanya
+              hilang. Prediksi meramal kategori kualitas air keseluruhan, subjek
               yang sama dengan klasifikasi, jadi labelnya memang sama. */}
           {!item.parameter && (
             <span
@@ -160,10 +148,9 @@ export default function NotificationItem({
               Kualitas Kolam
             </span>
           )}
-          {/* Kata "Aman"/"Waspada"/"Bahaya" sebagai TEKS. Sebelumnya statusnya
-              hanya tersirat dari bentuk & warna ikon di kiri, tidak terbaca
-              pembaca layar, dan tidak terbaca sama sekali oleh yang kesulitan
-              membedakan warna. */}
+          {/* Status ditulis sebagai teks. Kalau cuma tersirat dari bentuk dan
+              warna ikon di kiri, ia tidak terbaca pembaca layar maupun oleh
+              yang kesulitan membedakan warna. */}
           <StatusBadge status={label} size="sm" />
           {!item.is_read && (
             <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />

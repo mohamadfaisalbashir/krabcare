@@ -17,17 +17,16 @@ class DeviceNotFoundError(KolamError):
 
 
 class DeviceAlreadyClaimedError(KolamError):
-    """Klaim ditolak karena konflik: device sudah milik kolam lain, ATAU kolam
-    tujuan sudah terhubung ke device lain (satu rak = satu device)."""
+    """Klaim ditolak: device sudah milik kolam lain, atau kolam tujuan sudah
+    terhubung ke device lain (satu rak = satu device)."""
 
 
 async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) -> Kolam:
-    """Kolam baru + klaim device-nya, dalam SATU transaksi.
+    """Kolam baru + klaim device-nya, dalam satu transaksi.
 
-    flush() dulu supaya `kolam.id` terisi tanpa commit; commit-nya baru terjadi
-    di dalam claim_device. Jadi kalau device_code salah atau sudah dipakai,
-    rollback membatalkan kolamnya juga, tidak ada kolam yatim yang tertinggal
-    karena langkah kedua gagal.
+    flush() dulu supaya `kolam.id` terisi tanpa commit; commit-nya terjadi di
+    dalam claim_device. Jadi kalau device_code salah atau sudah dipakai,
+    rollback ikut membatalkan kolamnya dan tidak ada kolam yatim.
     """
     kolam = Kolam(owner_user_id=owner.id, nama=payload.nama)
     db.add(kolam)
@@ -50,8 +49,8 @@ async def list_kolam(db: AsyncSession, owner: User) -> list[Kolam]:
 
 
 async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam | None:
-    """None kalau kolam tidak ada ATAU bukan milik `owner`, sengaja tidak dibedakan,
-    supaya router balas 404 seragam tanpa membocorkan keberadaan kolam orang lain."""
+    """None kalau kolam tidak ada atau bukan milik `owner`. Keduanya tidak
+    dibedakan supaya router balas 404 seragam."""
     result = await db.execute(
         select(Kolam).where(Kolam.id == kolam_id, Kolam.owner_user_id == owner.id)
     )
@@ -69,16 +68,15 @@ async def update_kolam(db: AsyncSession, kolam: Kolam, payload: KolamUpdateIn) -
 async def delete_kolam(db: AsyncSession, kolam: Kolam) -> None:
     """Hapus kolam secara permanen.
 
-    Tidak ada relationship() di model Kolam, jadi ini mengeluarkan DELETE polos
-    dan aturan FK database yang bekerja:
-      - notifications.kolam_id  ON DELETE CASCADE  -> notifikasi kolam ini ikut hilang
-      - devices.kolam_id        ON DELETE SET NULL -> device SELAMAT, cuma jadi tak terklaim
+    Tidak ada relationship() di model Kolam, jadi ini DELETE polos dan aturan FK
+    database yang bekerja:
+      - notifications.kolam_id  ON DELETE CASCADE  -> notifikasi ikut hilang
+      - devices.kolam_id        ON DELETE SET NULL -> device jadi tak terklaim
 
-    sensor_readings / fuzzy_classifications / fuzzy_predictions tidak menunjuk
-    kolam sama sekali (semuanya menempel di devices), jadi seluruh riwayat
-    pengukuran bertahan. Ia hanya tak terlihat oleh bekas pemiliknya karena
-    get_allowed_device_ids menyaring lewat join Device -> Kolam; klaim ulang
-    device-nya mengembalikan akses.
+    sensor_readings, fuzzy_classifications, dan fuzzy_predictions menempel di
+    devices, bukan kolam, jadi riwayatnya bertahan. Ia cuma tak terlihat oleh
+    bekas pemiliknya karena get_allowed_device_ids menyaring lewat join
+    Device -> Kolam; klaim ulang device-nya mengembalikan akses.
     """
     await db.delete(kolam)
     await db.commit()
@@ -87,9 +85,9 @@ async def delete_kolam(db: AsyncSession, kolam: Kolam) -> None:
 async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Device:
     """Klaim device (by device_code) ke `kolam`.
 
-    Satu kolam = satu rak = TEPAT SATU device. Klaim kedua ditolak 409, dan
-    tidak ada lagi cascade master -> slave: kalau cascade dibiarkan, mengklaim
-    master tetap menyeret semua slave ke satu kolam lewat API.
+    Satu kolam = satu rak = satu device, klaim kedua ditolak 409. Tanpa cascade
+    master -> slave: kalau ada, mengklaim master akan menyeret semua slave ke
+    satu kolam lewat API.
     """
     result = await db.execute(select(Device).where(Device.device_code == device_code))
     device = result.scalar_one_or_none()
@@ -99,7 +97,7 @@ async def claim_device(db: AsyncSession, kolam: Kolam, device_code: str) -> Devi
     if device.kolam_id is not None and device.kolam_id != kolam.id:
         raise DeviceAlreadyClaimedError(f"Device '{device_code}' sudah diklaim kolam lain")
 
-    # Klaim ulang device yang sama tetap idempoten. Yang ditolak cuma device kedua.
+    # Klaim ulang device yang sama idempoten; yang ditolak cuma device kedua.
     occupant_result = await db.execute(select(Device).where(Device.kolam_id == kolam.id))
     occupant = occupant_result.scalars().first()
     if occupant is not None and occupant.id != device.id:

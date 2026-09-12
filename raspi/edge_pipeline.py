@@ -1,23 +1,3 @@
-"""Satu titik masuk: dari satu reading mentah, hasilkan payload lengkap siap
-POST ke backend (POST /api/v1/ingest/quality), klasifikasi kondisi sekarang,
-forecast 15/30/60 menit, dan risiko amonia untuk kondisi sekarang + tiap horizon.
-
-Backend TIDAK LAGI menghitung ketiganya. VPS cuma menyimpan apa yang dikirim
-dari sini (lihat README.md bagian "Perubahan kontrak ingest").
-
-CARA PAKAI:
-    from edge_pipeline import EdgePipeline
-
-    pipeline = EdgePipeline(device_code="54D660E9BFB4")
-
-    # tiap ada reading baru dari ESP32 (GANTI baca sensor asli kalian):
-    payload = pipeline.process(waktu, ph=6.9, temperature_c=28.4, salinity_ppt=15.2)
-    # payload sudah dict siap json.dumps() lalu POST ke /api/v1/ingest/quality
-    # (header X-API-Key: GATEWAY_API_KEY, sama seperti /ingest/readings)
-
-Murni stdlib, tidak butuh `pip install` apa pun.
-"""
-
 from datetime import datetime, timedelta
 
 from ammonia_nh3 import MODEL_VERSION as AMMONIA_MODEL_VERSION
@@ -25,14 +5,8 @@ from ammonia_nh3 import assess_ammonia_risk
 from fuzzy_quality import ANOMALY_CATEGORIES, classify_water_quality
 from wlr_forecast import HORIZONS_MINUTES, WLRForecaster
 
-#: horizon_minutes untuk baris "kondisi terukur" (bukan ramalan), SAMA dengan
-#: ammonia_service.HORIZON_TERUKUR di backend, WAJIB tetap 0 di dua sisi.
 HORIZON_TERUKUR = 0
 
-#: Tag model_version yang dikirim ke backend, beda dari versi lama backend
-#: ("fuzzy-logic"/"fts") supaya baris lama vs baru gampang dibedakan di DB
-#: kalau suatu saat perlu ditelusuri. Amonia SENGAJA tidak diberi tag "-edge":
-#: rumusnya identik, cuma pindah tempat jalannya (lihat ammonia_nh3.py).
 MODEL_VERSION_CLASSIFICATION = "fuzzy-logic"
 MODEL_VERSION_PREDICTION = "wlr"
 
@@ -91,11 +65,12 @@ class EdgePipeline:
         }
 
     def process(self, time: datetime, ph: float | None, temperature_c: float | None, salinity_ppt: float | None) -> dict:
-        """Satu reading masuk -> payload lengkap {classifications, predictions, ammonia_risks}.
+        """Satu reading masuk, keluar payload {classifications, predictions,
+        ammonia_risks}.
 
-        `time` HARUS timezone-aware. Kalau salah satu parameter None (sensor mati),
-        klasifikasi/amonia kondisi-sekarang dilewati (bukan diisi nilai palsu),
-        tapi reading tetap ditambahkan ke buffer forecast kalau nilainya ada.
+        `time` harus timezone-aware. Kalau ada parameter None (sensor mati),
+        klasifikasi dan amonia kondisi sekarang dilewati, bukan diisi nilai
+        palsu, tapi reading tetap masuk ke buffer forecast.
         """
         classifications: list[dict] = []
         predictions: list[dict] = []
@@ -141,9 +116,9 @@ class EdgePipeline:
             "classifications": classifications,
             "predictions": predictions,
             "ammonia_risks": ammonia_risks,
-            # Info tambahan buat kalian putuskan sendiri (mis. nyalain buzzer lokal),
-            # backend tetap dapat kategori mentahnya dari classifications/predictions
-            # di atas dan memutuskan notifikasi push sendiri, bagian ini tidak dikirim.
+            # Info tambahan untuk keperluan lokal (misal menyalakan buzzer).
+            # Tidak dikirim: backend memutuskan notifikasi push dari kategori di
+            # classifications/predictions.
             "_anomaly_now": anomaly_categories_now,
             "_anomaly_forecast": anomaly_predictions,
         }

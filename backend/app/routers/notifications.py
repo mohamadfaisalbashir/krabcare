@@ -26,8 +26,8 @@ async def list_notifications(
 ) -> list[NotificationOut]:
     """Notifikasi milik user ini; device_code diambil sekali lewat batch lookup.
 
-    `source` menyaring di SQL, tab filter di web memakainya supaya paginasinya
-    ikut tersaring, bukan menyaring sisa halaman yang sudah terpotong LIMIT.
+    `source` menyaring di SQL supaya paginasinya ikut tersaring, bukan
+    menyaring sisa halaman yang sudah terpotong LIMIT.
     """
     items = await notification_service.list_notifications(
         db, current_user, unread_only, limit, offset, source
@@ -82,7 +82,7 @@ async def delete_all_notifications(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Hapus SEMUA notifikasi milik user ini."""
+    """Hapus semua notifikasi milik user ini."""
     jumlah = await notification_service.delete_all_notifications(db, current_user)
     return {"deleted": jumlah}
 

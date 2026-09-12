@@ -1,9 +1,9 @@
-# Override PRODUCTION. Selalu dipakai bersama file base, eksplisit:
+# Override production. Selalu dipakai bersama file base:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #
-# Menyebut -f secara eksplisit juga membuat docker-compose.override.yml (dev)
-# TIDAK ikut termuat, sehingga bind mount ./backend:/app tidak ada di sini dan
-# kode benar-benar berasal dari image hasil build.
+# Menyebut -f eksplisit juga membuat docker-compose.override.yml (dev) tidak
+# ikut termuat, jadi tidak ada bind mount ./backend:/app dan kodenya benar-benar
+# berasal dari image hasil build.
 services:
   backend:
     environment:
@@ -15,7 +15,7 @@ services:
   web:
     build:
       args:
-        # Domain API publik (lihat DOMAIN di env.production.example), bukan localhost.
+        # Domain API publik (DOMAIN di env.production.example), bukan localhost.
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.domain-anda.com/api/v1}
 
   caddy:

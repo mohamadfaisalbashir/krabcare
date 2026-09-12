@@ -1,10 +1,3 @@
-"""Angka acuan buat ammonia_nh3.py dan fuzzy_quality.py di folder ini, port dari
-backend/tests/test_ammonia_speciation.py (harus tetap identik angkanya, karena
-rumusnya sengaja diduplikasi persis, bukan diimpor).
-
-Jalankan langsung: python3 test_reference_values.py
-"""
-
 import sys
 from pathlib import Path
 
@@ -35,13 +28,13 @@ def test_di_luar_rentang_tetap_dihitung():
 
 
 def test_klasifikasi_normal():
-    """Kondisi normal (dalam himpunan "normal" ketiga parameter) -> kategori baik."""
+    """Ketiga parameter di himpunan "normal", hasilnya kategori baik."""
     hasil = classify_water_quality(ph=8.0, temperature_c=28.0, salinity_ppt=20.0)
     assert hasil["quality_category"] == "baik", hasil
 
 
 def test_klasifikasi_ekstrem():
-    """Salinitas jauh di bawah semua himpunan -> sangat_rendah -> bahaya -> buruk."""
+    """Salinitas jauh di bawah semua himpunan: sangat_rendah, bahaya, buruk."""
     hasil = classify_water_quality(ph=8.0, temperature_c=28.0, salinity_ppt=0.0)
     assert hasil["quality_category"] == "buruk", hasil
 

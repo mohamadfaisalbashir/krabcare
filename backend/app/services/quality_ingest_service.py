@@ -1,7 +1,7 @@
 """Simpan hasil ML: klasifikasi Mamdani & prediksi FTS.
 
-Pola sama dengan ingest_service.py (lookup device -> insert idempoten -> lapor
-yang di-skip). Bedanya cuma conflict target, mengikuti PK tabel masing-masing.
+Pola sama dengan ingest_service.py: lookup device, insert idempoten, lapor yang
+di-skip. Bedanya cuma conflict target, mengikuti PK tabel masing-masing.
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,7 +59,7 @@ async def ingest_classifications(
 async def ingest_predictions(
     db: AsyncSession, predictions: list[FuzzyPredictionIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    """Simpan batch prediksi; conflict target ikut horizon_minutes (lihat catatan di bawah)."""
+    """Simpan batch prediksi; conflict target ikut horizon_minutes."""
     device_map = await find_devices_by_code(db, [p.device_code for p in predictions])
     unknown = sorted({p.device_code for p in predictions if p.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}
@@ -86,7 +86,7 @@ async def ingest_predictions(
 
     if rows:
         # Satu run forecast menghasilkan banyak horizon dengan `time` sama, jadi
-        # horizon_minutes WAJIB ikut conflict target, kalau tidak, cuma 1 yang masuk.
+        # horizon_minutes harus ikut conflict target, kalau tidak cuma satu masuk.
         inserted, skipped_rows = await insert_skip_duplicates(
             db,
             FuzzyPrediction,
@@ -110,8 +110,9 @@ async def ingest_predictions(
 async def ingest_ammonia_risks(
     db: AsyncSession, ammonia_risks: list[AmmoniaRiskIn]
 ) -> tuple[int, list[str], list[SkippedDuplicateOut]]:
-    """Simpan batch risiko amonia dari edge; conflict target ikut horizon_minutes
-    (satu device di satu waktu bisa punya beberapa baris: 0=terukur, 15/30/60=ramalan)."""
+    """Simpan batch risiko amonia dari edge; conflict target ikut horizon_minutes,
+    karena satu device di satu waktu punya beberapa baris: 0 = terukur,
+    15/30/60 = ramalan."""
     device_map = await find_devices_by_code(db, [a.device_code for a in ammonia_risks])
     unknown = sorted({a.device_code for a in ammonia_risks if a.device_code not in device_map})
     device_code_by_id = {d.id: code for code, d in device_map.items()}

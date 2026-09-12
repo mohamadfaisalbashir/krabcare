@@ -14,8 +14,8 @@ class Notification(Base):
     """Notifikasi in-app untuk pemilik kolam, dari klasifikasi maupun prediksi."""
 
     __tablename__ = "notifications"
-    # UNIQUE = satu-satunya dedup notifikasi sumber `prediction` (event_time absolut
-    # per horizon). Nama constraint harus persis sama dengan yang ada di Postgres.
+    # UNIQUE ini satu-satunya dedup notifikasi sumber `prediction` (event_time
+    # absolut per horizon). Nama constraint harus sama persis dengan di Postgres.
     __table_args__ = (
         UniqueConstraint(
             "device_id",

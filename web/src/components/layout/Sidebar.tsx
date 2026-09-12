@@ -26,26 +26,22 @@ import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 const STORAGE_KEY = "sidebar_collapsed";
 
 /**
- * Kunci kehalusan buka/tutup panel ini ada di tiga aturan:
+ * Tiga aturan animasi buka/tutup panel ini:
  *
- * 1. SEMUA yang bergerak memakai durasi & kurva yang sama (`ease-smooth`).
- * 2. TIDAK ADA yang di-unmount di tengah animasi, dulu label & Logo hilang
- *    seketika sementara lebarnya beranimasi, dan itu yang terbaca patah-patah.
- * 3. Sesedikit mungkin properti LAYOUT yang dianimasikan. Yang tersisa cuma
- *    lebar <aside> (memang itu intinya) dan tinggi submenu lewat trik grid
- *    0fr→1fr. Label memakai opacity+transform saja. Padding aside dibuat tetap
- *    sehingga ikon tidak bergeser mendatar sama sekali selama panel melebar.
+ * 1. Semua yang bergerak memakai durasi & kurva yang sama (`ease-smooth`).
+ * 2. Tidak ada yang di-unmount di tengah animasi.
+ * 3. Properti layout yang dianimasikan seminimal mungkin: cuma lebar <aside>
+ *    dan tinggi submenu lewat trik grid 0fr->1fr. Label memakai opacity +
+ *    transform, dan padding aside tetap supaya ikon tidak bergeser.
  *
- * Sisa jank terbesarnya justru bukan di berkas ini: grafik recharts di panel
- * detail dashboard ikut menggambar ulang tiap frame saat lebar berubah. Itu
- * ditangani prop `debounce` pada ResponsiveContainer, bukan di sini.
+ * Grafik recharts di panel dashboard ikut menggambar ulang saat lebar berubah;
+ * itu ditangani prop `debounce` pada ResponsiveContainer, bukan di sini.
  */
 const MOVE = "transition-all duration-300 ease-smooth motion-reduce:transition-none";
 
-/** Kotak ikon 36px yang dipakai SETIAP baris, tombol kuncup, item nav, dan
- *  tombol keluar. Karena ukurannya seragam dan padding aside tetap, ketiganya
- *  duduk pada sumbu X yang sama, dan pada keadaan kuncup (12 + 36 + 12 = 60px)
- *  ikonnya tepat di tengah panel tanpa perlu `justify-center` yang berpindah. */
+/** Kotak ikon 36px untuk setiap baris: tombol kuncup, item nav, tombol keluar.
+ *  Ukuran seragam + padding aside tetap bikin ketiganya duduk pada sumbu X yang
+ *  sama, dan saat kuncup (12 + 36 + 12 = 60px) ikonnya pas di tengah panel. */
 const ICON_BOX = "flex h-9 w-9 shrink-0 items-center justify-center";
 
 const NAV = [
@@ -54,13 +50,12 @@ const NAV = [
     href: "/log-historis",
     label: "Log historis",
     icon: History,
-    // Anak-anaknya menaut ke tampilan per-parameter yang sudah ada. `param`
-    // adalah nama field mentah backend (ph / temperature_c / salinity_ppt),
-    // labelnya diambil dari PARAM_UI supaya tidak ada string yang diduplikasi.
+    // `param` adalah nama field backend (ph / temperature_c / salinity_ppt),
+    // labelnya dari PARAM_UI supaya tidak ada string yang diduplikasi.
     children: [
       ...PARAM_KEYS.map((p) => ({ param: p as LogParam, label: PARAM_UI[p].short })),
-      // Amonia menutup daftar, bukan menyelip di tengah: ia turunan dari ketiga
-      // parameter di atasnya, jadi urutannya ikut menjelaskan asalnya.
+      // Amonia di urutan terakhir karena ia turunan dari ketiga parameter di
+      // atasnya.
       { param: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
     ],
   },
@@ -68,26 +63,19 @@ const NAV = [
   { href: "/profil", label: "Profil", icon: UserRound },
 ];
 
-/** Cuma dirender untuk role admin, lihat device belum diklaim & tambah device baru.
- *  Diketik eksplisit ke elemen NAV: item-item dalam SATU array literal saling
- *  "meminjamkan" properti opsional (children) satu sama lain lewat inferensi TS,
- *  tapi ADMIN_NAV_ITEM dideklarasikan terpisah jadi tidak ikut kebagian itu,
- *  tanpa anotasi ini destructuring `children` di NavGroup gagal type-check. */
+/** Cuma dirender untuk role admin: lihat device belum diklaim & tambah device.
+ *  Diketik eksplisit ke elemen NAV karena item dalam satu array literal saling
+ *  meminjamkan properti opsional (children) lewat inferensi TS, sedangkan
+ *  ADMIN_NAV_ITEM berdiri sendiri dan tanpa anotasi ini gagal type-check. */
 const ADMIN_NAV_ITEM: (typeof NAV)[number] = { href: "/perangkat", label: "Perangkat", icon: Cpu };
 
 /**
- * Label yang memudar, bukan menyusut.
+ * Label yang memudar, bukan menyusut. Cuma `opacity` + `translate-x`, dua
+ * properti compositor tanpa layout; lebarnya dibiarkan alami dan terpotong
+ * `overflow-x-hidden` di <aside>.
  *
- * Sebelumnya ia menganimasikan `max-width`, properti LAYOUT, jadi setiap frame
- * memaksa hitung ulang tata letak seluruh sidebar sementara panelnya juga
- * sedang melebar. Sekarang hanya `opacity` + `translate-x`, dua properti yang
- * dikerjakan compositor tanpa layout sama sekali. Lebarnya dibiarkan alami dan
- * TERPOTONG oleh `overflow-x-hidden` di <aside>, tidak ada lebar yang perlu
- * diinterpolasi.
- *
- * Jeda saat membentang disengaja: tanpa itu teks sudah tampil penuh sebelum
- * panelnya punya ruang, dan yang terlihat adalah huruf yang terjepit tepi.
- * Saat menguncup jedanya nol, teks harus lenyap duluan, bukan ikut terpotong.
+ * Ada jeda saat membentang, supaya teks tidak tampil penuh sebelum panelnya
+ * punya ruang. Saat menguncup jedanya nol, teks harus lenyap duluan.
  */
 function CollapsingLabel({
   collapsed,
@@ -115,23 +103,21 @@ export default function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const user = useUser();
-  // Admin gak punya kolam sendiri, jadi Dashboard/Log historis/Notifikasi
-  // (semuanya berbasis kepemilikan kolam) gak relevan buatnya, nav-nya cuma
-  // Perangkat (kelola device) + Profil. Item "Profil" diambil dari NAV yang
-  // sama (bukan didefinisikan ulang) supaya tidak ada dua sumber kebenaran.
+  // Admin tidak punya kolam, jadi Dashboard/Log historis/Notifikasi tidak
+  // relevan; nav-nya cuma Perangkat + Profil. "Profil" diambil dari NAV yang
+  // sama, bukan didefinisikan ulang.
   const navItems =
     user?.role === "admin"
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
 
-  // null selama pengambilan pertama, badge sengaja tidak dirender sampai
-  // angkanya benar-benar diketahui, supaya tidak berkedip "0" lalu berubah.
+  // null selama pengambilan pertama. Badge tidak dirender sampai angkanya
+  // diketahui, supaya tidak berkedip "0" lalu berubah.
   const unread = useUnreadCount();
 
-  // Aman dari hydration mismatch tanpa trik: (app)/layout.tsx mengembalikan null
-  // sampai `authorized` di-set di dalam useEffect, jadi komponen ini tidak pernah
-  // dirender di server maupun di render klien pertama. Lazy init karenanya hanya
-  // berjalan di klien, dan tidak ada kedipan "terbuka lalu menguncup".
+  // Aman dari hydration mismatch: (app)/layout.tsx mengembalikan null sampai
+  // `authorized` di-set di useEffect, jadi komponen ini tidak pernah dirender
+  // di server maupun di render klien pertama.
   const [collapsed, setCollapsed] = useState(
     () =>
       typeof window !== "undefined" &&
@@ -146,9 +132,9 @@ export default function Sidebar({ className }: { className?: string }) {
     });
   }
 
-  // Halaman log memakai "ph" untuk param yang kosong atau tak dikenal
+  // Halaman log memakai "ph" untuk param kosong atau tak dikenal
   // (log-historis/page.tsx:69-72). Ditiru di sini supaya /log-historis polos
-  // menyalakan submenu "pH", sesuai apa yang benar-benar dirender halaman itu.
+  // menyalakan submenu "pH".
   const rawParam = searchParams.get("param");
   const activeParam: LogParam =
     rawParam === LOG_PARAM_AMONIA || PARAM_KEYS.includes(rawParam as ParamKey)
@@ -158,20 +144,19 @@ export default function Sidebar({ className }: { className?: string }) {
   return (
     <aside
       className={clsx(
-        // sticky + h-screen: panel setinggi layar penuh yang tetap di tempat
-        // saat konten digulir. Tanpa ini ia ikut memanjang mengikuti tinggi
-        // dokumen, sehingga tombol Keluar terdorong jauh di bawah lipatan pada
-        // halaman panjang seperti Log historis.
+        // sticky + h-screen: panel tetap setinggi layar saat konten digulir.
+        // Tanpa ini ia memanjang mengikuti tinggi dokumen dan tombol Keluar
+        // terdorong jauh ke bawah di halaman panjang.
         "sticky top-0 flex h-screen flex-col justify-between overflow-y-auto",
-        // overflow-x-hidden WAJIB dan bukan kosmetik: overflow-y-auto memaksa
-        // sumbu X ikut jadi `auto`, dan label yang kini tetap ter-render (bukan
-        // di-unmount lagi) akan memunculkan scrollbar mendatar saat menguncup.
+        // overflow-x-hidden wajib: overflow-y-auto memaksa sumbu X jadi `auto`,
+        // dan label yang tetap ter-render memunculkan scrollbar mendatar saat
+        // panel menguncup.
         "overflow-x-hidden",
-        // bg-bg, bukan bg-surface: panel nav adalah lapisan LATAR dan panel
-        // konten yang putih, seperti NavigationView WinUI 3.
+        // bg-bg, bukan bg-surface: panel nav adalah lapisan latar di belakang
+        // panel konten yang putih, seperti NavigationView WinUI 3.
         "border-r border-border bg-bg px-3 py-6",
-        // HANYA lebar yang beranimasi. Padding sengaja tetap, itu yang membuat
-        // ikon diam di tempat sementara panelnya melebar.
+        // Hanya lebar yang beranimasi. Padding tetap, supaya ikon diam di
+        // tempat sementara panelnya melebar.
         "transition-[width] duration-300 ease-smooth motion-reduce:transition-none",
         collapsed ? "w-[3.75rem]" : "w-64",
         className
@@ -251,26 +236,26 @@ function NavGroup({
   collapsed: boolean;
   children_?: { param: LogParam; label: string }[];
   activeParam: LogParam;
-  /** Jumlah belum dibaca. null = belum diketahui (jangan dirender), 0 = kosong (jangan dirender juga). */
+  /** Jumlah belum dibaca. null = belum diketahui, 0 = kosong. Keduanya tidak dirender. */
   badge?: number | null;
 }) {
-  // Sentinel, bukan useEffect sinkronisasi: grup terbuka sendiri saat halamannya
-  // aktif, tetap bisa dibuka manual dari halaman lain, dan tidak ada state yang
-  // bisa jatuh tidak sinkron dengan rute.
+  // Sentinel, bukan useEffect sinkronisasi: grup terbuka sendiri saat
+  // halamannya aktif, tetap bisa dibuka manual, dan tidak ada state yang bisa
+  // jatuh tidak sinkron dengan rute.
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? active;
 
   const hasChildren = !!children_?.length;
-  // Terbuka HANYA saat panel terbentang: submenu tidak muat di rail selebar
-  // 60px. Ini kondisi TAMPILAN, terpisah dari `open` yang menyimpan niat
-  // pengguna, jadi submenu kembali seperti semula begitu panel dibentangkan.
+  // Terbuka hanya saat panel terbentang; submenu tidak muat di rail 60px.
+  // Terpisah dari `open` yang menyimpan niat pengguna, jadi submenu kembali
+  // seperti semula begitu panel dibentangkan.
   const showChildren = hasChildren && open && !collapsed;
 
   return (
     <div>
-      {/* Latar aktif/hover ada di PEMBUNGKUS, bukan di <Link>, supaya sorotan
-          membentang utuh sampai melewati chevron. Kalau ditaruh di Link, chevron
-          adalah saudara di luar area berlatar dan tampak menggantung.
+      {/* Latar aktif dan hover ada di pembungkus, bukan di <Link>, supaya
+          sorotan membentang sampai melewati chevron. Di <Link>, chevron berada
+          di luar area berlatar dan tampak menggantung.
           Jangan tambahkan overflow-hidden, itu memotong outline fokus global. */}
       <div
         className={clsx(
@@ -279,10 +264,9 @@ function NavGroup({
           active ? "bg-brand-50" : "hover:bg-border/60"
         )}
       >
-        {/* Indikator aksen ala WinUI3 NavigationView. Dekoratif,
-            maknanya sudah dibawa aria-current di bawah. Item non-aktif
-            tetap merender span ini dalam keadaan menyusut, supaya
-            perpindahannya beranimasi tumbuh/menyusut, bukan mengedip. */}
+        {/* Indikator aksen ala WinUI3 NavigationView. Dekoratif, maknanya
+            dibawa aria-current di bawah. Item non-aktif tetap merender span
+            ini dalam keadaan menyusut supaya perpindahannya beranimasi. */}
         <span
           aria-hidden
           className={clsx(
@@ -327,8 +311,8 @@ function NavGroup({
             onClick={() => setOpenOverride(!open)}
             aria-label={`${open ? "Tutup" : "Buka"} submenu ${label}`}
             aria-expanded={open}
-            // Tanpa latar hover sendiri: baris sudah menyediakannya, dua lapis
-            // akan terbaca sebagai kotak di dalam kotak.
+            // Tanpa latar hover sendiri: baris sudah punya, dua lapis terbaca
+            // sebagai kotak di dalam kotak.
             className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink transition-colors duration-150 hover:text-ink"
           >
             <ChevronDown
@@ -343,9 +327,9 @@ function NavGroup({
       </div>
 
       {hasChildren && (
-        // Trik grid 0fr→1fr: tingginya beranimasi tanpa mengukur DOM dan tanpa
-        // max-height yang harus ditebak. Anak grid WAJIB overflow-hidden,
-        // tanpa itu isinya meluber keluar saat barisnya berukuran 0fr.
+        // Trik grid 0fr->1fr: tinggi beranimasi tanpa mengukur DOM dan tanpa
+        // max-height tebakan. Anak grid wajib overflow-hidden, tanpa itu isinya
+        // meluber saat barisnya 0fr.
         <div
           className={clsx(
             "grid",
@@ -359,22 +343,18 @@ function NavGroup({
             <div className="space-y-0.5" aria-hidden={!showChildren}>
               {children_!.map(({ param, label: childLabel }) => {
                 const childActive = active && activeParam === param;
-                // Ikon yang sama dengan yang dipakai kartu parameter dan panel
-                // prediksi, supaya satu parameter selalu dikenali lewat lambang
-                // yang sama di seluruh aplikasi.
+                // Ikon yang sama dengan kartu parameter dan panel prediksi.
                 const ChildIcon =
                   param === LOG_PARAM_AMONIA ? AMONIA_ICON : PARAM_ICON[param];
                 return (
                   <Link
                     key={param}
                     href={`${href}?param=${param}`}
-                    // replace, bukan push: pil parameter di dalam halaman memakai
-                    // router.replace juga, jadi tombol Back berperilaku sama untuk
-                    // dua kontrol yang mengerjakan hal identik.
+                    // replace, bukan push: pil parameter di halaman juga memakai
+                    // router.replace, jadi tombol Back berperilaku sama.
                     replace
-                    // Tersembunyi tapi masih di DOM (itulah yang membuatnya bisa
-                    // beranimasi), jadi harus dikeluarkan dari urutan Tab,
-                    // kalau tidak fokus bisa mendarat di elemen tak terlihat.
+                    // Tersembunyi tapi masih di DOM supaya bisa beranimasi, jadi
+                    // harus dikeluarkan dari urutan Tab.
                     tabIndex={showChildren ? undefined : -1}
                     aria-current={childActive ? "page" : undefined}
                     className={clsx(
@@ -394,7 +374,7 @@ function NavGroup({
                       )}
                     />
                     {/* Sedikit lebih kecil dari ikon induk (18px) supaya hierarkinya
-                        tetap terbaca, gaya goresan sama. */}
+                        terbaca. Gaya goresannya sama. */}
                     <ChildIcon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
                     {childLabel}
                   </Link>

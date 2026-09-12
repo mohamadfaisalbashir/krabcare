@@ -41,9 +41,8 @@ const STATUS_QUERY: Record<StatusLabel, "aman" | "waspada" | "bahaya"> = {
 /** Satu permintaan = 25 baris, diiris di database (LIMIT/OFFSET). */
 const PAGE = 25;
 
-/** Jam bulat 00-23 untuk mode "jam" -- dua dropdown, bukan <input type="time">
- *  bebas menit. Label pakai titik ("23.00") meniru notasi jam yang biasa
- *  dipakai di sini, bukan titik dua ala ISO. */
+/** Jam bulat 00-23 untuk mode "jam": dua dropdown, bukan <input type="time">
+ *  bebas menit. Label pakai titik ("23.00"), bukan titik dua ala ISO. */
 const HOUR_OPTIONS: string[] = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, "0"));
 function jamLabel(h: string): string {
   return `${h}.00`;
@@ -52,8 +51,8 @@ function jamLabel(h: string): string {
 /**
  * Dua cara melihat rentang waktu log:
  * - "hari": dua <input type="date">, granularitas satu hari penuh.
- * - "jam": satu tanggal + dua pilihan jam bulat, untuk menyempitkan ke jam
- *   tertentu DALAM satu hari itu (mis. cuma jam kerja 08.00 sampai 17.00).
+ * - "jam": satu tanggal + dua jam bulat, untuk menyempitkan ke jam tertentu
+ *   dalam hari itu (misal 08.00 sampai 17.00).
  */
 type RangeMode = "hari" | "jam";
 const RANGE_MODES: Array<{ value: RangeMode; label: string }> = [
@@ -61,10 +60,9 @@ const RANGE_MODES: Array<{ value: RangeMode; label: string }> = [
   { value: "jam", label: "Per jam" },
 ];
 
-/** Param aktif dari `?param=` URL, dengan fallback "ph" untuk nilai yang tidak
- *  dikenal -- dipisah dari komponen supaya dipakai baik untuk state awal
- *  maupun untuk menyinkronkan balik saat URL berubah dari LUAR (link sidebar
- *  desktop, tombol Back), lihat komentar di `param`/`useEffect` di bawah. */
+/** Param aktif dari `?param=` di URL, fallback "ph" untuk nilai tak dikenal.
+ *  Dipisah dari komponen karena dipakai untuk state awal sekaligus untuk
+ *  sinkron balik saat URL berubah dari luar (submenu sidebar, tombol Back). */
 function resolveParam(raw: string | null): LogParam {
   return raw === LOG_PARAM_AMONIA || PARAM_KEYS.includes(raw as ParamKey)
     ? (raw as LogParam)
@@ -113,20 +111,16 @@ export default function LogHistorisPage() {
 function LogHistorisView() {
   const router = useRouter();
 
-  // URL tetap sumber kebenaran untuk di-bookmark/tombol Back, TAPI parameter
-  // aktif yang dipakai render & fetch adalah STATE LOKAL, bukan langsung dari
-  // useSearchParams(). Sebelumnya klik pil parameter cuma router.replace(...),
-  // dan `param` menunggu Next.js selesai memutar navigasinya dulu sebelum
-  // pil aktif & data ikut berganti -- itu jeda yang terasa sebagai "lag"
-  // tiap pindah pH -> Suhu dkk, padahal pil status/rentang waktu di sebelahnya
-  // (state lokal murni) terasa instan. Klik di sini sekarang men-set state
-  // dulu (instan, memicu render & fetch di render yang sama), baru
-  // menyinkronkan URL di belakang layar lewat handleParamChange() di bawah.
+  // URL tetap sumber kebenaran untuk bookmark dan tombol Back, tapi parameter
+  // yang dipakai render & fetch adalah state lokal, bukan useSearchParams()
+  // langsung. Kalau menunggu navigasi Next selesai, ganti parameter terasa
+  // lag. Klik men-set state dulu, URL disinkronkan belakangan lewat
+  // handleParamChange().
   const rawParam = useSearchParams().get("param");
   const [param, setParam] = useState<LogParam>(() => resolveParam(rawParam));
 
-  // Sinkron BALIK kalau URL berubah dari luar klik pil di halaman ini sendiri
-  // (tautan submenu sidebar di layar lg:, tombol Back/Forward browser).
+  // Sinkron balik kalau URL berubah dari luar halaman ini (submenu sidebar,
+  // tombol Back/Forward).
   useEffect(() => {
     setParam((prev) => {
       const next = resolveParam(rawParam);
@@ -139,8 +133,8 @@ function LogHistorisView() {
     router.replace(`?param=${next}`, { scroll: false });
   }
 
-  // Amonia bukan kolom di sensor_readings, barisnya datang dari endpoint lain
-  // (/quality/ammonia-risk/history), jadi seluruh halaman bercabang di sini.
+  // Amonia bukan kolom sensor_readings, barisnya dari endpoint lain
+  // (/quality/ammonia-risk/history), jadi halaman ini bercabang di sini.
   const isAmonia = param === LOG_PARAM_AMONIA;
 
   const [rows, setRows] = useState<SensorReading[]>([]);
@@ -149,25 +143,22 @@ function LogHistorisView() {
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
   const [rangeMode, setRangeMode] = useState<RangeMode>("hari");
-  // Kosong = semua waktu. Format <input type="date">: "yyyy-mm-dd". Dipakai
-  // mode "hari" (dua-duanya) dan mode "jam" (cuma `dari`, sebagai tanggalnya).
+  // Kosong = semua waktu. Format "yyyy-mm-dd". Mode "hari" memakai keduanya,
+  // mode "jam" cuma `dari` sebagai tanggal acuan.
   const [dari, setDari] = useState("");
   const [sampai, setSampai] = useState("");
-  // Mode "jam": jam mulai/selesai DALAM tanggal `dari`, jam BULAT saja ("00".."23")
-  // lewat dropdown -- lihat HOUR_OPTIONS. Default "00" & "00" = satu hari penuh
-  // (aturan wraparound di rentangIso() membuat selesai<=mulai berarti hari
-  // berikutnya), padanan default lama "00:00"-"23:59".
+  // Mode "jam": jam mulai/selesai di dalam tanggal `dari`, jam bulat saja
+  // (HOUR_OPTIONS). Default "00" dan "00" berarti satu hari penuh, lewat
+  // aturan wraparound di rentangIso().
   const [jamDari, setJamDari] = useState("00");
   const [jamSampai, setJamSampai] = useState("00");
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Daftar sensor: sekali saja, dan hanya untuk panel unduh, yang butuh id
-  // device serta nama kolam untuk kolom CSV. Daftar log sendiri tidak menyaring
-  // per sensor. Satu kolam = tepat satu device (backend menolak klaim kedua
-  // dengan 409), tapi disimpan sebagai daftar datar supaya tetap benar kalau
-  // aturan itu berubah.
+  // Daftar sensor diambil sekali, hanya untuk panel unduh yang butuh id device
+  // dan nama kolam. Satu kolam = satu device (backend menolak klaim kedua
+  // dengan 409), tapi disimpan sebagai daftar datar kalau aturan itu berubah.
   useEffect(() => {
     async function loadSensors() {
       try {
@@ -196,34 +187,30 @@ function LogHistorisView() {
   }, []);
 
   // Satu permintaan untuk seluruh halaman, bukan satu per sensor: parameter,
-  // status, dan rentang waktu semuanya disaring di SQL sebelum LIMIT/OFFSET,
-  // jadi 25 baris yang dikirim backend adalah 25 baris yang tampil.
+  // status, dan rentang waktu disaring di SQL sebelum LIMIT/OFFSET, jadi 25
+  // baris yang dikirim backend adalah 25 baris yang tampil.
   //
-  // device_id sengaja TIDAK dikirim: scope backend sudah membatasi ke device
-  // milik user. Kekhawatiran lama (sensor cerewet menenggelamkan yang jarang
-  // lapor) berlaku untuk pengambilan "terbaru per device" seperti di dashboard;
-  // di sini urutannya memang kronologis dan riwayat yang lebih tua tinggal
-  // diminta halaman berikutnya.
-  // Satu fungsi, dicabangkan per mode -- keduanya cuma menghasilkan bentuk
-  // start_time/end_time ISO yang sama untuk dikirim ke backend, jadi bagian
-  // pengambilan data di bawah tidak perlu tahu mode mana yang sedang aktif.
+  // device_id tidak dikirim: scope backend sudah membatasi ke device milik user,
+  // dan urutan di sini kronologis, bukan "terbaru per device" seperti dashboard.
+  //
+  // Satu fungsi untuk kedua mode. Keduanya menghasilkan start_time/end_time ISO
+  // yang sama, jadi bagian pengambilan data tidak perlu tahu mode yang aktif.
   const rentangIso = useCallback((): { start?: string; end?: string } => {
     if (rangeMode === "hari") {
-      // dayRangeToIso dipakai per sisi: ia yang menangani jebakan
-      // tengah-malam-LOKAL vs UTC. Sisi yang kosong tidak dikirim sama sekali.
+      // dayRangeToIso dipakai per sisi karena ia yang menangani tengah malam
+      // lokal vs UTC. Sisi yang kosong tidak dikirim.
       return {
         start: dari ? dayRangeToIso(dari, dari).start : undefined,
         end: sampai ? dayRangeToIso(sampai, sampai).end : undefined,
       };
     }
-    // "jam". Tanpa tanggal, "jam 08.00 sampai 17.00" tidak berarti apa-apa,
-    // butuh `dari` sebagai hari acuannya.
+    // Mode "jam" butuh `dari` sebagai hari acuan; tanpa tanggal, "08.00 sampai
+    // 17.00" tidak berarti apa-apa.
     if (!dari) return {};
     const start = new Date(`${dari}T${jamDari}:00:00`);
     let end = new Date(`${dari}T${jamSampai}:00:00`);
-    // Wraparound: jam selesai <= jam mulai berarti jendelanya melewati tengah
-    // malam ke hari berikutnya (mis. mulai 23.00 selesai 00.00 = satu jam
-    // semalam), BUKAN rentang kosong/terbalik.
+    // Wraparound: jam selesai <= jam mulai berarti jendelanya lewat tengah
+    // malam ke hari berikutnya, bukan rentang kosong.
     if (end.getTime() <= start.getTime()) {
       end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
     }
@@ -245,8 +232,7 @@ function LogHistorisView() {
       if (isAmonia) {
         const halaman = await api.getAmmoniaHistory({
           ...bersama,
-          // Log amonia menampilkan kondisi REAL-TIME, bukan ramalan -- horizon 0
-          // saja (lihat catatan di baris tabel amonia di bawah).
+          // Log amonia menampilkan kondisi terukur, bukan ramalan: horizon 0 saja.
           only_measured: true,
           ...(statusFilter !== "Semua"
             ? { risk_level: STATUS_TO_RISK[statusFilter] }
@@ -265,7 +251,7 @@ function LogHistorisView() {
     [param, isAmonia, statusFilter, rentangIso]
   );
 
-  // Ganti parameter/status/rentang -> kembali ke halaman pertama.
+  // Ganti parameter/status/rentang, kembali ke halaman pertama.
   useEffect(() => {
     let batal = false;
     setLoading(true);
@@ -317,13 +303,12 @@ function LogHistorisView() {
         </p>
       )}
 
-      {/* Satu panel: area kontrol dan area data menyatu, dipisah garis tipis
-          alih-alih celah antar kartu. Tanpa overflow-hidden, di dalamnya ada
-          kolom tanggal dan tombol pil yang outline fokusnya akan terpotong. */}
+      {/* Satu panel: area kontrol dan area data menyatu, dipisah garis tipis.
+          Tanpa overflow-hidden, karena outline fokus kolom tanggal dan tombol
+          pil di dalamnya akan terpotong. */}
       <Card className="p-0">
-        {/* Pemilih mode rentang: hari/jam, lihat komentar RangeMode di atas.
-            Grid 2 kolom rata -- bukan flex-wrap -- supaya kedua pil selalu sama
-            lebar dan sejajar rapi di layar sempit. */}
+        {/* Pemilih mode rentang (hari/jam), lihat RangeMode di atas. Grid 2
+            kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. */}
         <div className="grid grid-cols-2 gap-2 p-4 pb-0">
           {RANGE_MODES.map((m) => (
             <FilterPill
@@ -340,13 +325,12 @@ function LogHistorisView() {
             Di layar sempit keduanya menumpuk. */}
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Rentang waktu: bentuk kolomnya berubah sesuai `rangeMode`, tapi
-              ketiganya bermuara ke start_time/end_time yang sama lewat
-              rentangIso() -- lihat komentar di sana. Kosong = semua waktu. */}
+              semuanya bermuara ke start_time/end_time lewat rentangIso().
+              Kosong berarti semua waktu. */}
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-muted">Rentang</span>
-            {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang sengaja
-                16px di mobile supaya Safari iOS tidak memperbesar viewport saat kolomnya
-                difokus. */}
+            {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang 16px di
+                mobile supaya Safari iOS tidak memperbesar viewport. */}
             {rangeMode === "hari" && (
               <>
                 <input
@@ -377,11 +361,10 @@ function LogHistorisView() {
                   className="input-field w-auto py-1.5"
                   aria-label="Tanggal"
                 />
-                {/* Dua HourSelect, JAM BULAT saja (00-23) -- lihat HOUR_OPTIONS.
-                    Selesai boleh lebih kecil/sama dengan mulai: itu artinya
-                    jendela melewati tengah malam (mis. 23.00 -> 00.00), bukan
-                    kombinasi tidak valid, jadi tidak ada validasi yang menolaknya
-                    di sini -- wraparound-nya ditangani rentangIso(). */}
+                {/* Dua HourSelect, jam bulat saja (HOUR_OPTIONS). Jam selesai boleh
+                    lebih kecil atau sama dengan jam mulai: itu berarti jendela
+                    melewati tengah malam, bukan kombinasi tidak valid, dan
+                    ditangani rentangIso(). */}
                 <HourSelect
                   value={jamDari}
                   onChange={setJamDari}
@@ -428,11 +411,10 @@ function LogHistorisView() {
           </div>
         </div>
 
-        {/* Pemilih parameter hanya untuk layar sempit: di atas breakpoint lg,
-            submenu sidebar sudah mengerjakan hal yang sama. Di bawah lg sidebar
-            tidak dirender sama sekali dan bar bawah tidak punya submenu, jadi
-            tanpa ini parameter terkunci di pH. Grid 4 kolom rata, bukan
-            flex-wrap, supaya keempat pil sejajar rapi di layar sempit. */}
+        {/* Pemilih parameter khusus layar sempit. Di atas lg submenu sidebar
+            sudah mengerjakan hal yang sama; di bawah lg sidebar tidak dirender
+            dan bar bawah tidak punya submenu, jadi tanpa ini parameter terkunci
+            di pH. Grid 4 kolom rata supaya keempat pil sejajar. */}
         <div className="grid grid-cols-4 gap-2 border-t border-border px-4 py-3 lg:hidden">
           {[
             ...PARAM_KEYS.map((p) => ({ value: p as LogParam, label: PARAM_UI[p].short })),
@@ -448,19 +430,14 @@ function LogHistorisView() {
           ))}
         </div>
 
-        {/* Daftar reading, satu parameter saja, sama seperti aplikasi mobile.
-            Badge-nya memakai cek ambang yang sama dengan filter status di
-            backend (app/core/water_thresholds.py), BUKAN fuzzy Mamdani.
-            ponytail: klasifikasi Mamdani ditulis satu baris per device per siklus
-            scheduler (ML_BUCKET_MINUTES=60), sedangkan reading masuk tiap 1-15
-            menit, jadi status fuzzy per-reading memang tidak ada datanya. Ganti
-            ke endpoint riwayat klasifikasi kalau cadence keduanya disamakan. */}
-        {/* Saat parameter diganti, baris lama DIBIARKAN di tempatnya dan cuma
-            diredupkan. Sebelumnya kerangka 6 baris ditumpuk DI ATAS daftar lama
-            yang 25 baris, jadi tingginya melompat naik lalu turun lagi dalam
-            sekejap, itu yang terbaca patah, paling kentara di kolom status
-            sebelah kanan. Kerangka sekarang hanya untuk keadaan yang memang
-            belum punya apa pun untuk ditampilkan. */}
+        {/* Daftar reading, satu parameter saja. Badge-nya memakai ambang yang
+            sama dengan filter status di backend (app/core/water_thresholds.py),
+            bukan fuzzy Mamdani: klasifikasi Mamdani ditulis jauh lebih jarang
+            daripada reading, jadi status fuzzy per baris tidak ada datanya. */}
+        {/* Saat parameter diganti, baris lama dibiarkan di tempatnya dan cuma
+            diredupkan. Menumpuk kerangka 6 baris di atas daftar 25 baris bikin
+            tingginya melompat naik lalu turun. Kerangka cuma dipakai kalau
+            memang belum ada apa pun untuk ditampilkan. */}
         <div
           className={clsx(
             "divide-y divide-border border-t border-border transition-opacity duration-200 motion-reduce:transition-none",
@@ -475,9 +452,9 @@ function LogHistorisView() {
           )}
 
           {/* Baris amonia: sumbernya tabel ammonia_risks, bukan sensor_readings.
-              Badge-nya memakai risk_level yang TERSIMPAN, bukan hitung ulang di
-              browser, dengan begitu log dan kartu tidak bisa berselisih kalau
-              ambang di backend suatu saat diubah. */}
+              Badge-nya memakai risk_level yang tersimpan, bukan hitung ulang di
+              browser, supaya log dan kartu tidak berselisih kalau ambang di
+              backend diubah. */}
           {isAmonia &&
             ammoniaRows.map((r, i) => {
               const status = riskToStatus(r.risk_level);
@@ -497,14 +474,13 @@ function LogHistorisView() {
                         dari TAN
                       </span>
                     </p>
-                    {/* Cuma waktunya -- halaman ini sekarang hanya meminta baris
-                        REAL-TIME (only_measured: true di muatHalaman), jadi
-                        keterangan "ramalan +N menit"/"ekstrapolasi" yang dulu
-                        ada di sini sudah tidak pernah relevan lagi. */}
-                    {/* brand-700 + semibold: waktu adalah kunci baca baris log,
-                        tapi `muted` membuatnya terbaca paling akhir. Warna merek,
-                        bukan warna status, supaya tidak tertukar dengan
-                        aman/waspada/bahaya di kolom sebelahnya. */}
+                    {/* Cuma waktunya. Halaman ini hanya meminta baris terukur
+                        (only_measured: true di muatHalaman), jadi tidak ada
+                        keterangan horizon ramalan yang perlu ditampilkan. */}
+                    {/* brand-700 + semibold: waktu adalah kunci baca baris log, dan
+                        `muted` membuatnya terbaca paling akhir. Warna merek,
+                        bukan warna status, supaya tidak tertukar dengan badge
+                        di kolom sebelahnya. */}
                     <p className="text-xs font-semibold text-brand-700">
                       {formatWaktu(r.target_time)}
                     </p>
@@ -518,10 +494,8 @@ function LogHistorisView() {
 
           {!isAmonia &&
             rows.map((r, i) => {
-            // Baris dari parameter sebelumnya masih terpasang sesaat setelah
-            // parameter diganti. SensorReading membawa ketiganya sekaligus jadi
-            // nilainya biasanya ada, tapi baris yang kolomnya null tetap harus
-            // aman, formatValue() menerima number, bukan null.
+            // Sesaat setelah parameter diganti, baris lama masih terpasang.
+            // Kolom yang null harus tetap aman: formatValue() menerima number.
             const value = r[param as ParamKey] ?? null;
             return (
               <div
@@ -533,8 +507,8 @@ function LogHistorisView() {
                     {r.device_code}{" "}
                     <span className="text-muted">
                       {meta.label} terukur {value != null ? formatValue(value) : "N/A"}
-                      {/* PARAM_UI.ph.unit === "pH", jadi "8.1 pH" untuk pH saja
-                          sudah cukup, tanpa satuan yang mengulang. */}
+                      {/* PARAM_UI.ph.unit === "pH", jadi satuannya tidak
+                          perlu diulang untuk parameter pH. */}
                       {param === "ph" || value == null ? "" : ` ${meta.unit}`}
                     </span>
                   </p>
@@ -542,7 +516,7 @@ function LogHistorisView() {
                     {formatWaktu(r.time)}
                   </p>
                 </div>
-                {/* Dibungkus supaya bisa shrink-0, StatusBadge tidak menerima
+                {/* Dibungkus supaya bisa shrink-0: StatusBadge tidak menerima
                     className, dan tanpa ini badge-nya kegencet di layar 375px. */}
                 <div className="shrink-0">
                   {value != null && (
@@ -553,7 +527,7 @@ function LogHistorisView() {
             );
           })}
 
-          {/* Tetap terpasang selama memuat, cuma dimatikan: kalau ia ikut hilang
+          {/* Tetap terpasang selama memuat, cuma dimatikan: kalau ikut hilang
               saat parameter diganti, tinggi panel menyusut lalu tumbuh lagi. */}
           {hasMore && (
             <div className="p-4 text-center">
@@ -568,8 +542,8 @@ function LogHistorisView() {
   );
 }
 
-/** Tiruan baris log: device + waktu di kiri, badge status di kanan. Dipakai juga
- *  sebagai fallback Suspense, jadi kerangkanya sama sebelum & sesudah hydrate. */
+/** Tiruan baris log: device + waktu di kiri, badge status di kanan. Dipakai
+ *  juga sebagai fallback Suspense, jadi sama sebelum dan sesudah hydrate. */
 function LogRowsSkeleton() {
   return (
     <div className="divide-y divide-border">

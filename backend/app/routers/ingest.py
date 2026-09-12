@@ -38,9 +38,9 @@ async def ingest_quality(
     payload: QualityIngestIn,
     db: AsyncSession = Depends(get_db),
 ) -> QualityIngestResultOut:
-    """Simpan klasifikasi, prediksi, dan/atau risiko amonia, dihitung & dikirim
-    edge (Raspi, raspi/edge_pipeline.py). Backend TIDAK menghitung ulang apa pun
-    di sini, cuma menyimpan lalu memutuskan notifikasi dari kategori yang diterima."""
+    """Simpan klasifikasi, prediksi, dan risiko amonia yang dihitung edge
+    (raspi/edge_pipeline.py). Backend tidak menghitung ulang, cuma menyimpan
+    lalu memutuskan notifikasi dari kategori yang diterima."""
     inserted_c, unknown_c, skipped_c = await quality_ingest_service.ingest_classifications(
         db, payload.classifications
     )
@@ -51,8 +51,8 @@ async def ingest_quality(
         db, payload.ammonia_risks
     )
 
-    # Notifikasi (in-app + push) dipicu di sini, dari kategori yang BARU diterima,
-    # lihat docstring dispatch_from_quality_ingest untuk kenapa titiknya pindah ke sini.
+    # Notifikasi (in-app + push) dipicu dari kategori yang baru diterima, lihat
+    # dispatch_from_quality_ingest.
     await notification_service.dispatch_from_quality_ingest(
         db, payload.classifications, payload.predictions, payload.ammonia_risks
     )

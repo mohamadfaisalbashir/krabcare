@@ -8,11 +8,9 @@ import { api } from "@/lib/api";
 /**
  * Zona berbahaya ala GitHub: menghapus rak butuh mengetik ulang namanya.
  *
- * Halaman detail rak menyembunyikan panel ini sampai tombol "Hapus rak" ditekan,
- * tapi wujudnya tetap INLINE, bukan overlay. Modal buatan sendiri butuh focus
- * trap, penanganan Escape, dan portal untuk hasil yang sama, alasan yang sama
- * yang membuat confirmLogout memilih window.confirm (lib/api.ts). window.confirm
- * sendiri tak bisa dipakai di sini karena butuh kolom isian.
+ * Inline, bukan overlay. Modal sendiri butuh focus trap, penanganan Escape,
+ * dan portal untuk hasil yang sama; window.confirm tidak bisa dipakai karena
+ * di sini butuh kolom isian.
  */
 export default function DangerZone({
   kolamId,
@@ -33,11 +31,10 @@ export default function DangerZone({
   const cocok = ketikan.trim() === nama;
 
   async function handleHapus() {
-    // Peringatan TERAKHIR, di atas ketik-ulang-nama. Keduanya menjaga hal yang
-    // berbeda: mengetik nama menjaga dari salah KOLAM, dialog ini menjaga dari
-    // salah TEKAN, nama yang benar bisa saja sudah terlanjur diketik lalu
-    // tombolnya tersenggol. Sengaja window.confirm, sama seperti tiga
-    // konfirmasi destruktif lain di aplikasi ini (lihat lib/api.ts:69).
+    // Peringatan terakhir di atas ketik-ulang-nama. Keduanya menjaga hal
+    // berbeda: mengetik nama menjaga dari salah kolam, dialog ini dari salah
+    // tekan. window.confirm, sama seperti konfirmasi destruktif lain di
+    // aplikasi ini (lib/api.ts:69).
     if (
       !window.confirm(
         `Hapus kolam "${nama}" secara permanen?\n\n` +
@@ -61,9 +58,9 @@ export default function DangerZone({
     }
   }
 
-  // Tanpa `.glass` sendiri: blok ini sudah duduk di dalam lembar kaca
-  // RakDetail, dan backdrop-filter bersarang cuma menambah biaya cat tanpa
-  // menambah tampilan. Tint merah + garis 1px sudah cukup memisahkannya.
+  // Tanpa `.glass` sendiri: blok ini sudah di dalam lembar kaca RakDetail dan
+  // backdrop-filter bersarang cuma menambah biaya cat. Tint merah + garis 1px
+  // sudah cukup memisahkannya.
   return (
     <div className="rounded-lg border border-status-bahaya/30 bg-status-bahayaBg/60 p-5 sm:max-w-2xl">
       <div className="mb-3 flex items-center gap-2.5">

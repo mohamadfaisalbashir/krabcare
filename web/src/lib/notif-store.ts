@@ -4,15 +4,12 @@ import { useEffect, useSyncExternalStore } from "react";
 import { api } from "./api";
 
 /**
- * Jumlah notifikasi belum dibaca, satu salinan untuk seluruh tab.
+ * Jumlah notifikasi belum dibaca, satu salinan untuk seluruh tab. Pola sama
+ * dengan user-store.ts, supaya badge di sidebar langsung turun begitu
+ * notifikasi ditandai dibaca di halaman Notifikasi.
  *
- * Pola sama persis dengan user-store.ts: Sidebar, MobileNav, dan halaman
- * Notifikasi semuanya butuh angka yang SAMA supaya badge di sidebar langsung
- * turun begitu notifikasi ditandai dibaca/dihapus di halaman, tanpa menunggu
- * polling 60 detik masing-masing komponen.
- *
- * Dibatasi 200 (batas keras backend, lihat routers/notifications.py), kalau
- * memang ada >200 belum dibaca, badge menampilkan "200+", bukan angka pasti.
+ * Dibatasi 200 (batas keras backend, routers/notifications.py); lebih dari itu
+ * badge menampilkan "200+".
  */
 const BATAS_HITUNG = 200;
 
@@ -40,14 +37,14 @@ export async function refreshUnreadCount(): Promise<void> {
     count = list.length;
     beritahu();
   } catch {
-    // Diam saja, badge cuma tampilan sekunder, jangan sampai error di sini
-    // ikut memunculkan pesan galat di layar.
+    // Diam saja. Badge cuma tampilan sekunder, error di sini tidak perlu
+    // memunculkan pesan galat di layar.
   } finally {
     sedangMemuat = false;
   }
 }
 
-/** Dipanggil optimis setelah "Tandai dibaca"/hapus, supaya badge turun SEKETIKA
+/** Dipanggil optimis setelah "Tandai dibaca" atau hapus, supaya badge turun
  *  tanpa menunggu polling berikutnya. */
 export function setUnreadCount(next: number) {
   count = Math.max(0, next);
@@ -75,7 +72,7 @@ export function useUnreadCount(): number | null {
   return nilai;
 }
 
-/** Label badge: "1".."200", atau "200+" kalau kebetulan pas di batas keras. */
+/** Label badge: "1" sampai "200", atau "200+" kalau pas di batas keras. */
 export function formatUnreadBadge(n: number): string {
   return n >= BATAS_HITUNG ? `${BATAS_HITUNG}+` : String(n);
 }

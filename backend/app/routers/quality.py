@@ -74,12 +74,11 @@ async def latest_ammonia_risk(
 ) -> list[DeviceAmmoniaOut]:
     """Indeks risiko toksisitas amonia per device: terukur terkini + ramalan.
 
-    Bukan konsentrasi mg/L, yang dikembalikan adalah FRAKSI TAN yang berbentuk
-    NH3 toksik pada pH/suhu/salinitas saat itu. Lihat field `disclaimer`.
+    Yang dikembalikan fraksi TAN yang berbentuk NH3 toksik pada pH/suhu/
+    salinitas saat itu, bukan konsentrasi mg/L. Lihat field `disclaimer`.
 
-    Barisnya dibaca dari tabel `ammonia_risks` (ditulis saat ingest & saat siklus
-    forecast), bukan dihitung ulang di sini, supaya angka yang tampil di kartu
-    persis sama dengan yang ada di log historis.
+    Dibaca dari tabel `ammonia_risks`, bukan dihitung ulang di sini, supaya
+    angka di kartu sama persis dengan yang ada di log historis.
     """
     items = await ammonia_service.get_latest_and_forecast(
         db, device_id, scope.allowed_device_ids
@@ -113,8 +112,8 @@ async def ammonia_risk_history(
 ) -> list[AmmoniaRiskLogOut]:
     """Log historis risiko amonia (terbaru dulu), pola sama dengan /readings.
 
-    Respons list polos tanpa `total`, "masih ada lagi" dibaca dari jumlah baris
-    == limit, sama seperti endpoint readings.
+    Respons list polos tanpa `total`; "masih ada lagi" dibaca dari jumlah baris
+    yang sama dengan limit.
     """
     rows = await ammonia_service.get_history(
         db,

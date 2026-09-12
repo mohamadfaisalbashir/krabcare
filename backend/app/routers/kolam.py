@@ -93,9 +93,9 @@ async def delete_kolam(
 ) -> None:
     """Hapus kolam sendiri, permanen.
 
-    Device yang terhubung tidak ikut terhapus, FK-nya SET NULL, jadi perangkat
-    itu hanya kembali jadi tak terklaim beserta seluruh riwayat sensornya.
-    Notifikasi kolam ini ikut terhapus (FK CASCADE).
+    Device yang terhubung tidak ikut terhapus (FK SET NULL), ia kembali jadi
+    tak terklaim beserta seluruh riwayat sensornya. Notifikasi kolam ini ikut
+    terhapus (FK CASCADE).
     """
     kolam = await kolam_service.get_owned_kolam(db, current_user, kolam_id)
     if kolam is None:
@@ -110,7 +110,7 @@ async def claim_device(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    """Klaim device ke kolam ini, langkah yang membuka akses data device tsb."""
+    """Klaim device ke kolam ini, langkah yang membuka akses ke datanya."""
     kolam = await kolam_service.get_owned_kolam(db, current_user, kolam_id)
     if kolam is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kolam tidak ditemukan")

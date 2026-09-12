@@ -1,13 +1,3 @@
-"""Klasifikasi kualitas air (Fuzzy Inference System Mamdani), jalan di Raspi5.
-
-Satu file berdiri sendiri (tidak import modul lain di repo), tinggal copy ke Raspi
-tanpa perlu bawa seisi repo. Rumusnya dites terhadap acuan skripsi bagian 3.3.6.
-
-Murni stdlib. Tidak butuh histori/buffer apa pun, klasifikasi ini SEKALI JALAN
-per reading (beda dari forecast WLR di wlr_forecast.py yang butuh histori).
-"""
-
-
 def trapezoid(x: float, a: float, b: float, c: float, d: float) -> float:
     """T(x; a, b, c, d), Persamaan 3.3.6.1 proposal."""
     if b <= x <= c:
@@ -78,7 +68,7 @@ _SCORE_BAHAYA_MIN = 65
 CATEGORY_TO_DB = {"aman": "baik", "waspada": "sedang", "bahaya": "buruk"}
 _SEVERITY_ORDER = {"baik": 0, "sedang": 1, "buruk": 2}
 
-#: Dipakai edge_pipeline.py buat tahu kategori mana yang perlu memicu notifikasi.
+#: Dipakai edge_pipeline.py untuk tahu kategori mana yang memicu notifikasi.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
 
@@ -128,12 +118,12 @@ def infer_parameter(parameter: str, value: float) -> tuple[float, str, dict[str,
 
 
 def classify_water_quality(ph: float, temperature_c: float, salinity_ppt: float) -> dict:
-    """Klasifikasi kualitas air dari 3 parameter (proposal 3.3.6).
+    """Klasifikasi kualitas air dari tiga parameter (proposal 3.3.6).
 
-    3 sistem Mamdani independen (suhu, pH, salinitas) digabung jadi satu
-    quality_score/quality_category lewat prinsip worst-case (parameter kondisi
-    terburuk menentukan status keseluruhan). Rincian per parameter tetap ada
-    di membership_degrees, dikirim apa adanya ke backend."""
+    Tiga sistem Mamdani independen (suhu, pH, salinitas) digabung jadi satu
+    quality_score/quality_category dengan prinsip worst-case: parameter
+    terburuk menentukan status keseluruhan. Rincian per parameter tetap ada di
+    membership_degrees dan dikirim apa adanya ke backend."""
     per_parameter = {}
     for parameter, value in (("suhu", temperature_c), ("ph", ph), ("salinitas", salinity_ppt)):
         score, category, memberships = infer_parameter(parameter, value)

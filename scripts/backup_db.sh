@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# Backup database ke backups/. Data sensor dari Raspberry Pi tidak bisa diulang
-# kalau hilang, jadi ini bukan opsional.
-#
-# Pasang ke cron harian di VPS (jam 2 pagi):
-#   crontab -e
-#   0 2 * * * cd /path/ke/crab && ./scripts/backup_db.sh >> backups/backup.log 2>&1
+# Backup database ke backups
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -19,7 +14,7 @@ OUT="backups/${DB_NAME}_$(date +%Y%m%d_%H%M%S).sql.gz"
 
 docker compose exec -T db pg_dump -U "$DB_USER" -d "$DB_NAME" | gzip > "$OUT"
 
-# pg_dump yang gagal di tengah pipe tetap menghasilkan file .gz (kecil), cek isinya.
+# pg_dump yang gagal di tengah pipe tetap menghasilkan .gz kecil, jadi cek isinya.
 if [ ! -s "$OUT" ] || [ "$(stat -c %s "$OUT")" -lt 1024 ]; then
     echo "GAGAL: $OUT kosong/terlalu kecil, backup tidak valid." >&2
     rm -f "$OUT"
