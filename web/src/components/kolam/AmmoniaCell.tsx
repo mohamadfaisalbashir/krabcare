@@ -47,12 +47,12 @@ export default function AmmoniaCell({
   return (
     <div className="group px-1 py-4 sm:px-5 sm:py-3">
       <div className="flex items-center gap-2">
-        <p className="truncate text-sm font-medium text-ink">{AMONIA_UI.label}</p>
+        <p className="truncate text-[16.67px] font-medium text-ink">{AMONIA_UI.label}</p>
         {/* Badge status pojok kanan cuma untuk baris "Parameter". Baris
             "Prediksi" memakai bulatan per horizon di dalam body, sama seperti
             ketiga kolom tetangganya di PredictionPanel. */}
         {mode === "terkini" && (
-          <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
+          <span className="ml-auto flex w-28 shrink-0 items-center gap-1.5 text-sm">
             {isi.status ? (
               <>
                 <span aria-hidden className={clsx("h-2 w-2 rounded-full", WARNA[isi.status])} />
@@ -138,14 +138,6 @@ function renderTerkini(risk: AmmoniaRisk | null): {
             <span className="text-right">{SKALA_MAKS}</span>
           </div>
         </div>
-
-        {/* Peringatan ekstrapolasi, cuma muncul kalau di luar rentang berlaku
-            persamaannya (pH 7,8-8,3 / 5-35 °C / 5-35 ppt). */}
-        {risk && !risk.in_valid_range && (
-          <p className="mt-2 text-[11px] leading-snug text-muted">
-            Di luar rentang tervalidasi persamaan, angka ini hasil ekstrapolasi.
-          </p>
-        )}
       </>
     ),
   };

@@ -191,9 +191,9 @@ export default function RakDetail({
       {/* Kepala, tanpa foto: dashboard di atasnya sudah punya banner berfoto. */}
       <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-[#266B70]">Detail Kolam</p>
+          <p className="text-[16.67px] font-semibold text-[#266B70]">Detail Kolam</p>
           {/* Nama rak buatan pengguna, panjangnya tidak terbatas, jadi dipotong alih-alih mendorong tombol Tutup keluar. */}
-          <h2 className="mt-0.5 truncate font-display text-2xl font-semibold text-brand-700 sm:text-3xl">
+          <h2 className="mt-0.5 truncate font-display font-semibold text-brand-700 text-[26.67px] sm:text-[32.67px]">
             {kolam.nama}
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -230,7 +230,7 @@ export default function RakDetail({
           <Section {...SECTION.terkini}>
             <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
             {/* Keterangan pita hijau*/}
-            <p className="mt-3 text-xs leading-relaxed text-muted">
+            <p className="mt-3 text-sm leading-relaxed text-muted">
               <span className="font-semibold text-status-aman">Angka hijau</span> di
               tengah batang adalah rentang optimal untuk kepiting bakau. Selama nilai
               parameter berada di rentang itu, lingkungan kolam sedang paling
@@ -395,7 +395,7 @@ function Section({
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title && (
-              <h3 className="text-base font-semibold text-ink">{title}</h3>
+              <h3 className="text-[18.67px] font-semibold text-ink">{title}</h3>
             )}
             {note && <p className="mt-1 max-w-2xl text-sm text-muted">{note}</p>}
           </div>
@@ -410,17 +410,17 @@ function Section({
 // Legenda warna kondisi, dirender di dalam tiap bagian yang memakai warnanya (Parameter & Prediksi)
 function WarnaKondisiLegend() {
   return (
-    <div className="mt-3 flex flex-col items-start gap-1 border-t border-white/60 pt-2.5 text-xs text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
+    <div className="mt-3 flex flex-col items-start gap-1 border-t border-white/60 pt-2.5 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
       <span className="font-medium text-ink">Warna kondisi:</span>
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-status-aman">
         <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
         Aman: dalam rentang optimal
       </span>
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-status-waspada">
         <span aria-hidden className="h-2 w-2 rounded-full bg-status-waspada" />
         Waspada: di luar optimal, masih toleransi
       </span>
-      <span className="flex items-center gap-1.5">
+      <span className="flex items-center gap-1.5 text-status-bahaya">
         <span aria-hidden className="h-2 w-2 rounded-full bg-status-bahaya" />
         Bahaya: di luar rentang toleransi
       </span>
@@ -432,7 +432,7 @@ function WarnaKondisiLegend() {
 function ParamChip({ param }: { param: ParamKey }) {
   const cfg = PARAM_UI[param];
   return (
-    <div className="mb-2 flex items-center gap-2 text-sm">
+    <div className="mb-2 flex items-center gap-2 text-[16.67px]">
       <span
         aria-hidden
         className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
@@ -452,7 +452,7 @@ function DetailPill({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-[11px] font-medium text-ink ring-1 ring-inset ring-white/70">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-white/70">
       <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
       {children}
     </span>

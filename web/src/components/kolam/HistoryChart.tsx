@@ -120,7 +120,7 @@ export default function HistoryChart({
             tickFormatter={chartTickLabel}
             interval="preserveStartEnd"
             minTickGap={64}
-            tick={hideXAxis ? false : { fontSize: 13, fill: "#5C7A72" }}
+            tick={hideXAxis ? false : { fontSize: 13, fill: "#000" }}
             height={hideXAxis ? 0 : undefined}
             axisLine={false}
             tickLine={false}
@@ -131,7 +131,7 @@ export default function HistoryChart({
           <YAxis
             domain={[lo, hi]}
             tickFormatter={chartValueLabel}
-            tick={{ fontSize: 13, fill: "#5C7A72" }}
+            tick={{ fontSize: 13, fill: "#000" }}
             axisLine={false}
             tickLine={false}
             width={52}

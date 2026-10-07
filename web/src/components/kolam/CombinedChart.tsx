@@ -78,7 +78,7 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
         );
       })}
 
-      <p className="text-xs leading-snug text-muted sm:pl-[8.75rem]">
+      <p className="text-sm leading-snug text-muted sm:pl-[8.75rem]">
         Tiap parameter punya sumbu nilainya sendiri dalam satuan asli, dan
         ketiganya berbagi sumbu waktu yang sama. Arti pita warnanya sama dengan
         grafik satu parameter.

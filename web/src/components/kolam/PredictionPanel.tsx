@@ -57,7 +57,7 @@ export default function PredictionPanel({
 
         return (
           <div key={param} className="px-1 py-4 sm:px-5 sm:py-3">
-            <p className="truncate text-sm font-medium text-ink">{cfg.label}</p>
+            <p className="truncate text-[16.67px] font-medium text-ink">{cfg.label}</p>
 
             {/* Garis aksen netral: pemisah kolom, bukan pembawa warna status
                 (lihat catatan di atas fungsi). */}

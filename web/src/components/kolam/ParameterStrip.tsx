@@ -66,8 +66,8 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
           bukan di bawah angka, supaya kondisi semua kolom bisa dibaca sekali
           sapu. */}
       <div className="flex items-center gap-2">
-        <p className="truncate text-sm font-medium text-ink">{label}</p>
-        <span className="ml-auto flex w-24 shrink-0 items-center gap-1.5 text-xs">
+        <p className="truncate text-[16.67px] font-medium text-ink">{label}</p>
+        <span className="ml-auto flex w-28 shrink-0 items-center gap-1.5 text-sm">
           {status ? (
             <>
               {/* Titik membawa warna, kata membawa makna. Kata statusnya text-ink,

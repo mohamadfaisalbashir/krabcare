@@ -34,7 +34,7 @@ export default function StatusBadge({
         "inline-flex items-center gap-1.5 rounded-full font-semibold",
         cfg.bg,
         cfg.text,
-        size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-sm"
+        size === "sm" ? "px-2.5 py-1 text-sm" : "px-3 py-1.5 text-sm"
       )}
     >
       <Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} strokeWidth={2.4} />
