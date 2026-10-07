@@ -1,7 +1,7 @@
-"""Notifikasi in-app + dispatch push (FCM) dari hasil pipeline ML."""
+"""Notifikasi dari hasil pipeline ML"""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from typing import TYPE_CHECKING
 
@@ -19,16 +19,20 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("app.services.notification_service")
 
-#: Kategori (nilai DB baik/sedang/buruk) yang dianggap anomali. Salinan dari
-#: ANOMALY_CATEGORIES di raspi/fuzzy_quality.py, harus tetap sinkron.
 ANOMALY_CATEGORIES = {"sedang", "buruk"}
 
-#: Label Indonesia untuk pesan notifikasi dan seluruh frontend
-#: (categoryToLabel() di lib/types.ts). Harus tetap sinkron.
 CATEGORY_LABEL: dict[str, str] = {"baik": "Aman", "sedang": "Waspada", "buruk": "Bahaya"}
 
-#: Kunci UNIQUE tabel notifications (database/init/08_notifications.sql:16).
-#: Dipakai ketiga jalur pembuatan notifikasi untuk on_conflict_do_nothing.
+# Jam di teks notifikasi dibaca manusia di Jakarta. WIB = UTC+7 tanpa DST.
+WIB = timezone(timedelta(hours=7), "WIB")
+
+
+def jam_wib(t: datetime) -> str:
+    """Jam "HH:MM" dalam WIB. Datetime naive dianggap UTC, sama seperti ingest_base."""
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return t.astimezone(WIB).strftime("%H:%M")
+
 _UNIQUE_KEY = [
     Notification.device_id,
     Notification.source,
@@ -36,14 +40,8 @@ _UNIQUE_KEY = [
     Notification.parameter,
 ]
 
-
 async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notification | None:
-    """INSERT satu notifikasi; None kalau kunci uniknya sudah ada.
-
-    db.add() polos melempar IntegrityError kalau gateway mengulang ingest yang
-    sama, dan karena ini dipanggil di dalam loop, satu tabrakan akan membuat
-    seluruh request 500 dan membuang sisa notifikasi batch itu.
-    """
+    """INSERT satu notifikasi; None kalau kunci uniknya sudah ada"""
     stmt = (
         pg_insert(Notification)
         .values(values)
@@ -53,7 +51,6 @@ async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notificati
     result = await db.execute(stmt)
     await db.commit()
     return result.scalars().first()
-
 
 async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
     """Kategori pada notifikasi klasifikasi terakhir device ini, acuan transition-check."""
@@ -65,7 +62,6 @@ async def _last_classification_category(db: AsyncSession, device_id: int) -> str
     )
     return result.scalar_one_or_none()
 
-
 async def create_classification_notification(
     db: AsyncSession,
     device: Device,
@@ -74,15 +70,7 @@ async def create_classification_notification(
     quality_score: float,
     sensor_reading_time: datetime,
 ) -> Notification | None:
-    """Notifikasi status sekarang, hanya dibuat saat kategori berubah.
-
-    Tanpa transition-check ini, tiap siklus scheduler memberi notifikasi selama
-    anomali masih berlangsung. Return None kalau tidak ada yang dibuat.
-
-    Pesannya menyebut transisi eksplisit ("dari X ke Y") dengan label yang sama
-    dengan dashboard (Aman/Waspada/Bahaya). Bentuk ini otomatis mencakup semua
-    kombinasi perpindahan, tanpa daftar kasus khusus.
-    """
+    """Notifikasi status sekarang, hanya dibuat saat kategori berubah"""
     previous = await _last_classification_category(db, device.id)
     if previous == category:
         return None
@@ -90,8 +78,6 @@ async def create_classification_notification(
     label_baru = CATEGORY_LABEL.get(category, category)
 
     if previous is None:
-        # Belum ada pembanding, jadi ini bukan perubahan: diam kalau kondisi
-        # awalnya baik. Anomali di pembacaan pertama device tetap diberitahu.
         if category == "baik":
             return None
         message = (
@@ -119,9 +105,7 @@ async def create_classification_notification(
         },
     )
 
-
-#: Ambang toleransi dan optimal parameter air. Salinan dari RANGE di
-#: web/src/lib/parameter.ts, harus tetap sinkron.
+# Ambang toleransi dan optimal parameter air
 PARAM_CONFIG: dict[str, dict] = {
     "ph": {
         "label": "pH air",
@@ -152,7 +136,6 @@ AMMONIA_RISK_TO_CATEGORY: dict[str, str] = {
     "berbahaya": "buruk",
 }
 
-
 def classify_param_value(param_key: str, value: float) -> str:
     """Tentukan kategori status dari nilai numerik parameter."""
     cfg = PARAM_CONFIG[param_key]
@@ -161,7 +144,6 @@ def classify_param_value(param_key: str, value: float) -> str:
     if value < cfg["optimal"][0] or value > cfg["optimal"][1]:
         return "sedang"
     return "baik"
-
 
 async def _last_parameter_category(db: AsyncSession, device_id: int, parameter: str) -> str | None:
     """Kategori pada notifikasi parameter terakhir device ini, acuan transition-check."""
@@ -176,7 +158,6 @@ async def _last_parameter_category(db: AsyncSession, device_id: int, parameter: 
         .limit(1)
     )
     return result.scalar_one_or_none()
-
 
 async def create_parameter_notification(
     db: AsyncSession,
@@ -223,17 +204,10 @@ async def create_parameter_notification(
         },
     )
 
-
 async def create_prediction_notifications(
     db: AsyncSession, device: Device, kolam: Kolam, anomalies: list[dict]
 ) -> list[Notification]:
-    """Peringatan dini dari horizon yang diramal anomali.
-
-    `anomalies`: [{"target_time", "category", "horizon_minutes"}, ...]. Dedup
-    cukup lewat UNIQUE (device_id, source, event_time, parameter) karena
-    target_time absolut, tidak perlu transition-check seperti klasifikasi.
-    Return notifikasi yang benar-benar baru.
-    """
+    """Peringatan dini dari horizon yang diramal anomali"""
     if not anomalies:
         return []
 
@@ -247,13 +221,9 @@ async def create_prediction_notifications(
             "quality_category": a["category"],
             "event_time": a["target_time"],
             "message": (
-                # CATEGORY_LABEL, bukan a['category'] mentah: nilai mentahnya
-                # istilah database ("sedang"/"buruk") sedangkan UI memakai
-                # Waspada/Bahaya, dan pewarnaan kata status di halaman
-                # notifikasi mencari istilah UI.
                 f"Prediksi: kualitas air {device.device_code} berpotensi "
                 f"{CATEGORY_LABEL.get(a['category'], a['category']).upper()} "
-                f"sekitar {a['target_time'].strftime('%H:%M')} ({a['horizon_minutes']} menit lagi)."
+                f"sekitar {jam_wib(a['target_time'])} WIB ({a['horizon_minutes']} menit lagi)."
             ),
         }
         for a in anomalies
@@ -270,13 +240,8 @@ async def create_prediction_notifications(
     await db.commit()
     return list(result.scalars().all())
 
-
 async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> None:
-    """Kirim tiap notifikasi ke semua perangkat pemiliknya.
-
-    Gagal di satu token tidak menghentikan token lain; is_pushed baru true kalau
-    minimal satu perangkat berhasil menerima.
-    """
+    """Kirim tiap notifikasi ke semua perangkat pemiliknya"""
     for notif in notifications:
         result = await db.execute(select(PushToken).where(PushToken.user_id == notif.user_id))
         tokens = result.scalars().all()
@@ -313,10 +278,6 @@ async def dispatch_from_quality_ingest(
 ) -> None:
     """Pemicu notifikasi untuk klasifikasi, prediksi, dan parameter yang baru
     diterima lewat POST /ingest/quality (dikirim edge, raspi/edge_pipeline.py).
-
-    Aturannya: transition check untuk klasifikasi dan per-parameter, dedup
-    UNIQUE untuk prediksi. Device yang belum diklaim (kolam_id NULL) dilewati
-    karena notifikasi butuh pemilik.
     """
     device_codes = sorted(
         {c.device_code for c in classifications}
@@ -441,7 +402,6 @@ async def dispatch_from_quality_ingest(
     if new_notifications:
         await dispatch_push(db, new_notifications)
 
-
 async def list_notifications(
     db: AsyncSession,
     user: User,
@@ -450,12 +410,7 @@ async def list_notifications(
     offset: int = 0,
     source: str | None = None,
 ) -> list[Notification]:
-    """Notifikasi milik `user`, terbaru dulu. `offset` untuk "muat lebih banyak".
-
-    `source` disaring di SQL, bukan di klien: satu halaman cuma 20 baris, jadi
-    menyaring setelah LIMIT membuat tab tampak kosong padahal barisnya ada di
-    halaman berikutnya.
-    """
+    """Notifikasi milik `user`diurutkan dari terbaru dulu dan satu halaman cuma 20 baris. `offset` untuk "muat lebih banyak" """
     stmt = select(Notification).where(Notification.user_id == user.id)
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
@@ -464,7 +419,6 @@ async def list_notifications(
     stmt = stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
-
 
 async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
     """Tandai sudah dibaca. False = tidak ada / bukan milik user ini (router balas 404)."""
@@ -480,7 +434,6 @@ async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
     await db.commit()
     return True
 
-
 async def delete_notification(db: AsyncSession, user: User, notification_id: int) -> bool:
     """Hapus satu notifikasi. False = tidak ada / bukan milik user ini (router balas 404)."""
     result = await db.execute(
@@ -495,7 +448,6 @@ async def delete_notification(db: AsyncSession, user: User, notification_id: int
     await db.commit()
     return True
 
-
 async def delete_all_notifications(db: AsyncSession, user: User) -> int:
     """Hapus semua notifikasi milik `user`. Kembalikan jumlah baris terhapus."""
     result = await db.execute(select(Notification).where(Notification.user_id == user.id))
@@ -504,7 +456,6 @@ async def delete_all_notifications(db: AsyncSession, user: User) -> int:
         await db.delete(row)
     await db.commit()
     return len(rows)
-
 
 async def register_push_token(db: AsyncSession, user: User, fcm_token: str, platform: str) -> None:
     """Simpan token FCM. Token yang sama bisa pindah pemilik, jadi upsert, bukan insert."""

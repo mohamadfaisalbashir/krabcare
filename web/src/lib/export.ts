@@ -6,7 +6,7 @@
 // karena itu di-import dinamis di dalam downloadXlsx.
 import type { SensorReading } from "./types";
 import type { ParamKey } from "./parameter";
-import { formatWaktuDetik } from "./tanggal.ts";
+import { formatWaktuDetik, WIB_MS } from "./tanggal.ts";
 
 /** RFC 4180 + default pandas. Ganti ";" kalau Excel-ID jadi konsumen utama. */
 export const CSV_SEP = ",";
@@ -23,14 +23,14 @@ const CHUNK = 1000;
 export const MAX_PAGES = 20;
 
 /**
- * `<input type="date">` memberi "2026-09-01". Tanpa akhiran T00:00:00 itu
- * dibaca sebagai tengah malam UTC, selisih 7 jam dari WIB di kedua ujung
- * rentang. Pengguna memilih tanggal menurut jamnya sendiri.
+ * `<input type="date">` memberi "2026-09-01". Tanggal itu hari kalender Jakarta,
+ * jadi batasnya ditulis eksplisit +07:00. Tanpa akhiran zona, "T00:00:00" ikut
+ * jam browser dan rentangnya bergeser kalau browser tidak di WIB.
  */
 export function dayRangeToIso(from: string, to: string) {
   return {
-    start: new Date(`${from}T00:00:00`).toISOString(),
-    end: new Date(`${to}T23:59:59.999`).toISOString(),
+    start: new Date(`${from}T00:00:00+07:00`).toISOString(),
+    end: new Date(`${to}T23:59:59.999+07:00`).toISOString(),
   };
 }
 
@@ -249,6 +249,14 @@ export function downloadCsv(csv: string, filename: string): void {
 }
 
 /**
+ * write-excel-file mengubah `Date` ke serial Excel dari getTime(), artinya jam
+ * UTC. Digeser +7 jam supaya sel menampilkan jam WIB, sama dengan kolom CSV.
+ */
+export function jamDindingWib(iso: string): Date {
+  return new Date(new Date(iso).getTime() + WIB_MS);
+}
+
+/**
  * XLSX lewat write-excel-file v4 (import dinamis, lihat kepala berkas).
  *
  * Subpath `/browser` wajib: paketnya tidak punya export root ".", cuma
@@ -273,7 +281,7 @@ export async function downloadXlsx(
     {
       header: header("waktu_lokal"),
       cell: (r: SensorReading) => ({
-        value: new Date(r.time),
+        value: jamDindingWib(r.time),
         type: Date,
         format: FORMAT_TANGGAL,
       }),
@@ -282,7 +290,7 @@ export async function downloadXlsx(
     {
       header: header("waktu_diterima"),
       cell: (r: SensorReading) => ({
-        value: new Date(r.received_at),
+        value: jamDindingWib(r.received_at),
         type: Date,
         format: FORMAT_TANGGAL,
       }),

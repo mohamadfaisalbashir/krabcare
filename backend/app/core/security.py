@@ -28,11 +28,7 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
 
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# bcrypt 12 rounds memakan ~250-400 ms CPU per operasi dan itu memang tujuannya,
-# jangan diturunkan. Yang penting tempatnya: dipanggil langsung di dalam
-# `async def` akan memblokir event loop, jadi satu pendaftaran (dua operasi
-# bcrypt berturut-turut) membekukan semua request lain selama ~700 ms.
-# asyncio.to_thread memindahkannya ke thread pool, sama seperti core/email.py.
+# bcrypt 12 rounds memakan ~250-400 ms CPU per operasi dan itu memang tujuannya
 def _hash_sync(password: str) -> str:
     return _pwd_context.hash(password)
 
@@ -103,19 +99,12 @@ async def get_current_admin(current_user: User = Depends(get_current_user)) -> U
 
 @dataclass
 class DataAccessScope:
-    """Batas akses baca data hasil resolusi dua jalur auth.
-
-    - Gateway (X-API-Key valid): user=None, allowed_device_ids=None (tidak dibatasi).
-    - User role ADMIN: user=<User>, allowed_device_ids=None (tidak dibatasi).
-    - User role lain: user=<User>, allowed_device_ids=set[int] (bisa kosong).
-    """
+    """Batas akses baca data hasil resolusi dua jalur auth"""
 
     user: User | None
     allowed_device_ids: set[int] | None
 
-
 _bearer_scheme_optional = HTTPBearer(auto_error=False)
-
 
 async def get_data_access_scope(
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),

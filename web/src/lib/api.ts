@@ -1,15 +1,5 @@
-// Pemanggilan REST API ke backend FastAPI (../backend/).
-// Semua path mengikuti route di backend/app/routers/*.
-
 const CONFIGURED_API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-/**
- * Alamat backend, dihitung saat dipanggil, bukan konstanta modul.
- *
- * NEXT_PUBLIC_* di-inline saat build (web/Dockerfile), defaultnya localhost.
- * Kalau halaman dibuka dari host lain (misal HP di WiFi yang sama), host di
- * alamat itu ditukar ke host halaman. Alamat berdomain asli tidak disentuh.
- */
 function resolveApiBaseUrl(): string {
   const fallback = "http://localhost:8000/api/v1";
   if (typeof window === "undefined") return CONFIGURED_API_BASE_URL ?? fallback;
@@ -62,12 +52,6 @@ export function confirmLogout(): void {
   }
 }
 
-/**
- * `detail` FastAPI punya dua bentuk: string dari HTTPException kita, atau
- * array `{loc, msg, type}` dari validasi Pydantic (422). Tanpa penanganan ini
- * bentuk array jadi "[object Object]". `loc` dipakai untuk tahu field mana
- * yang ditolak.
- */
 function pesanError(detail: unknown, status: number): string {
   if (typeof detail === "string" && detail) return detail;
 
@@ -78,7 +62,6 @@ function pesanError(detail: unknown, status: number): string {
       // loc = ["body", "email"] -> "email". Segmen terakhir adalah nama field.
       const field = Array.isArray(pertama.loc) ? pertama.loc[pertama.loc.length - 1] : null;
       // Kalimat kita menggantikan msg, bukan ditempel di depannya: msg Pydantic
-      // berbahasa Inggris dan untuk pola email isinya regex mentah.
       return PESAN_FIELD[String(field)] ?? msg;
     }
   }
@@ -117,9 +100,8 @@ async function request<T>(
       },
     });
   } catch {
-    // fetch cuma melempar untuk kegagalan jaringan (server mati, CORS ditolak,
-    // DNS gagal); status HTTP apa pun tetap resolve. Sebut alamatnya, karena
-    // "Failed to fetch" bawaan browser tidak menyebut apa-apa.
+    // fetch cuma melempar untuk kegagalan jaringan (server mati, CORS ditolak, DNS gagal)
+    // status HTTP apa pun tetap resolve
     throw new Error(
       `Tidak bisa menghubungi server di ${base}. Pastikan backend hidup dan alamat ini terjangkau dari perangkat Anda.`
     );
@@ -210,9 +192,7 @@ export const api = {
 
   // Kolam (routers/kolam.py)
 
-  /** POST /kolam → KolamOut. Membuat kolam sekaligus mengklaim device-nya.
-   *  Satu transaksi di backend: device_code salah -> 404/409 dan kolam tidak
-   *  jadi dibuat, klien tidak perlu rollback. */
+  /** POST /kolam → KolamOut. Membuat kolam sekaligus mengklaim device-nya */
   createKolam: (nama: string, device_code: string) =>
     request<import("./types").Kolam>("/kolam", {
       method: "POST",
@@ -226,9 +206,8 @@ export const api = {
       body: JSON.stringify({ nama }),
     }),
 
-  /** DELETE /kolam/:id → 204. Permanen. Device dan riwayat sensornya tetap ada
-   *  (FK SET NULL), statusnya kembali belum diklaim. Notifikasi kolam ikut
-   *  terhapus (CASCADE). */
+  /** DELETE /kolam/:id → 204. Permanen. Device dan riwayat sensornya tetap ada statusnya kembali belum diklaim
+   * Notifikasi kolam ikut terhapus */
   deleteKolam: (kolamId: number) =>
     request<void>(`/kolam/${kolamId}`, { method: "DELETE" }),
 
@@ -288,7 +267,6 @@ export const api = {
   // Readings (routers/readings.py)
 
   /** GET /readings → SensorReadingOut[].
-   *  `param` + `status` disaring di SQL (ambang Tabel 2.1 juga ada di backend),
    *  supaya satu halaman tetap penuh setelah difilter. */
   getReadings: (params?: {
     device_id?: number;

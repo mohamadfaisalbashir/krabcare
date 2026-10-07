@@ -45,18 +45,18 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
             {/* Label kiri, lebar tetap w-28 mulai sm: supaya tepi kiri ketiga
                 grafik lurus. Kalau lebarnya mengikuti isi, panel "Salinitas"
                 menggeser grafiknya dan garis waktu ketiga panel tidak sejajar. */}
-            <div className="flex shrink-0 items-center gap-2 sm:w-28 sm:flex-col sm:items-start sm:gap-0.5">
+            <div className="flex shrink-0 items-center gap-2 sm:w-32 sm:flex-col sm:items-start sm:gap-0.5">
               <span className="flex items-center gap-1.5">
                 <span
                   aria-hidden
                   className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
                   style={{ background: cfg.color }}
                 />
-                <span className="text-xs font-semibold text-ink">{cfg.short}</span>
+                <span className="text-sm font-semibold text-ink">{cfg.short}</span>
               </span>
-              <span className="font-mono text-sm font-semibold text-ink sm:text-base">
+              <span className="font-mono text-base font-semibold text-ink sm:text-lg">
                 {value != null ? formatValue(value) : "N/A"}
-                <span className="ml-1 font-sans text-[10px] font-medium text-muted">
+                <span className="ml-1 font-sans text-xs font-medium text-muted">
                   {cfg.unit}
                 </span>
               </span>
@@ -70,7 +70,7 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
               <HistoryChart
                 data={data}
                 parameter={param}
-                height={terakhir ? "h-40" : "h-32"}
+                height={terakhir ? "h-44" : "h-36"}
                 hideXAxis={!terakhir}
               />
             </div>
@@ -78,10 +78,10 @@ export default function CombinedChart({ data }: { data: SensorReading[] }) {
         );
       })}
 
-      <p className="text-[10px] leading-snug text-muted sm:pl-[7.75rem]">
+      <p className="text-xs leading-snug text-muted sm:pl-[8.75rem]">
         Tiap parameter punya sumbu nilainya sendiri dalam satuan asli, dan
         ketiganya berbagi sumbu waktu yang sama. Arti pita warnanya sama dengan
-        Grafik Pemantauan di atas.
+        grafik satu parameter.
       </p>
     </div>
   );

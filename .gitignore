@@ -48,9 +48,15 @@ Thumbs.db
 # Backup database
 backups/
 
-# Eksperimen riset lokal (WLR vs FTS, dsb)
+# Eksperimen riset lokal
 experiments/
 data/
+graphify-out
+*.md
+*.md.bak
+
+# Raspi
+raspi/
 
 # Postman
 .postman/

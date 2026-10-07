@@ -1,8 +1,4 @@
-"""Simpan hasil ML: klasifikasi Mamdani & prediksi FTS.
-
-Pola sama dengan ingest_service.py: lookup device, insert idempoten, lapor yang
-di-skip. Bedanya cuma conflict target, mengikuti PK tabel masing-masing.
-"""
+"""Simpan hasil ML: klasifikasi Fuzzy logic & prediksi WLR"""
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

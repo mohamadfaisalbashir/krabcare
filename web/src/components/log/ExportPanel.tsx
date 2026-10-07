@@ -21,13 +21,7 @@ import {
   type ExportFormat,
   type GetPage,
 } from "@/lib/export";
-
-/** yyyy-mm-dd untuk <input type="date">, dari tanggal lokal bukan UTC. */
-function isoDay(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
+import { tanggalWib } from "@/lib/tanggal";
 
 /** Batas keras backend untuk /quality/ammonia-risk/history (le=1000). */
 const AMONIA_CHUNK = 1000;
@@ -59,12 +53,9 @@ async function ambilAmonia(start: string, end: string) {
 }
 
 export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
-  const today = new Date();
-  const weekAgo = new Date(today);
-  weekAgo.setDate(today.getDate() - 6);
-
-  const [from, setFrom] = useState(isoDay(weekAgo));
-  const [to, setTo] = useState(isoDay(today));
+  // 7 hari terakhir menurut kalender Jakarta, termasuk hari ini.
+  const [from, setFrom] = useState(() => tanggalWib(-6));
+  const [to, setTo] = useState(() => tanggalWib());
   // "amonia" = amonia saja. Kolomnya selalu ikut di berkas apa pun, tapi tanpa
   // pilihan ini keberadaannya tidak kelihatan di layar.
   const [paramSel, setParamSel] = useState<ParamKey | "semua" | "amonia">("semua");

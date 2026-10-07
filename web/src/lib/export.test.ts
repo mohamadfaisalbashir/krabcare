@@ -12,6 +12,8 @@ import {
   namaBerkas,
   petaAmoniaDari,
   TOLERANSI_AMONIA_MS,
+  dayRangeToIso,
+  jamDindingWib,
 } from "./export.ts";
 import { formatTanggal, formatWaktu, formatWaktuDetik } from "./tanggal.ts";
 import type { SensorReading } from "./types.ts";
@@ -212,16 +214,22 @@ test("toCsv tanpa parameter sensor tetap membawa kolom amonia", () => {
   assert.equal(sel[6], "perhatian");
 });
 
-test("format tanggal dd-mm-yyyy, tanggal & bulan satu digit tetap dipad", () => {
-  // Dibangun sebagai waktu lokal supaya uji ini tidak bergantung zona waktu
-  // mesin yang menjalankannya.
-  const lokal = (y: number, m: number, d: number, h = 0, mi = 0, s = 0) =>
-    new Date(y, m - 1, d, h, mi, s).toISOString();
+test("format tanggal selalu WIB (UTC+7), dd-mm-yyyy dipad", () => {
+  // Input ISO UTC tetap: hasilnya harus jam Jakarta apa pun zona waktu mesin
+  // yang menjalankan uji ini. Kasusnya sama dengan mobile/test/logic_test.dart.
+  assert.equal(formatTanggal("2026-01-04T17:00:00Z"), "05-01-2026");
+  assert.equal(formatWaktu("2026-03-01T21:05:00Z"), "02-03-2026 04:05");
+  assert.equal(formatWaktuDetik("2026-09-09T07:32:07.123456Z"), "09-09-2026 14:32:07");
+  assert.equal(formatWaktuDetik("2026-12-31T17:05:07Z"), "01-01-2027 00:05:07");
+  assert.equal(formatWaktu("2026-09-09T14:32:00+07:00"), "09-09-2026 14:32");
+});
 
-  assert.equal(formatTanggal(lokal(2026, 9, 9)), "09-09-2026");
-  assert.equal(formatTanggal(lokal(2026, 1, 5)), "05-01-2026");
-  assert.equal(formatTanggal(lokal(2026, 12, 31)), "31-12-2026");
-  assert.equal(formatWaktu(lokal(2026, 9, 9, 14, 32)), "09-09-2026 14:32");
-  assert.equal(formatWaktu(lokal(2026, 3, 2, 4, 5)), "02-03-2026 04:05");
-  assert.equal(formatWaktuDetik(lokal(2026, 9, 9, 14, 32, 7)), "09-09-2026 14:32:07");
+test("dayRangeToIso: hari penuh WIB, bukan hari browser", () => {
+  const r = dayRangeToIso("2026-09-01", "2026-09-09");
+  assert.equal(r.start, "2026-08-31T17:00:00.000Z");
+  assert.equal(r.end, "2026-09-09T16:59:59.999Z");
+});
+
+test("sel XLSX memakai jam dinding WIB (library membaca komponen UTC)", () => {
+  assert.equal(jamDindingWib("2026-09-09T07:32:07Z").toISOString(), "2026-09-09T14:32:07.000Z");
 });

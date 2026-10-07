@@ -15,7 +15,6 @@ router = APIRouter(
     dependencies=[Depends(verify_gateway_api_key)],
 )
 
-
 @router.post("/readings", response_model=IngestResultOut, status_code=201)
 async def ingest_readings(
     payload: SensorReadingBatchIn,
@@ -31,7 +30,6 @@ async def ingest_readings(
         unknown_device_codes=unknown,
         skipped_duplicates=skipped_duplicates,
     )
-
 
 @router.post("/quality", response_model=QualityIngestResultOut, status_code=201)
 async def ingest_quality(
@@ -51,8 +49,7 @@ async def ingest_quality(
         db, payload.ammonia_risks
     )
 
-    # Notifikasi (in-app + push) dipicu dari kategori yang baru diterima, lihat
-    # dispatch_from_quality_ingest.
+    # Notifikasi dipicu dari kategori yang baru diterima
     await notification_service.dispatch_from_quality_ingest(
         db, payload.classifications, payload.predictions, payload.ammonia_risks
     )

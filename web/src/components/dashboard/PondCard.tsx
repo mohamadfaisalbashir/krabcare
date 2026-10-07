@@ -50,6 +50,7 @@ export default function PondCard({
     ? new Date(latestReading.time).toLocaleTimeString("id-ID", {
         hour: "2-digit",
         minute: "2-digit",
+        timeZone: "Asia/Jakarta",
       })
     : "N/A";
 

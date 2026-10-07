@@ -50,10 +50,6 @@ async def ingest_readings(
             for row in skipped_rows
         ]
 
-        # Risiko amonia dihitung di edge (raspi/edge_pipeline.py) dan dikirim
-        # lewat POST /ingest/quality bersama klasifikasi & prediksi. Lihat
-        # quality_ingest_service.ingest_ammonia_risks.
-
         # Bukti device masih hidup, dipakai dashboard untuk status online/offline.
         device_ids = list({row["device_id"] for row in rows})
         await db.execute(

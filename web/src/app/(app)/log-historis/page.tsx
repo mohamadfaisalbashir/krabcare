@@ -207,8 +207,9 @@ function LogHistorisView() {
     // Mode "jam" butuh `dari` sebagai hari acuan; tanpa tanggal, "08.00 sampai
     // 17.00" tidak berarti apa-apa.
     if (!dari) return {};
-    const start = new Date(`${dari}T${jamDari}:00:00`);
-    let end = new Date(`${dari}T${jamSampai}:00:00`);
+    // Jam yang dipilih adalah jam Jakarta, bukan jam browser.
+    const start = new Date(`${dari}T${jamDari}:00:00+07:00`);
+    let end = new Date(`${dari}T${jamSampai}:00:00+07:00`);
     // Wraparound: jam selesai <= jam mulai berarti jendelanya lewat tengah
     // malam ke hari berikutnya, bukan rentang kosong.
     if (end.getTime() <= start.getTime()) {

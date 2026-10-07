@@ -111,16 +111,17 @@ Langkah yang harus dilakukan sebelum ada apa pun kelihatan di web:
 User hanya bisa melihat device di kolam miliknya sendiri, kecuali role `admin` (tidak
 dibatasi).
 
-## Ambang Parameter: dua salinan yang harus sinkron
+## Ambang Parameter: tiga salinan yang harus sinkron
 
-Angka Tabel 2.1 ada di dua tempat karena Python dan TypeScript tidak bisa berbagi
+Angka Tabel 2.1 ada di tiga tempat karena Python, TypeScript, dan Dart tidak bisa berbagi
 konstanta:
 
 - `backend/app/core/water_thresholds.py`, dipakai untuk memfilter log historis di SQL
 - `web/src/lib/parameter.ts`, dipakai untuk mewarnai kartu & badge di UI
+- `mobile/lib/logic.dart`, padanan `parameter.ts` di aplikasi Android (`mobile/README.md`)
 
 Kalau cuma salah satu yang diubah, satu pembacaan bisa tampil "aman" di kartu tapi
-tersaring sebagai "bahaya" di log historis. Ubah keduanya bersamaan.
+tersaring sebagai "bahaya" di log historis. Ubah ketiganya bersamaan.
 
 ## Migrasi Skema Database (Alembic)
 

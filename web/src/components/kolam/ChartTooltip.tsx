@@ -18,8 +18,8 @@ export default function ChartTooltip({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="card min-w-[11rem] px-3 py-2.5 shadow-float">
-      <p className="mb-2 text-xs font-semibold text-muted">
+    <div className="card min-w-[13rem] px-3 py-2.5 shadow-float">
+      <p className="mb-2 text-sm font-semibold text-muted">
         {typeof label === "string"
           ? formatWaktu(label)
           : label}
@@ -33,7 +33,7 @@ export default function ChartTooltip({
           if (!cfg || typeof row.value !== "number") return null;
           const status = statusOf(key, row.value);
           return (
-            <div key={key} className="flex items-center gap-2 text-xs">
+            <div key={key} className="flex items-center gap-2 text-sm">
               <span
                 aria-hidden
                 className="h-2 w-2 shrink-0 rounded-full"
