@@ -117,6 +117,21 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
     }
   }
 
+  Future<void> bacaSemua() async {
+    try {
+      await api.markAllNotificationsRead();
+      if (!mounted) return;
+      setState(() {
+        for (final n in items) {
+          n['is_read'] = true;
+        }
+      });
+      refreshUnread();
+    } catch (e) {
+      if (mounted) toast(context, '$e');
+    }
+  }
+
   Future<void> hapusSemua() async {
     if (!await confirm(context, 'Hapus semua notifikasi? Tindakan ini tidak bisa dibatalkan.', ok: 'Hapus semua')) {
       return;
@@ -150,6 +165,11 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
         ),
       ),
       actions: [
+        IconButton(
+          tooltip: 'Baca semua',
+          icon: const Icon(Icons.done_all),
+          onPressed: items.every((n) => n['is_read'] == true) ? null : bacaSemua,
+        ),
         IconButton(
           tooltip: 'Hapus semua',
           icon: const Icon(Icons.delete_sweep_outlined),

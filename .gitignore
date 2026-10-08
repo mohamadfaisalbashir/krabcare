@@ -51,9 +51,12 @@ backups/
 # Eksperimen riset lokal
 experiments/
 data/
+
+# Lain lain
 graphify-out
 *.md
 *.md.bak
+*.docx
 
 # Raspi
 raspi/

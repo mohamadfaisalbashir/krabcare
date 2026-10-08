@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Trash2 } from "lucide-react";
+import { CheckCheck, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -132,6 +132,17 @@ export default function NotifikasiPage() {
     }
   }
 
+  async function handleReadAll() {
+    setError(null);
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications((list) => list.map((n) => ({ ...n, is_read: true })));
+      refreshUnreadCount();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal menandai semua notifikasi.");
+    }
+  }
+
   async function handleDeleteAll() {
     if (notifications.length === 0) return;
     if (!window.confirm("Hapus SEMUA notifikasi? Tindakan ini tidak bisa dibatalkan.")) {
@@ -192,15 +203,26 @@ export default function NotifikasiPage() {
           </div>
 
           {!loading && notifications.length > 0 && (
-            <button
-              type="button"
-              onClick={handleDeleteAll}
-              disabled={deletingAll}
-              className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-status-bahaya transition-colors duration-150 hover:bg-status-bahayaBg disabled:opacity-60"
-            >
-              <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
-              {deletingAll ? "Menghapus..." : "Hapus semua"}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleReadAll}
+                disabled={unread === 0}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 transition-colors duration-150 hover:bg-bg disabled:opacity-60"
+              >
+                <CheckCheck className="h-3.5 w-3.5" strokeWidth={2.2} />
+                Baca semua
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAll}
+                disabled={deletingAll}
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-status-bahaya transition-colors duration-150 hover:bg-status-bahayaBg disabled:opacity-60"
+              >
+                <Trash2 className="h-3.5 w-3.5" strokeWidth={2.2} />
+                {deletingAll ? "Menghapus..." : "Hapus semua"}
+              </button>
+            </div>
           )}
         </div>
 

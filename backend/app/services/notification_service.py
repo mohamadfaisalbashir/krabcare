@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
@@ -433,6 +433,16 @@ async def mark_read(db: AsyncSession, user: User, notification_id: int) -> bool:
     notification.is_read = True
     await db.commit()
     return True
+
+async def mark_all_read(db: AsyncSession, user: User) -> int:
+    """Tandai semua notifikasi belum dibaca milik `user`. Kembalikan jumlah baris yang berubah."""
+    result = await db.execute(
+        update(Notification)
+        .where(Notification.user_id == user.id, Notification.is_read.is_(False))
+        .values(is_read=True)
+    )
+    await db.commit()
+    return result.rowcount
 
 async def delete_notification(db: AsyncSession, user: User, notification_id: int) -> bool:
     """Hapus satu notifikasi. False = tidak ada / bukan milik user ini (router balas 404)."""

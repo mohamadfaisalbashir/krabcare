@@ -370,6 +370,10 @@ export const api = {
   markNotificationRead: (notificationId: number) =>
     request<void>(`/notifications/${notificationId}/read`, { method: "POST" }),
 
+  /** POST /notifications/read-all → { updated: number } */
+  markAllNotificationsRead: () =>
+    request<{ updated: number }>(`/notifications/read-all`, { method: "POST" }),
+
   /** DELETE /notifications/:id → 204 */
   deleteNotification: (notificationId: number) =>
     request<void>(`/notifications/${notificationId}`, { method: "DELETE" }),

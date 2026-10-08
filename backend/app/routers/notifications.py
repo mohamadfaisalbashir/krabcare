@@ -53,6 +53,15 @@ async def list_notifications(
     ]
 
 
+@router.post("/read-all", status_code=200)
+async def mark_all_notifications_read(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Tandai semua notifikasi milik user ini sudah dibaca."""
+    return {"updated": await notification_service.mark_all_read(db, current_user)}
+
+
 @router.post("/{notification_id}/read", status_code=204)
 async def mark_notification_read(
     notification_id: int,

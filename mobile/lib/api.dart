@@ -196,6 +196,7 @@ class _Api {
         ),
       );
   Future<void> markNotificationRead(int id) => _request('POST', '/notifications/$id/read');
+  Future<void> markAllNotificationsRead() => _request('POST', '/notifications/read-all');
   Future<void> deleteNotification(int id) => _request('DELETE', '/notifications/$id');
   Future<void> deleteAllNotifications() => _request('DELETE', '/notifications');
   Future<void> registerPushToken(String fcmToken) =>
