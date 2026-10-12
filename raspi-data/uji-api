@@ -1,0 +1,5 @@
+curl -X POST https://krabcare.com/dashboard/api/data \
+  -H "Content-Type: application/json" \
+  -H "X-Gateway: 4105a27f1036f81d8dd30bc06e5f50f18de00b871a15527d50446ac6a4910558" \
+  -d '{"ph":8.0,"suhu":25.3,"salinitas":18,"amonia":0.05}' \
+  -o /dev/null -s -w "Total time: %{time_total}s\n"
