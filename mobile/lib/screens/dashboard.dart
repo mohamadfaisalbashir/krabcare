@@ -477,12 +477,11 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                 style: const TextStyle(fontSize: 13, color: cMuted, height: 1.5),
                 children: [
                   TextSpan(
-                    text: 'Angka hijau',
+                    text: 'Rentang daerah berwarna hijau',
                     style: TextStyle(fontWeight: FontWeight.w700, color: statusColor('Aman')),
                   ),
                   const TextSpan(
-                    text: ' di tengah batang adalah rentang optimal untuk kepiting bakau. Selama nilai '
-                        'parameter berada di rentang itu, lingkungan kolam sedang paling mendukung pertumbuhan.',
+                    text: ' di pengukuran parameter adalah kondisi optimal untuk pertumbuhan kepiting bakau.',
                   ),
                 ],
               ),
@@ -1000,14 +999,6 @@ class _AmoniaCell extends StatelessWidget {
           color: statusColor(status),
         ),
         _LabelTrack('0', '0 s/d ${formatFraksi(amoniaPerhatian)}%', numStr(amoniaSkalaMaks)),
-        if (current != null && current!['in_valid_range'] == false)
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Text(
-              'Di luar rentang tervalidasi persamaan, angka ini hasil ekstrapolasi.',
-              style: TextStyle(fontSize: 12, color: cInk),
-            ),
-          ),
       ],
     );
   }

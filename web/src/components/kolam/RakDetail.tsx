@@ -231,10 +231,11 @@ export default function RakDetail({
             <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
             {/* Keterangan pita hijau*/}
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              <span className="font-semibold text-status-aman">Angka hijau</span> di
-              tengah batang adalah rentang optimal untuk kepiting bakau. Selama nilai
-              parameter berada di rentang itu, lingkungan kolam sedang paling
-              mendukung pertumbuhan.
+              <span className="font-semibold text-status-aman">
+                Rentang daerah berwarna hijau
+              </span>{" "}
+              di pengukuran parameter adalah kondisi optimal untuk pertumbuhan
+              kepiting bakau.
             </p>
             <WarnaKondisiLegend />
           </Section>

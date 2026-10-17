@@ -152,8 +152,11 @@ export default function NotificationItem({
               warna ikon di kiri, ia tidak terbaca pembaca layar maupun oleh
               yang kesulitan membedakan warna. */}
           <StatusBadge status={label} size="sm" />
+          {/* Merah, bukan biru merek: latar baris belum dibaca sudah kebiruan
+              (bg-brand-50), jadi titik biru tenggelam. Warnanya sama dengan
+              titik belum dibaca di aplikasi mobile. */}
           {!item.is_read && (
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" aria-label="Belum dibaca" />
+            <span className="h-2 w-2 rounded-full bg-status-bahaya" aria-label="Belum dibaca" />
           )}
         </div>
         <p className="mt-1 text-sm leading-relaxed text-ink">

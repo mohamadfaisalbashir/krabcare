@@ -348,8 +348,8 @@ function PanduanBaca() {
             </ul>
           </li>
           <li>
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500 align-middle" />{" "}
-            Titik biru dan latar kebiruan berarti notifikasi belum dibaca.
+            <span className="inline-block h-2 w-2 rounded-full bg-status-bahaya align-middle" />{" "}
+            Titik merah dan latar kebiruan berarti notifikasi belum dibaca.
           </li>
         </ol>
 
