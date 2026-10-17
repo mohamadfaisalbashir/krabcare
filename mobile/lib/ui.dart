@@ -112,10 +112,13 @@ class Logo extends StatelessWidget {
 
 /// Kartu bagian berjudul, pengganti `<Card>` + judul di web.
 class Section extends StatelessWidget {
-  const Section({super.key, required this.title, required this.child, this.trailing});
+  const Section({super.key, required this.title, required this.child, this.trailing, this.note});
   final String title;
   final Widget child;
   final Widget? trailing;
+
+  /// Catatan pendek di bawah judul, padanan prop `note` Section di RakDetail.tsx.
+  final String? note;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -132,6 +135,11 @@ class Section extends StatelessWidget {
               ?trailing,
             ],
           ),
+          if (note != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(note!, style: const TextStyle(fontSize: 13, color: cMuted)),
+            ),
           const SizedBox(height: 10),
           child,
         ],
@@ -204,9 +212,11 @@ class HistoryChart extends StatelessWidget {
           maxY: hi,
           clipData: const FlClipData.all(),
           borderData: FlBorderData(show: false),
+          // Kisi tegak seperti HistoryChart.tsx: terbaca sebagai penanda waktu.
           gridData: FlGridData(
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => const FlLine(color: cBorder, strokeWidth: 1),
+            drawHorizontalLine: false,
+            verticalInterval: (rows.length / 6).ceilToDouble().clamp(1, double.infinity),
+            getDrawingVerticalLine: (_) => FlLine(color: cBorder.withValues(alpha: .9), strokeWidth: 1),
           ),
           rangeAnnotations: RangeAnnotations(
             horizontalRangeAnnotations: [
@@ -218,7 +228,7 @@ class HistoryChart extends StatelessWidget {
           extraLinesData: ExtraLinesData(
             horizontalLines: [
               for (final y in [r.min, r.max])
-                HorizontalLine(y: y, color: red.withValues(alpha: .6), strokeWidth: 1, dashArray: [4, 4]),
+                HorizontalLine(y: y, color: red.withValues(alpha: .3), strokeWidth: 1, dashArray: [4, 4]),
             ],
           ),
           titlesData: FlTitlesData(
@@ -286,14 +296,17 @@ class HistoryChart extends StatelessWidget {
               isCurved: true,
               preventCurveOverShooting: true,
               color: color,
-              barWidth: 2,
+              barWidth: 2.2,
+              isStrokeCapRound: true,
               dotData: const FlDotData(show: false),
+              // Gradasi sama dengan linearGradient di HistoryChart.tsx (0,28 → 0,08 → 0).
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [color.withValues(alpha: .25), color.withValues(alpha: 0)],
+                  colors: [color.withValues(alpha: .28), color.withValues(alpha: .08), color.withValues(alpha: 0)],
+                  stops: const [0, .6, 1],
                 ),
               ),
             ),

@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
+import StatusBadge from "@/components/ui/StatusBadge";
 import { Notification, NotifSource } from "@/lib/types";
 import { api } from "@/lib/api";
 import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/notif-store";
@@ -183,6 +184,8 @@ export default function NotifikasiPage() {
           </p>
         )}
 
+        <PanduanBaca />
+
         {/* Filter bar & aksi hapus semua */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -255,6 +258,107 @@ export default function NotifikasiPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+/** Chip abu-abu = jenis notifikasi; gayanya sama persis dengan di NotificationItem. */
+function ChipJenis({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-bg px-2 py-0.5 text-[11px] font-medium text-muted">
+      {children}
+    </span>
+  );
+}
+
+/** Chip berwarna = hal yang dinilai; warnanya ikut status, seperti di NotificationItem. */
+function ChipSubjek({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="rounded-full bg-status-bahayaBg px-2 py-0.5 text-[11px] font-semibold text-status-bahaya">
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Panduan membaca deretan label di setiap notifikasi. <details> bawaan HTML:
+ * tertutup secara default supaya tidak mendorong daftar ke bawah, bisa dibuka
+ * dengan keyboard, tanpa state React. Isinya disamakan dengan panduan di
+ * aplikasi mobile (mobile/lib/screens/notifikasi.dart).
+ */
+function PanduanBaca() {
+  return (
+    <details className="group rounded-xl border border-border bg-surface px-5 py-3">
+      <summary className="flex cursor-pointer select-none items-center justify-between text-sm font-semibold text-ink">
+        Cara membaca notifikasi
+        <span className="text-xs font-medium text-brand-600 group-open:hidden">Tampilkan</span>
+        <span className="hidden text-xs font-medium text-brand-600 group-open:inline">Sembunyikan</span>
+      </summary>
+
+      <div className="mt-3 space-y-4 text-sm leading-relaxed text-ink">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-bg px-3 py-2">
+          <span className="text-sm font-semibold">54D660E9BFB4</span>
+          <ChipJenis>Prediksi</ChipJenis>
+          <ChipSubjek>Kualitas Kolam</ChipSubjek>
+          <StatusBadge status="Bahaya" size="sm" />
+        </div>
+        <p className="text-muted">Label di setiap notifikasi dibaca dari kiri ke kanan:</p>
+
+        <ol className="list-decimal space-y-3 pl-5">
+          <li>
+            <span className="font-semibold">Kode perangkat</span>, misalnya{" "}
+            <span className="font-semibold">54D660E9BFB4</span>: sensor kolam yang mengirim data.
+          </li>
+          <li>
+            <span className="font-semibold">Jenis notifikasi</span> (label abu-abu):
+            <ul className="mt-1.5 space-y-1.5">
+              <li>
+                <ChipJenis>Kondisi aktual</ChipJenis> hasil pengukuran sensor saat ini.
+              </li>
+              <li>
+                <ChipJenis>Parameter</ChipJenis> satu parameter (pH, suhu, salinitas, atau amonia)
+                berubah status.
+              </li>
+              <li>
+                <ChipJenis>Prediksi</ChipJenis> perkiraan kondisi 15–60 menit ke depan berdasarkan
+                tren data terakhir. Belum terjadi, jadi bisa dipakai untuk berjaga-jaga.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span className="font-semibold">Yang dinilai</span> (label berwarna):{" "}
+            <ChipSubjek>Kualitas Kolam</ChipSubjek> berarti penilaian gabungan pH, suhu, dan
+            salinitas; nama parameter (mis. <ChipSubjek>Suhu</ChipSubjek>) berarti hanya parameter
+            itu. Warna labelnya mengikuti status.
+          </li>
+          <li>
+            <span className="font-semibold">Status</span>:
+            <ul className="mt-1.5 space-y-1.5">
+              <li>
+                <StatusBadge status="Aman" size="sm" /> kondisi berada di rentang optimal. Notifikasi
+                Aman biasanya berarti kondisi sudah pulih.
+              </li>
+              <li>
+                <StatusBadge status="Waspada" size="sm" /> mulai keluar dari rentang optimal tetapi
+                masih dalam batas toleransi kepiting. Pantau kolam.
+              </li>
+              <li>
+                <StatusBadge status="Bahaya" size="sm" /> melewati batas toleransi kepiting. Segera
+                periksa kolam.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500 align-middle" />{" "}
+            Titik biru dan latar kebiruan berarti notifikasi belum dibaca.
+          </li>
+        </ol>
+
+        <p className="text-muted">
+          Contoh di atas dibaca: sensor 54D660E9BFB4 memperkirakan kualitas air kolam akan masuk
+          kondisi Bahaya dalam beberapa menit ke depan.
+        </p>
+      </div>
+    </details>
   );
 }
 

@@ -405,8 +405,11 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       if (status != null) StatusBadge(status),
-                      _Pill(device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}'),
-                      if (reading != null) _Pill('Pembacaan terakhir ${formatWaktu(reading['time'])}'),
+                      _Pill(
+                        Icons.power_outlined,
+                        device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}',
+                      ),
+                      if (reading != null) _Pill(Icons.schedule, 'Pembacaan terakhir ${formatWaktu(reading['time'])}'),
                     ],
                   ),
                   ErrorText(error),
@@ -458,20 +461,33 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
       'salinity_ppt': 'predicted_salinity_ppt',
     };
     return [
+      // Judul, catatan, keterangan, dan legenda warna disamakan dengan
+      // SECTION / WarnaKondisiLegend di web/src/components/kolam/RakDetail.tsx.
       Section(
         title: 'Parameter',
+        note: amoniaDisclaimer,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             for (final p in paramKeys) _ParamCell(param: p, value: reading?[p]),
             _AmoniaCell(current: current),
-            const SizedBox(height: 8),
-            Text(amoniaDisclaimer, style: const TextStyle(fontSize: 12, color: cInk)),
-            const SizedBox(height: 4),
-            const Text(
-              'Pita hijau = rentang optimal. Batang penuh = rentang toleransi.',
-              style: TextStyle(fontSize: 12, color: cInk),
+            const SizedBox(height: 12),
+            Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 13, color: cMuted, height: 1.5),
+                children: [
+                  TextSpan(
+                    text: 'Angka hijau',
+                    style: TextStyle(fontWeight: FontWeight.w700, color: statusColor('Aman')),
+                  ),
+                  const TextSpan(
+                    text: ' di tengah batang adalah rentang optimal untuk kepiting bakau. Selama nilai '
+                        'parameter berada di rentang itu, lingkungan kolam sedang paling mendukung pertumbuhan.',
+                  ),
+                ],
+              ),
             ),
+            const _WarnaKondisiLegend(),
           ],
         ),
       ),
@@ -483,6 +499,9 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
           children: [
             for (final p in paramKeys) ...[
               Text(paramUi[p]!.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+              // Garis aksen netral seperti PredictionPanel.tsx: status 15/30/60
+              // menit bisa berbeda, jadi warnanya ada di bulatan tiap baris.
+              const _AksenNetral(),
               for (final h in const [15, 30, 60])
                 _PrediksiRow(h, () {
                   final v = window.where((x) => x['horizon_minutes'] == h).firstOrNull?[field[p]];
@@ -492,18 +511,23 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
               const SizedBox(height: 8),
             ],
             const Text('Risiko amonia (NH₃)', style: TextStyle(fontWeight: FontWeight.w600)),
+            const _AksenNetral(),
             for (final h in const [15, 30, 60])
               _PrediksiRow(h, () {
                 final f = forecast.where((x) => x['horizon_minutes'] == h && x['fraction_nh3_pct'] != null).firstOrNull;
                 if (f == null) return null;
                 return (text: trenAmonia([f['fraction_nh3_pct']]), status: riskToStatus(f['risk_level']));
               }()),
+            const _WarnaKondisiLegend(),
           ],
         ),
       ),
       const SizedBox(height: 12),
       Section(
         title: 'Grafik Pemantauan',
+        note:
+            'Pita hijau adalah rentang optimal, garis putus-putus merah adalah batas toleransi. '
+            'Nilai di luar garis merah masuk kategori Bahaya. Pilih Semua untuk melihat ketiganya sekaligus.',
         child: history.isEmpty
             ? const Text('Belum ada pembacaan tersimpan untuk rak ini.')
             : Column(
@@ -524,15 +548,13 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   ),
                   const SizedBox(height: 12),
                   if (param != 'all') ...[
+                    // ParamChip web: kotak warna garis + nama + (satuan).
                     Row(
                       children: [
-                        Dot(Color(paramUi[param]!.color)),
-                        const SizedBox(width: 6),
-                        Text(
-                            paramUi[param]!.unit == paramUi[param]!.short
-                                ? paramUi[param]!.label
-                                : '${paramUi[param]!.label} (${paramUi[param]!.unit})',
-                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                        _Swatch(Color(paramUi[param]!.color)),
+                        const SizedBox(width: 8),
+                        Text(paramUi[param]!.label, style: const TextStyle(fontWeight: FontWeight.w600, color: cInk)),
+                        Text(' (${paramUi[param]!.unit})', style: const TextStyle(color: cMuted)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -541,7 +563,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                     for (final p in paramKeys) ...[
                       Row(
                         children: [
-                          Dot(Color(paramUi[p]!.color)),
+                          _Swatch(Color(paramUi[p]!.color)),
                           const SizedBox(width: 6),
                           Text(paramUi[p]!.short, style: const TextStyle(fontWeight: FontWeight.w600)),
                           const Spacer(),
@@ -559,12 +581,12 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Pita hijau adalah rentang optimal, garis putus-putus merah adalah batas toleransi. '
-                    'Nilai di luar garis merah masuk kategori Bahaya. Pilih Semua untuk melihat ketiganya sekaligus.',
-                    style: TextStyle(fontSize: 12, color: cInk),
-                  ),
+                  if (param == 'all')
+                    const Text(
+                      'Tiap parameter punya sumbu nilainya sendiri dalam satuan asli, dan ketiganya berbagi '
+                      'sumbu waktu yang sama. Arti pita warnanya sama dengan grafik satu parameter.',
+                      style: TextStyle(fontSize: 13, color: cMuted),
+                    ),
                 ],
               ),
       ),
@@ -693,49 +715,189 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   );
 }
 
+/// DetailPill web: ikon + teks di atas latar putih bergaris tipis.
 class _Pill extends StatelessWidget {
-  const _Pill(this.text);
+  const _Pill(this.icon, this.text);
+  final IconData icon;
   final String text;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(color: cBrand50, borderRadius: BorderRadius.circular(99)),
-    child: Text(text, style: const TextStyle(fontSize: 12, color: cBrand700)),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      border: Border.all(color: cBorder),
+      borderRadius: BorderRadius.circular(99),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: cInk),
+        const SizedBox(width: 6),
+        Flexible(
+          child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cInk)),
+        ),
+      ],
+    ),
   );
 }
 
-/// Track rentang: batang = toleransi, pita = optimal/aman, penanda = nilai.
+/// Kotak kecil warna garis grafik (ParamChip / label CombinedChart di web).
+class _Swatch extends StatelessWidget {
+  const _Swatch(this.color);
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 10,
+    height: 10,
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3)),
+  );
+}
+
+/// Garis pemisah netral di bawah judul kolom prediksi (bg-ink h-0.5 di web).
+class _AksenNetral extends StatelessWidget {
+  const _AksenNetral();
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 2,
+    margin: const EdgeInsets.only(top: 6, bottom: 4),
+    decoration: BoxDecoration(color: cInk, borderRadius: BorderRadius.circular(1)),
+  );
+}
+
+/// Legenda warna kondisi, sama isi & warnanya dengan WarnaKondisiLegend di RakDetail.tsx.
+class _WarnaKondisiLegend extends StatelessWidget {
+  const _WarnaKondisiLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    Widget item(String s, String teks) => Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Dot(statusColor(s)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text('$s: $teks', style: TextStyle(fontSize: 13, color: statusColor(s))),
+          ),
+        ],
+      ),
+    );
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 10),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: cBorder))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Warna kondisi:',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
+          ),
+          item('Aman', 'dalam rentang optimal'),
+          item('Waspada', 'di luar optimal, masih toleransi'),
+          item('Bahaya', 'di luar rentang toleransi'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Status di pojok kanan kolom: titik membawa warna, kata ditulis warna tinta
+/// (seperti ParameterStrip.tsx; teks kuning Waspada di latar terang kurang kontras).
+class _StatusPojok extends StatelessWidget {
+  const _StatusPojok(this.status);
+  final String? status;
+  @override
+  Widget build(BuildContext context) => status == null
+      ? const Text('Belum ada data', style: TextStyle(fontSize: 13, color: cMuted))
+      : Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Dot(statusColor(status)),
+            const SizedBox(width: 6),
+            Text(status!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk)),
+          ],
+        );
+}
+
+/// Label di bawah track: batas bawah, rentang optimal (hijau), batas atas.
+class _LabelTrack extends StatelessWidget {
+  const _LabelTrack(this.kiri, this.tengah, this.kanan);
+  final String kiri, tengah, kanan;
+  @override
+  Widget build(BuildContext context) {
+    final gaya = mono.copyWith(fontSize: 10, color: cMuted);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Expanded(child: Text(kiri, style: gaya)),
+          Expanded(
+            child: Text(tengah, textAlign: TextAlign.center, style: gaya.copyWith(color: statusColor('Aman'))),
+          ),
+          Expanded(child: Text(kanan, textAlign: TextAlign.right, style: gaya)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Track rentang (ParameterStrip.tsx / AmmoniaCell.tsx): batang krem = rentang
+/// toleransi, pita teal = rentang optimal, pita merah opsional = wilayah
+/// berbahaya (amonia), penanda = nilai sekarang berwarna status.
 class _Track extends StatelessWidget {
-  const _Track({required this.frac, required this.band, required this.color});
+  const _Track({required this.frac, required this.band, required this.color, this.bahayaMulai});
   final double? frac;
   final (double, double) band; // awal & akhir pita, 0..1
   final Color color;
+  final double? bahayaMulai; // 0..1, mulai pita merah sampai ujung kanan
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (_, c) => SizedBox(
-      height: 14,
+      height: 16,
       child: Stack(
         alignment: Alignment.centerLeft,
         children: [
           Container(
             height: 6,
-            decoration: BoxDecoration(color: cBorder, borderRadius: BorderRadius.circular(3)),
+            decoration: BoxDecoration(
+              color: statusStyle['Waspada']!.bg.withValues(alpha: .8),
+              borderRadius: BorderRadius.circular(3),
+            ),
           ),
           Positioned(
             left: c.maxWidth * band.$1,
             width: c.maxWidth * (band.$2 - band.$1),
-            child: Container(height: 6, color: cBrand.withValues(alpha: .45)),
+            child: Container(
+              height: 6,
+              decoration: BoxDecoration(
+                color: cBrand700.withValues(alpha: .25),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
           ),
+          if (bahayaMulai != null)
+            Positioned(
+              left: c.maxWidth * bahayaMulai!,
+              right: 0,
+              child: Container(
+                height: 6,
+                decoration: BoxDecoration(
+                  color: statusColor('Bahaya').withValues(alpha: .2),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+            ),
           if (frac != null)
             Positioned(
               left: (c.maxWidth * frac! - 5).clamp(0, c.maxWidth - 10),
               child: Container(
                 width: 10,
-                height: 14,
+                height: 16,
                 decoration: BoxDecoration(
                   color: color,
-                  borderRadius: BorderRadius.circular(3),
+                  borderRadius: BorderRadius.circular(99),
                   border: Border.all(color: Colors.white, width: 2),
                 ),
               ),
@@ -763,13 +925,9 @@ class _ParamCell extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(ui.label, style: const TextStyle(fontWeight: FontWeight.w600)),
+                child: Text(ui.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
               ),
-              if (status != null) ...[
-                Dot(statusColor(status)),
-                const SizedBox(width: 4),
-                Text(status, style: TextStyle(color: statusColor(status), fontSize: 12)),
-              ],
+              _StatusPojok(status),
             ],
           ),
           Text.rich(
@@ -782,28 +940,18 @@ class _ParamCell extends StatelessWidget {
                 if (ui.unit != ui.short || value == null)
                   TextSpan(
                     text: ' ${ui.unit}',
-                    style: const TextStyle(color: cInk),
+                    style: const TextStyle(color: cMuted),
                   ),
               ],
             ),
           ),
+          const SizedBox(height: 6),
           _Track(
             frac: value == null ? null : rangeFrac(param, value!),
             band: (rangeFrac(param, r.lo), rangeFrac(param, r.hi)),
             color: statusColor(status),
           ),
-          Row(
-            children: [
-              Text(formatValue(r.min), style: const TextStyle(fontSize: 11, color: cInk)),
-              const Spacer(),
-              Text(
-                '${formatValue(r.lo)} s/d ${formatValue(r.hi)}',
-                style: TextStyle(fontSize: 11, color: statusColor('Aman')),
-              ),
-              const Spacer(),
-              Text(formatValue(r.max), style: const TextStyle(fontSize: 11, color: cInk)),
-            ],
-          ),
+          _LabelTrack(formatValue(r.min), '${formatValue(r.lo)} s/d ${formatValue(r.hi)}', formatValue(r.max)),
         ],
       ),
     );
@@ -824,13 +972,9 @@ class _AmoniaCell extends StatelessWidget {
         Row(
           children: [
             const Expanded(
-              child: Text('Risiko amonia (NH₃)', style: TextStyle(fontWeight: FontWeight.w600)),
+              child: Text('Risiko amonia (NH₃)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
             ),
-            if (status != null) ...[
-              Dot(statusColor(status)),
-              const SizedBox(width: 4),
-              Text(status, style: TextStyle(color: statusColor(status), fontSize: 12)),
-            ],
+            _StatusPojok(status),
           ],
         ),
         Text.rich(
@@ -840,27 +984,22 @@ class _AmoniaCell extends StatelessWidget {
                 text: pct == null ? 'N/A' : formatFraksi(pct),
                 style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: cInk),
               ),
+              // "%" polos seperti AmmoniaCell.tsx, supaya selebar satuan kolom lain.
               const TextSpan(
-                text: ' % dari TAN',
-                style: TextStyle(color: cInk),
+                text: ' %',
+                style: TextStyle(color: cMuted),
               ),
             ],
           ),
         ),
+        const SizedBox(height: 6),
         _Track(
           frac: pct == null ? null : (pct / amoniaSkalaMaks).clamp(0.0, 1.0).toDouble(),
           band: (0, amoniaPerhatian / amoniaSkalaMaks),
+          bahayaMulai: amoniaBerbahaya / amoniaSkalaMaks,
           color: statusColor(status),
         ),
-        Row(
-          children: [
-            const Text('0', style: TextStyle(fontSize: 11, color: cInk)),
-            const Spacer(),
-            Text('0 s/d ${formatFraksi(amoniaPerhatian)}%', style: TextStyle(fontSize: 11, color: statusColor('Aman'))),
-            const Spacer(),
-            Text(numStr(amoniaSkalaMaks), style: const TextStyle(fontSize: 11, color: cInk)),
-          ],
-        ),
+        _LabelTrack('0', '0 s/d ${formatFraksi(amoniaPerhatian)}%', numStr(amoniaSkalaMaks)),
         if (current != null && current!['in_valid_range'] == false)
           const Padding(
             padding: EdgeInsets.only(top: 4),
@@ -887,7 +1026,8 @@ class _PrediksiRow extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 6, right: 8),
-          child: Dot(row == null ? cBorder : statusColor(row!.status)),
+          // Tanpa data: bulatan tinta pudar (bg-ink/15 di web).
+          child: Dot(row == null ? cInk.withValues(alpha: .15) : statusColor(row!.status)),
         ),
         Expanded(
           child: Text.rich(

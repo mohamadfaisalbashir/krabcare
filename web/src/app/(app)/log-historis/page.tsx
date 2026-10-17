@@ -309,17 +309,21 @@ function LogHistorisView() {
           pil di dalamnya akan terpotong. */}
       <Card className="p-0">
         {/* Pemilih mode rentang (hari/jam), lihat RangeMode di atas. Grid 2
-            kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. */}
-        <div className="grid grid-cols-2 gap-2 p-4 pb-0">
-          {RANGE_MODES.map((m) => (
-            <FilterPill
-              key={m.value}
-              active={rangeMode === m.value}
-              onClick={() => setRangeMode(m.value)}
-            >
-              {m.label}
-            </FilterPill>
-          ))}
+            kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. Judul
+            "Rentang Waktu" di atasnya sama dengan judul bagian di aplikasi mobile. */}
+        <div className="p-4 pb-0">
+          <p className="mb-2 text-sm font-semibold text-ink">Rentang Waktu</p>
+          <div className="grid grid-cols-2 gap-2">
+            {RANGE_MODES.map((m) => (
+              <FilterPill
+                key={m.value}
+                active={rangeMode === m.value}
+                onClick={() => setRangeMode(m.value)}
+              >
+                {m.label}
+              </FilterPill>
+            ))}
+          </div>
         </div>
 
         {/* Satu baris kontrol: rentang waktu di kiri, pil status di kanan.
@@ -327,9 +331,9 @@ function LogHistorisView() {
         <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
           {/* Rentang waktu: bentuk kolomnya berubah sesuai `rangeMode`, tapi
               semuanya bermuara ke start_time/end_time lewat rentangIso().
-              Kosong berarti semua waktu. */}
+              Kosong berarti semua waktu. Label "Rentang" di sini dihapus karena
+              sudah ada judul "Rentang Waktu" di atas pil mode. */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted">Rentang</span>
             {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang 16px di
                 mobile supaya Safari iOS tidak memperbesar viewport. */}
             {rangeMode === "hari" && (
@@ -382,20 +386,6 @@ function LogHistorisView() {
                   label="Jam akhir"
                 />
               </>
-            )}
-            {(dari || sampai) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDari("");
-                  setSampai("");
-                  setJamDari("00");
-                  setJamSampai("00");
-                }}
-                className="py-1.5 text-xs font-semibold text-brand-600 hover:underline"
-              >
-                Semua waktu
-              </button>
             )}
           </div>
 

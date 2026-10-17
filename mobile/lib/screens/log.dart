@@ -191,15 +191,6 @@ class _LogScreenState extends State<LogScreen> {
             const SizedBox(height: 12),
             Section(
               title: 'Rentang waktu',
-              trailing: TextButton(
-                onPressed: () => set(() {
-                  dari = null;
-                  sampai = null;
-                  jamDari = 0;
-                  jamSampai = 0;
-                }),
-                child: const Text('Semua waktu'),
-              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -259,16 +250,17 @@ class _LogScreenState extends State<LogScreen> {
               ),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya'])
-                  ChoiceChip(
-                    label: Text(s),
-                    selected: statusFilter == s,
-                    onSelected: (_) => set(() => statusFilter = s),
-                  ),
-              ],
+            // Satu baris tersegmentasi, sama bentuknya dengan pilihan parameter di atas.
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: [
+                  for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya']) ButtonSegment(value: s, label: Text(s)),
+                ],
+                selected: {statusFilter},
+                onSelectionChanged: (s) => set(() => statusFilter = s.first),
+              ),
             ),
             const SizedBox(height: 8),
             ErrorText(error),
@@ -567,11 +559,6 @@ class _ExportSheetState extends State<ExportSheet> {
             ],
             selected: {format},
             onSelectionChanged: (s) => setState(() => format = s.first),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Kolom amonia (fraksi NH₃ & risiko) selalu ikut di berkas.',
-            style: TextStyle(fontSize: 12, color: cInk),
           ),
           ErrorText(error),
           if (note != null) Text(note!, style: TextStyle(color: statusColor('Waspada'))),

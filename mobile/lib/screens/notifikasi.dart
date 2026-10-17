@@ -182,6 +182,8 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          const _PanduanBaca(),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -242,6 +244,110 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   );
 }
 
+/// Chip label notifikasi. Tanpa warna = jenis (abu-abu); dengan warna = subjek, ikut status.
+Widget _chip(String text, [Color? fg, Color? bg]) => Container(
+  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+  decoration: BoxDecoration(color: bg ?? cBg, borderRadius: BorderRadius.circular(4)),
+  child: Text(
+    text,
+    style: TextStyle(fontSize: 11, color: fg ?? cMuted, fontWeight: FontWeight.w600),
+  ),
+);
+
+/// Panduan membaca deretan label di setiap notifikasi. Isinya sama dengan
+/// PanduanBaca di web/src/app/(app)/notifikasi/page.tsx. Tertutup secara
+/// default supaya daftar notifikasi tetap langsung terlihat.
+class _PanduanBaca extends StatelessWidget {
+  const _PanduanBaca();
+
+  @override
+  Widget build(BuildContext context) {
+    final bahaya = statusStyle['Bahaya']!;
+    // Label di kiri, penjelasan di kanan yang turun baris kalau panjang.
+    Widget baris(Widget label, String teks) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          label,
+          const SizedBox(width: 8),
+          Expanded(child: Text(teks, style: const TextStyle(fontSize: 13, color: cInk))),
+        ],
+      ),
+    );
+    Widget judul(String t) => Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Text(t, style: const TextStyle(fontWeight: FontWeight.w700, color: cInk)),
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        title: const Text('Cara membaca notifikasi', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        shape: const Border(),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        expandedCrossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: cBg, borderRadius: BorderRadius.circular(8)),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Text('54D660E9BFB4', style: mono.copyWith(fontWeight: FontWeight.w600)),
+                _chip('Prediksi'),
+                _chip('Kualitas Kolam', bahaya.fg, bahaya.bg),
+                const StatusBadge('Bahaya'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text('Label di setiap notifikasi dibaca dari kiri ke kanan:', style: TextStyle(color: cInk)),
+          judul('1. Kode perangkat'),
+          const Text('Sensor kolam yang mengirim data, misalnya 54D660E9BFB4.', style: TextStyle(color: cInk)),
+          judul('2. Jenis notifikasi (label abu-abu)'),
+          baris(_chip('Kondisi aktual'), 'hasil pengukuran sensor saat ini.'),
+          baris(_chip('Parameter'), 'satu parameter (pH, suhu, salinitas, atau amonia) berubah status.'),
+          baris(
+            _chip('Prediksi'),
+            'perkiraan kondisi 15–60 menit ke depan berdasarkan tren data terakhir. Belum terjadi, '
+                'jadi bisa dipakai untuk berjaga-jaga.',
+          ),
+          judul('3. Yang dinilai (label berwarna)'),
+          baris(_chip('Kualitas Kolam', bahaya.fg, bahaya.bg), 'penilaian gabungan pH, suhu, dan salinitas.'),
+          baris(_chip('Suhu', bahaya.fg, bahaya.bg), 'nama parameter berarti hanya parameter itu.'),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text('Warna labelnya mengikuti status.', style: TextStyle(fontSize: 13, color: cInk)),
+          ),
+          judul('4. Status'),
+          baris(
+            const StatusBadge('Aman'),
+            'kondisi berada di rentang optimal. Notifikasi Aman biasanya berarti kondisi sudah pulih.',
+          ),
+          baris(
+            const StatusBadge('Waspada'),
+            'mulai keluar dari rentang optimal tetapi masih dalam batas toleransi kepiting. Pantau kolam.',
+          ),
+          baris(const StatusBadge('Bahaya'), 'melewati batas toleransi kepiting. Segera periksa kolam.'),
+          judul('5. Belum dibaca'),
+          baris(
+            const Padding(padding: EdgeInsets.only(top: 5), child: Dot(Color(0xFFC23B22))),
+            'titik merah dan latar kebiruan berarti notifikasi belum dibaca.'),
+          const SizedBox(height: 12),
+          const Text(
+            'Contoh di atas dibaca: sensor 54D660E9BFB4 memperkirakan kualitas air kolam akan masuk '
+            'kondisi Bahaya dalam beberapa menit ke depan.',
+            style: TextStyle(color: cMuted, fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _Item extends StatelessWidget {
   const _Item({required this.n, required this.onRead, required this.onDelete});
   final Json n;
@@ -275,14 +381,6 @@ class _Item extends StatelessWidget {
     final status = categoryToLabel(n['quality_category']);
     final s = statusStyle[status]!;
     final unread = n['is_read'] != true;
-    Widget chip(String text, [Color? fg, Color? bg]) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(color: bg ?? cBg, borderRadius: BorderRadius.circular(4)),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 11, color: fg ?? cMuted, fontWeight: FontWeight.w600),
-      ),
-    );
     return Container(
       color: unread ? cBrand50.withValues(alpha: .5) : null,
       padding: const EdgeInsets.all(12),
@@ -308,10 +406,16 @@ class _Item extends StatelessWidget {
                       n['device_code'] ?? 'Device #${n['device_id']}',
                       style: mono.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    chip(_sourceLabel[n['source']] ?? '${n['source']}'),
-                    n['parameter'] != null && _paramLabel.containsKey(n['parameter'])
-                        ? chip(_paramLabel[n['parameter']]!, s.fg, s.bg)
-                        : chip('Kualitas Kolam'),
+                    _chip(_sourceLabel[n['source']] ?? '${n['source']}'),
+                    // Seperti web: chip subjek selalu diwarnai status, termasuk
+                    // "Kualitas Kolam" pada baris kondisi aktual dan prediksi.
+                    _chip(
+                      n['parameter'] != null && _paramLabel.containsKey(n['parameter'])
+                          ? _paramLabel[n['parameter']]!
+                          : 'Kualitas Kolam',
+                      s.fg,
+                      s.bg,
+                    ),
                     StatusBadge(status),
                     if (unread) const Dot(Color(0xFFC23B22)),
                   ],
