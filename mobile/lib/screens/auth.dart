@@ -280,10 +280,9 @@ class _DaftarScreenState extends State<DaftarScreen> {
                 validator: _cekEmail,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              PasswordField(
                 controller: password,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: 'Kata sandi (min. 8 karakter)'),
+                label: 'Kata sandi (min. 8 karakter)',
                 validator: _cekSandi,
               ),
             ],
@@ -528,17 +527,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 key: form,
                 child: Column(
                   children: [
-                    TextFormField(
-                      controller: baru,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Kata sandi baru'),
-                      validator: _cekSandi,
-                    ),
+                    PasswordField(controller: baru, label: 'Kata sandi baru', validator: _cekSandi),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    PasswordField(
                       controller: konfirmasi,
-                      obscureText: true,
-                      decoration: const InputDecoration(labelText: 'Konfirmasi kata sandi baru'),
+                      label: 'Konfirmasi kata sandi baru',
                       validator: _cekSandi,
                     ),
                   ],

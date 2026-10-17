@@ -158,7 +158,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 n > 0 ? '$n notifikasi belum dibaca' : 'Peringatan kualitas air kolam Anda',
-                style: const TextStyle(color: cAxis),
+                style: const TextStyle(color: cInk),
               ),
             ),
           ),
@@ -321,7 +321,7 @@ class _Item extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(formatWaktu(n['created_at']), style: const TextStyle(fontSize: 12, color: cAxis)),
+                    Text(formatWaktu(n['created_at']), style: const TextStyle(fontSize: 12, color: cInk)),
                     const Spacer(),
                     if (unread)
                       TextButton(

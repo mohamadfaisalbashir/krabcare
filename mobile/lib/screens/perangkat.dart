@@ -185,7 +185,7 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
     Widget daftar(String judul, List<Json> list) => Section(
       title: '$judul (${list.length})',
       child: list.isEmpty
-          ? const Text('Tidak ada device.', style: TextStyle(color: cAxis))
+          ? const Text('Tidak ada device.', style: TextStyle(color: cInk))
           : Column(children: [for (final d in list) _row(d)]),
     );
     return Scaffold(

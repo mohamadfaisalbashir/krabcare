@@ -26,6 +26,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   final lama = TextEditingController(), baru = TextEditingController(), konfirmasi = TextEditingController();
   final ketikEmail = TextEditingController();
   bool busy = false;
+  Key _tileKey = UniqueKey();
   Msg? namaMsg, sandiMsg, hapusMsg;
 
   Future<void> simpanNama() async {
@@ -138,23 +139,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextField(
-                  controller: lama,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Kata sandi lama'),
-                ),
+                PasswordField(controller: lama, label: 'Kata sandi lama'),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: baru,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Kata sandi baru'),
-                ),
+                PasswordField(controller: baru, label: 'Kata sandi baru'),
                 const SizedBox(height: 10),
-                TextField(
-                  controller: konfirmasi,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Konfirmasi kata sandi baru'),
-                ),
+                PasswordField(controller: konfirmasi, label: 'Konfirmasi kata sandi baru'),
                 _msg(sandiMsg),
                 const SizedBox(height: 8),
                 FilledButton(onPressed: busy ? null : simpanSandi, child: const Text('Simpan perubahan')),
@@ -172,6 +161,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             const SizedBox(height: 12),
             Card(
               child: ExpansionTile(
+                key: _tileKey,
                 shape: const Border(),
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
                 leading: Icon(Icons.report_outlined, color: statusColor('Bahaya')),
@@ -182,20 +172,37 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                 children: [
                   const Text(
-                    'Akun, kolam, dan notifikasi Anda terhapus permanen. Riwayat sensor tetap ada pada device.',
+                    'Menghapus akun ini beserta seluruh kolam dan notifikasinya, permanen. Device yang terpasang '
+                    'tidak ikut terhapus. Ia kembali jadi belum diklaim beserta riwayat sensornya, dan bisa '
+                    'dipasang admin ke akun lain.',
                   ),
                   const SizedBox(height: 10),
+                  // Label di atas kolom (seperti web), bukan labelText: email panjang terpotong "…".
+                  Text(
+                    'Ketik "${user['email']}" untuk mengonfirmasi',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
                   TextField(
                     controller: ketikEmail,
                     onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(labelText: 'Ketik "${user['email']}" untuk konfirmasi'),
+                    autocorrect: false,
+                    decoration: InputDecoration(hintText: '${user['email']}'),
                   ),
                   _msg(hapusMsg),
                   const SizedBox(height: 8),
                   FilledButton(
                     style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
                     onPressed: busy || ketikEmail.text.trim() != user['email'] ? null : hapusAkun,
-                    child: const Text('Hapus akun saya'),
+                    child: Text(busy ? 'Menghapus...' : 'Hapus akun saya'),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() {
+                      ketikEmail.clear();
+                      hapusMsg = null;
+                      _tileKey = UniqueKey();
+                    }),
+                    child: const Text('Batal'),
                   ),
                 ],
               ),

@@ -235,7 +235,7 @@ class HistoryChart extends StatelessWidget {
                   meta: meta,
                   child: Text(
                     numStr(double.parse(v.toStringAsFixed(2))),
-                    style: const TextStyle(fontSize: 10, color: cAxis),
+                    style: const TextStyle(fontSize: 10, color: cInk),
                   ),
                 ),
               ),
@@ -254,7 +254,7 @@ class HistoryChart extends StatelessWidget {
                     child: Text(
                       '${formatTanggal(t).substring(0, 5)}\n${formatJam(t)}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 10, color: cAxis),
+                      style: const TextStyle(fontSize: 10, color: cInk),
                     ),
                   );
                 },
@@ -269,7 +269,7 @@ class HistoryChart extends StatelessWidget {
                 for (final s in spots)
                   LineTooltipItem(
                     '${formatWaktu(rows[s.x.toInt()]['time'])}\n',
-                    const TextStyle(fontSize: 11, color: cAxis),
+                    const TextStyle(fontSize: 11, color: cInk),
                     children: [
                       TextSpan(
                         text: '${formatValue(s.y)} ${paramUi[param]!.unit} · ${statusOf(param, s.y)}',
@@ -302,4 +302,32 @@ class HistoryChart extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Kolom kata sandi dengan tombol mata untuk menampilkan isinya (Input.tsx web).
+class PasswordField extends StatefulWidget {
+  const PasswordField({super.key, required this.controller, required this.label, this.validator});
+  final TextEditingController controller;
+  final String label;
+  final FormFieldValidator<String>? validator;
+  @override
+  State<PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<PasswordField> {
+  bool hide = true;
+  @override
+  Widget build(BuildContext context) => TextFormField(
+    controller: widget.controller,
+    obscureText: hide,
+    validator: widget.validator,
+    decoration: InputDecoration(
+      labelText: widget.label,
+      suffixIcon: IconButton(
+        tooltip: hide ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi',
+        icon: Icon(hide ? Icons.visibility : Icons.visibility_off),
+        onPressed: () => setState(() => hide = !hide),
+      ),
+    ),
+  );
 }

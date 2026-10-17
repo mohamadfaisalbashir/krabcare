@@ -15,6 +15,8 @@ env/
 .env
 .env.*
 env.production.example
+# Kunci service account Firebase di VPS (di-mount ke backend, lihat docker-compose.prod.yml)
+secrets/
 
 # Docker
 *.pid
@@ -54,9 +56,9 @@ data/
 
 # Lain lain
 graphify-out
-*.md
 *.md.bak
 *.docx
+*.pdf
 
 # Raspi
 raspi/

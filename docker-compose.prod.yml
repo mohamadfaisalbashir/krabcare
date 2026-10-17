@@ -11,6 +11,13 @@ services:
       DEBUG: "false"
     # Menimpa CMD Dockerfile: tanpa --reload.
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    volumes:
+      # Kunci service account Firebase (push FCM). Yang di-mount FOLDER, bukan
+      # berkasnya: kalau firebase.json belum diunggah, Docker cuma membuat folder
+      # kosong dan push dilewati dengan warning, alih-alih membuat FOLDER bernama
+      # firebase.json yang membuat firebase-admin gagal membaca kredensial.
+      # Pasangannya di .env: FIREBASE_CREDENTIALS_PATH=/run/secrets/firebase.json
+      - ./secrets:/run/secrets:ro
 
   web:
     build:

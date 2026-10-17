@@ -98,6 +98,9 @@ Future<void> registerPush() async {
   try {
     await FirebaseMessaging.instance.requestPermission();
     final t = await FirebaseMessaging.instance.getToken();
+    // Muncul di `flutter run` / `adb logcat`: tempel ke Firebase Console →
+    // Messaging → "Send test message" untuk menguji push tanpa lewat backend.
+    debugPrint('FCM token: $t');
     if (t != null) await api.registerPushToken(t);
   } catch (e) {
     debugPrint('Registrasi push gagal: $e');

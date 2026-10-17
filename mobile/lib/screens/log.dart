@@ -313,7 +313,7 @@ class _LogScreenState extends State<LogScreen> {
           children: [
             TextSpan(
               text: '${r['device_code']} ',
-              style: mono.copyWith(fontSize: 12, color: cAxis),
+              style: mono.copyWith(fontSize: 12, color: cInk),
             ),
             TextSpan(text: '${ui.short} terukur '),
             TextSpan(
@@ -337,7 +337,7 @@ class _LogScreenState extends State<LogScreen> {
           children: [
             TextSpan(
               text: '${r['device_code']} ',
-              style: mono.copyWith(fontSize: 12, color: cAxis),
+              style: mono.copyWith(fontSize: 12, color: cInk),
             ),
             const TextSpan(text: 'fraksi NH₃ toksik '),
             TextSpan(
@@ -361,6 +361,10 @@ class _Jam extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DropdownButton<int>(
     value: value,
+    // Setinggi ~192px dan bisa digulir, seperti HourSelect web, bukan 24 baris setinggi layar.
+    menuMaxHeight: 192,
+    isDense: true,
+    borderRadius: BorderRadius.circular(8),
     items: [for (var h = 0; h < 24; h++) DropdownMenuItem(value: h, child: Text('${h.toString().padLeft(2, '0')}.00'))],
     onChanged: (v) => onChanged(v!),
   );
@@ -567,7 +571,7 @@ class _ExportSheetState extends State<ExportSheet> {
           const SizedBox(height: 8),
           const Text(
             'Kolom amonia (fraksi NH₃ & risiko) selalu ikut di berkas.',
-            style: TextStyle(fontSize: 12, color: cAxis),
+            style: TextStyle(fontSize: 12, color: cInk),
           ),
           ErrorText(error),
           if (note != null) Text(note!, style: TextStyle(color: statusColor('Waspada'))),

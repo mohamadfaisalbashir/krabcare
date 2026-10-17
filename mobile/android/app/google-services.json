@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "49864716159",
+    "project_id": "krabcare",
+    "storage_bucket": "krabcare.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:49864716159:android:3590d66c264799f2d1344a",
+        "android_client_info": {
+          "package_name": "com.krabcare.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0WrpyLSSqZhRAXHq6ngfn8m6xS99emEE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

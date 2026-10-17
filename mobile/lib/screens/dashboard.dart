@@ -272,7 +272,7 @@ class _PondCard extends StatelessWidget {
                             Dot(statusColor(status)),
                             const SizedBox(width: 6),
                             Text(status ?? 'Belum ada data', style: TextStyle(color: statusColor(status))),
-                            if (r != null) Text('  ·  ${formatJam(r['time'])}', style: const TextStyle(color: cAxis)),
+                            if (r != null) Text('  ·  ${formatJam(r['time'])}', style: const TextStyle(color: cInk)),
                           ],
                         ),
                       ],
@@ -317,6 +317,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   bool loading = true, busy = false;
   String? error, rakMsg, hapusError;
   String param = 'ph';
+  String? panel; // panel Pengaturan Kolam yang terbuka: 'nama' | 'hapus' | null
   Timer? poll;
   final kode = TextEditingController(), namaBaru = TextEditingController(), ketikNama = TextEditingController();
 
@@ -465,11 +466,11 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
             for (final p in paramKeys) _ParamCell(param: p, value: reading?[p]),
             _AmoniaCell(current: current),
             const SizedBox(height: 8),
-            Text(amoniaDisclaimer, style: const TextStyle(fontSize: 12, color: cAxis)),
+            Text(amoniaDisclaimer, style: const TextStyle(fontSize: 12, color: cInk)),
             const SizedBox(height: 4),
             const Text(
               'Pita hijau = rentang optimal. Batang penuh = rentang toleransi.',
-              style: TextStyle(fontSize: 12, color: cAxis),
+              style: TextStyle(fontSize: 12, color: cInk),
             ),
           ],
         ),
@@ -506,6 +507,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
         child: history.isEmpty
             ? const Text('Belum ada pembacaan tersimpan untuk rak ini.')
             : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SegmentedButton<String>(
                     showSelectedIcon: false,
@@ -515,46 +517,57 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                           value: p,
                           label: Text(paramUi[p]!.short, style: TextStyle(color: Color(paramUi[p]!.color))),
                         ),
+                      const ButtonSegment(value: 'all', label: Text('Semua')),
                     ],
                     selected: {param},
                     onSelectionChanged: (s) => setState(() => param = s.first),
                   ),
                   const SizedBox(height: 12),
-                  HistoryChart(rows: history, param: param),
+                  if (param != 'all') ...[
+                    Row(
+                      children: [
+                        Dot(Color(paramUi[param]!.color)),
+                        const SizedBox(width: 6),
+                        Text(
+                            paramUi[param]!.unit == paramUi[param]!.short
+                                ? paramUi[param]!.label
+                                : '${paramUi[param]!.label} (${paramUi[param]!.unit})',
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    HistoryChart(rows: history, param: param),
+                  ] else
+                    for (final p in paramKeys) ...[
+                      Row(
+                        children: [
+                          Dot(Color(paramUi[p]!.color)),
+                          const SizedBox(width: 6),
+                          Text(paramUi[p]!.short, style: const TextStyle(fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          Text(() {
+                            final v = history.lastWhere((r) => r[p] != null, orElse: () => {})[p];
+                            return v == null ? '–' : '${formatValue(v)} ${paramUi[p]!.unit}';
+                          }(), style: mono),
+                        ],
+                      ),
+                      HistoryChart(
+                        rows: history,
+                        param: p,
+                        height: p == 'salinity_ppt' ? 150 : 120,
+                        showX: p == 'salinity_ppt',
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Pita hijau adalah rentang optimal, garis putus-putus merah adalah batas toleransi. '
+                    'Nilai di luar garis merah masuk kategori Bahaya. Pilih Semua untuk melihat ketiganya sekaligus.',
+                    style: TextStyle(fontSize: 12, color: cInk),
+                  ),
                 ],
               ),
       ),
-      const SizedBox(height: 12),
-      if (history.isNotEmpty)
-        Section(
-          title: 'Grafik Gabungan',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final p in paramKeys) ...[
-                Row(
-                  children: [
-                    Dot(Color(paramUi[p]!.color)),
-                    const SizedBox(width: 6),
-                    Text(paramUi[p]!.short, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Text(() {
-                      final v = history.lastWhere((r) => r[p] != null, orElse: () => {})[p];
-                      return v == null ? '–' : '${formatValue(v)} ${paramUi[p]!.unit}';
-                    }(), style: mono),
-                  ],
-                ),
-                HistoryChart(
-                  rows: history,
-                  param: p,
-                  height: p == 'salinity_ppt' ? 150 : 120,
-                  showX: p == 'salinity_ppt',
-                ),
-                const SizedBox(height: 8),
-              ],
-            ],
-          ),
-        ),
     ];
   }
 
@@ -563,87 +576,118 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: namaBaru,
-          decoration: const InputDecoration(labelText: 'Nama kolam'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () => setState(() => panel = panel == 'nama' ? null : 'nama'),
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Ubah nama kolam'),
+            ),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
+              onPressed: () => setState(() => panel = panel == 'hapus' ? null : 'hapus'),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text('Hapus Kolam'),
+            ),
+          ],
         ),
-        if (rakMsg != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(rakMsg!)),
-        const SizedBox(height: 8),
-        OutlinedButton(
-          onPressed: busy
-              ? null
-              : () => run(() async {
-                  await api.updateKolam(kolamId, namaBaru.text.trim());
-                  setState(() {
-                    namaKolam = namaBaru.text.trim();
-                    rakMsg = 'Nama kolam berhasil diperbarui.';
-                  });
-                }, (e) => setState(() => rakMsg = e)),
-          child: const Text('Ubah nama kolam'),
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: statusColor('Bahaya').withValues(alpha: .4)),
-            borderRadius: BorderRadius.circular(8),
+        if (panel == 'nama') ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: namaBaru,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'Nama kolam'),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.report_outlined, color: statusColor('Bahaya')),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Zona berbahaya',
-                    style: TextStyle(color: statusColor('Bahaya'), fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Menghapus kolam ini bersifat permanen dan tidak dapat dibatalkan.',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Kolam beserta notifikasinya hilang selamanya. Yang tetap aman: seluruh riwayat pengukuran, '
-                'klasifikasi, dan prediksi, karena semuanya menempel pada perangkat, bukan pada rak. '
-                '${device == null ? 'Kolam ini belum terhubung ke perangkat mana pun.' : 'Perangkat ${device!['device_code']} tidak ikut terhapus, hanya kembali menjadi belum terklaim.'}',
-                style: const TextStyle(fontSize: 13, color: cMuted),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: ketikNama,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(labelText: 'Ketik "$namaKolam" untuk konfirmasi'),
-              ),
-              ErrorText(hapusError),
-              const SizedBox(height: 8),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
-                onPressed: busy || ketikNama.text != namaKolam
-                    ? null
-                    : () async {
-                        final ok = await confirm(
-                          context,
-                          'Hapus kolam "$namaKolam" secara permanen?\n\nSeluruh notifikasi kolam ini ikut terhapus. '
-                          'Device-nya tidak terhapus, hanya kembali jadi belum diklaim beserta riwayat sensornya.\n\n'
-                          'Tindakan ini tidak bisa dibatalkan.',
-                          ok: 'Hapus',
-                        );
-                        if (!ok) return;
-                        await run(() async {
-                          await api.deleteKolam(kolamId);
-                          if (mounted) Navigator.pop(context);
-                        }, (e) => setState(() => hapusError = e));
-                      },
-                child: const Text('Hapus Kolam'),
-              ),
-            ],
+          if (rakMsg != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(rakMsg!)),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: busy || namaBaru.text.trim().isEmpty || namaBaru.text.trim() == namaKolam
+                ? null
+                : () => run(() async {
+                    await api.updateKolam(kolamId, namaBaru.text.trim());
+                    setState(() {
+                      namaKolam = namaBaru.text.trim();
+                      rakMsg = 'Nama kolam berhasil diperbarui.';
+                    });
+                  }, (e) => setState(() => rakMsg = e)),
+            child: Text(busy ? 'Menyimpan...' : 'Simpan'),
           ),
-        ),
+        ],
+        if (panel == 'hapus') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: statusStyle['Bahaya']!.bg.withValues(alpha: .6),
+              border: Border.all(color: statusColor('Bahaya').withValues(alpha: .3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.report_outlined, color: statusColor('Bahaya')),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Zona berbahaya',
+                      style: TextStyle(color: statusColor('Bahaya'), fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Menghapus kolam ini bersifat permanen dan tidak dapat dibatalkan.',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Tidak ada fitur pemulihan. Sekali dihapus, kolam ini beserta notifikasinya hilang selamanya. '
+                  'Yang tetap aman: seluruh riwayat pengukuran, klasifikasi, dan prediksi, karena semuanya '
+                  'menempel pada perangkat, bukan pada rak. '
+                  '${device == null ? 'Kolam ini belum terhubung ke perangkat mana pun.' : 'Perangkat ${device!['device_code']} tidak ikut terhapus, hanya kembali menjadi belum terklaim dan bisa diklaim ulang untuk membuka datanya lagi.'}',
+                  style: const TextStyle(fontSize: 13, color: cMuted),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Ketik "$namaKolam" untuk mengonfirmasi',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: ketikNama,
+                  onChanged: (_) => setState(() {}),
+                  autocorrect: false,
+                  decoration: InputDecoration(hintText: namaKolam),
+                ),
+                ErrorText(hapusError),
+                const SizedBox(height: 8),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
+                  onPressed: busy || ketikNama.text.trim() != namaKolam
+                      ? null
+                      : () async {
+                          final ok = await confirm(
+                            context,
+                            'Hapus kolam "$namaKolam" secara permanen?\n\nSeluruh notifikasi kolam ini ikut terhapus. '
+                            'Device-nya tidak terhapus, hanya kembali jadi belum diklaim beserta riwayat sensornya.\n\n'
+                            'Tindakan ini tidak bisa dibatalkan.',
+                            ok: 'Hapus',
+                          );
+                          if (!ok) return;
+                          await run(() async {
+                            await api.deleteKolam(kolamId);
+                            if (mounted) Navigator.pop(context);
+                          }, (e) => setState(() => hapusError = e));
+                        },
+                  child: Text(busy ? 'Menghapus...' : 'Hapus kolam ini'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     ),
   );
@@ -738,7 +782,7 @@ class _ParamCell extends StatelessWidget {
                 if (ui.unit != ui.short || value == null)
                   TextSpan(
                     text: ' ${ui.unit}',
-                    style: const TextStyle(color: cAxis),
+                    style: const TextStyle(color: cInk),
                   ),
               ],
             ),
@@ -750,14 +794,14 @@ class _ParamCell extends StatelessWidget {
           ),
           Row(
             children: [
-              Text(formatValue(r.min), style: const TextStyle(fontSize: 11, color: cAxis)),
+              Text(formatValue(r.min), style: const TextStyle(fontSize: 11, color: cInk)),
               const Spacer(),
               Text(
                 '${formatValue(r.lo)} s/d ${formatValue(r.hi)}',
                 style: TextStyle(fontSize: 11, color: statusColor('Aman')),
               ),
               const Spacer(),
-              Text(formatValue(r.max), style: const TextStyle(fontSize: 11, color: cAxis)),
+              Text(formatValue(r.max), style: const TextStyle(fontSize: 11, color: cInk)),
             ],
           ),
         ],
@@ -798,7 +842,7 @@ class _AmoniaCell extends StatelessWidget {
               ),
               const TextSpan(
                 text: ' % dari TAN',
-                style: TextStyle(color: cAxis),
+                style: TextStyle(color: cInk),
               ),
             ],
           ),
@@ -810,11 +854,11 @@ class _AmoniaCell extends StatelessWidget {
         ),
         Row(
           children: [
-            const Text('0', style: TextStyle(fontSize: 11, color: cAxis)),
+            const Text('0', style: TextStyle(fontSize: 11, color: cInk)),
             const Spacer(),
             Text('0 s/d ${formatFraksi(amoniaPerhatian)}%', style: TextStyle(fontSize: 11, color: statusColor('Aman'))),
             const Spacer(),
-            Text(numStr(amoniaSkalaMaks), style: const TextStyle(fontSize: 11, color: cAxis)),
+            Text(numStr(amoniaSkalaMaks), style: const TextStyle(fontSize: 11, color: cInk)),
           ],
         ),
         if (current != null && current!['in_valid_range'] == false)
@@ -822,7 +866,7 @@ class _AmoniaCell extends StatelessWidget {
             padding: EdgeInsets.only(top: 4),
             child: Text(
               'Di luar rentang tervalidasi persamaan, angka ini hasil ekstrapolasi.',
-              style: TextStyle(fontSize: 12, color: cAxis),
+              style: TextStyle(fontSize: 12, color: cInk),
             ),
           ),
       ],
