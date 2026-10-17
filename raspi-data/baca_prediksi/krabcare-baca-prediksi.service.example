@@ -1,0 +1,33 @@
+# Service untuk baca_prediksi.py — baca serial ESP32, hitung EdgePipeline,
+# tulis ke readings_*.csv + quality_*.jsonl. TIDAK menyentuh jaringan sama
+# sekali (lihat catatan di kepala baca_prediksi.py), jadi service ini boleh
+# start duluan, tidak perlu menunggu network.
+#
+# CARA PAKAI:
+#   1. Sesuaikan WorkingDirectory & ExecStart kalau lokasi filenya beda dari
+#      /home/pi/TA_Kepiting/baca_prediksi/ (harus satu folder sama dengan
+#      edge_pipeline.py, fuzzy_quality.py, ammonia_nh3.py, wlr_forecast.py —
+#      baca_prediksi.py meng-import keempatnya).
+#   2. Copy (rename, buang .example) ke /etc/systemd/system/krabcare-baca-prediksi.service
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable --now krabcare-baca-prediksi
+#   5. sudo journalctl -u krabcare-baca-prediksi -f   # lihat log live
+
+[Unit]
+Description=KrabCare — baca sensor ESP32 + EdgePipeline (edge, Raspi5)
+After=multi-user.target
+
+[Service]
+Type=simple
+User=pi
+# Butuh akses port serial — user "pi" harus sudah masuk grup "dialout"
+# (biasanya sudah default di Raspberry Pi OS; cek: groups pi).
+WorkingDirectory=/home/pi/TA_Kepiting/baca_prediksi
+ExecStart=/usr/bin/python3 /home/pi/TA_Kepiting/baca_prediksi/baca_prediksi.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

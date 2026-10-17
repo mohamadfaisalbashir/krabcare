@@ -1,0 +1,44 @@
+# Service untuk cloud_forwarder_watch.py — pantau readings_*.csv & quality_*.jsonl
+# (event-driven lewat inotify), kirim ke VPS, retry sendiri kalau LTE putus.
+# Proses TERPISAH dari baca_prediksi.py, boleh mati/restart tanpa mengganggu
+# pembacaan sensor (dan sebaliknya) — keduanya cuma "ketemu" lewat file.
+#
+# CARA PAKAI:
+#   1. Sesuaikan WorkingDirectory & ExecStart kalau lokasi filenya beda dari
+#      /home/pi/TA_Kepiting/kirim_ke_cloud/.
+#   2. Buat file rahasia TERPISAH untuk GATEWAY_API_KEY & endpoint (JANGAN
+#      taruh langsung di unit file ini — unit file systemd bisa terbaca
+#      siapa saja yang punya akses baca /etc/systemd/system/):
+#        sudo install -m 600 -o pi -g pi /dev/null /home/pi/TA_Kepiting/kirim_ke_cloud/forwarder.env
+#        sudo nano /home/pi/TA_Kepiting/kirim_ke_cloud/forwarder.env
+#      Isinya:
+#        GATEWAY_API_KEY=isi_dengan_GATEWAY_API_KEY_yang_sama_di_.env_backend
+#        CLOUD_URL_READINGS=https://api.domain-anda.com/api/v1/ingest/readings
+#        CLOUD_URL_QUALITY=https://api.domain-anda.com/api/v1/ingest/quality
+#   3. pip install requests watchdog --break-system-packages
+#   4. Copy (rename, buang .example) ke /etc/systemd/system/krabcare-cloud-forwarder.service
+#   5. sudo systemctl daemon-reload
+#   6. sudo systemctl enable --now krabcare-cloud-forwarder
+#   7. sudo journalctl -u krabcare-cloud-forwarder -f   # lihat log live
+
+[Unit]
+Description=KrabCare — forward readings+quality ke VPS (edge, Raspi5)
+# Wants+After network-online, BUKAN wajib: kalau boot pas LTE belum nyambung,
+# service ini tetap start (nanti retry sendiri lewat buffer SQLite), cuma
+# diusahakan start SETELAH network kalau memang sudah tersedia saat boot.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/TA_Kepiting/kirim_ke_cloud
+EnvironmentFile=/home/pi/TA_Kepiting/.env
+ExecStart=/usr/bin/python3 /home/pi/TA_Kepiting/kirim_ke_cloud/cloud_forwarder_watch.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
