@@ -1,11 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const jetbrains = JetBrains_Mono({
-  subsets: ["latin"],
+// Berkas font di repo, bukan next/font/google: yang google mengunduh font dari
+// Google saat `next build`, dan di VPS balasannya memuat URL tanpa ekstensi
+// sehingga build Docker gagal ("Cannot read properties of null (reading '1')").
+// Subset latin JetBrains Mono (variable font) dari fonts.gstatic.com, lisensi OFL.
+const jetbrains = localFont({
+  src: "./fonts/JetBrainsMono-latin.woff2",
   variable: "--font-jetbrains",
-  weight: ["400", "500", "600"],
+  weight: "400 600",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
