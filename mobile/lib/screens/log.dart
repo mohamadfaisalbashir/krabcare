@@ -173,134 +173,155 @@ class _LogScreenState extends State<LogScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: reload,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-          children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final p in paramKeys) ButtonSegment(value: p, label: Text(paramUi[p]!.short)),
-                  const ButtonSegment(value: _amonia, label: Text('Amonia')),
-                ],
-                selected: {param},
-                onSelectionChanged: (s) => set(() => param = s.first),
+        child: CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              sliver: SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    segments: [
+                      for (final p in paramKeys) ButtonSegment(value: p, label: Text(paramUi[p]!.short)),
+                      const ButtonSegment(value: _amonia, label: Text('Amonia')),
+                    ],
+                    selected: {param},
+                    onSelectionChanged: (s) => set(() => param = s.first),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            Section(
-              title: 'Rentang waktu',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            // Tetap di atas saat log digulir: rentang bisa diganti tanpa kembali ke atas.
+            // Latar cBg menutup celah supaya baris log tidak terlihat tembus.
+            PinnedHeaderSliver(
+              child: ColoredBox(
+                color: cBg,
+                child: Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), child: _rentangWaktu(tgl)),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              sliver: SliverList.list(
                 children: [
-                  SegmentedButton<String>(
-                    showSelectedIcon: false,
-                    segments: const [
-                      ButtonSegment(value: 'hari', label: Text('Per hari')),
-                      ButtonSegment(value: 'jam', label: Text('Per jam')),
-                    ],
-                    selected: {mode},
-                    onSelectionChanged: (s) => set(() => mode = s.first),
-                  ),
-                  const SizedBox(height: 10),
-                  if (mode == 'hari')
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              final d = await _pilihTanggal(dari);
-                              if (d != null) set(() => dari = d);
-                            },
-                            child: Text('Dari: ${tgl(dari)}'),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              final d = await _pilihTanggal(sampai);
-                              if (d != null) set(() => sampai = d);
-                            },
-                            child: Text('Sampai: ${tgl(sampai)}'),
-                          ),
-                        ),
+                  // Satu baris tersegmentasi, sama bentuknya dengan pilihan parameter di atas.
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      segments: [
+                        for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya']) ButtonSegment(value: s, label: Text(s)),
                       ],
+                      selected: {statusFilter},
+                      onSelectionChanged: (s) => set(() => statusFilter = s.first),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ErrorText(error),
+                  if (loading)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (rows.isEmpty && error == null)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: Text('Tidak ada data pada filter ini.')),
                     )
                   else
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () async {
-                              final d = await _pilihTanggal(dari);
-                              if (d != null) set(() => dari = d);
-                            },
-                            child: Text(tgl(dari)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _Jam(jamDari, (v) => set(() => jamDari = v)),
-                        const Text(' – '),
-                        _Jam(jamSampai, (v) => set(() => jamSampai = v)),
-                      ],
+                    Card(
+                      child: Column(
+                        children: [
+                          for (final r in rows) ...[
+                            isAmonia ? _barisAmonia(r) : _barisSensor(r),
+                            const Divider(height: 1),
+                          ],
+                        ],
+                      ),
+                    ),
+                  if (hasMore && !loading)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: OutlinedButton(
+                        onPressed: loadingMore ? null : more,
+                        child: Text(loadingMore ? 'Memuat…' : 'Muat lebih banyak'),
+                      ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            // Satu baris tersegmentasi, sama bentuknya dengan pilihan parameter di atas.
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<String>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya']) ButtonSegment(value: s, label: Text(s)),
-                ],
-                selected: {statusFilter},
-                onSelectionChanged: (s) => set(() => statusFilter = s.first),
-              ),
-            ),
-            const SizedBox(height: 8),
-            ErrorText(error),
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (rows.isEmpty && error == null)
-              const Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: Text('Tidak ada data pada filter ini.')),
-              )
-            else
-              Card(
-                child: Column(
-                  children: [
-                    for (final r in rows) ...[isAmonia ? _barisAmonia(r) : _barisSensor(r), const Divider(height: 1)],
-                  ],
-                ),
-              ),
-            if (hasMore && !loading)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: OutlinedButton(
-                  onPressed: loadingMore ? null : more,
-                  child: Text(loadingMore ? 'Memuat…' : 'Muat lebih banyak'),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
+  Widget _rentangWaktu(String Function(DateTime?) tgl) => Section(
+    title: 'Rentang waktu',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SegmentedButton<String>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(value: 'hari', label: Text('Per hari')),
+            ButtonSegment(value: 'jam', label: Text('Per jam')),
+          ],
+          selected: {mode},
+          onSelectionChanged: (s) => set(() => mode = s.first),
+        ),
+        const SizedBox(height: 10),
+        if (mode == 'hari')
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final d = await _pilihTanggal(dari);
+                    if (d != null) set(() => dari = d);
+                  },
+                  child: Text('Dari: ${tgl(dari)}'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final d = await _pilihTanggal(sampai);
+                    if (d != null) set(() => sampai = d);
+                  },
+                  child: Text('Sampai: ${tgl(sampai)}'),
+                ),
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    final d = await _pilihTanggal(dari);
+                    if (d != null) set(() => dari = d);
+                  },
+                  child: Text(tgl(dari)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _Jam(jamDari, (v) => set(() => jamDari = v)),
+              const Text(' – '),
+              _Jam(jamSampai, (v) => set(() => jamSampai = v)),
+            ],
+          ),
+      ],
+    ),
+  );
+
   Widget _barisSensor(Json r) {
     final v = r[param] as num?;
     final ui = paramUi[param]!;
     return ListTile(
-      title: Text.rich(
+      title: _sebaris(
         TextSpan(
           children: [
             TextSpan(
@@ -324,7 +345,7 @@ class _LogScreenState extends State<LogScreen> {
     final pct = r['fraction_nh3_pct'] as num?;
     final status = riskToStatus(r['risk_level']);
     return ListTile(
-      title: Text.rich(
+      title: _sebaris(
         TextSpan(
           children: [
             TextSpan(
@@ -344,6 +365,10 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 }
+
+/// Judul baris log selalu sebaris: di layar sempit teksnya mengecil, bukan patah.
+Widget _sebaris(TextSpan span) =>
+    FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: Text.rich(span));
 
 class _Jam extends StatelessWidget {
   const _Jam(this.value, this.onChanged);

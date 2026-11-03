@@ -315,6 +315,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   Json? device, quality, ammonia;
   List<Json> history = [], predictions = [];
   bool loading = true, busy = false;
+  bool deviceDicek = false; // daftar device kolam sudah berhasil diambil sekali
   String? error, rakMsg, hapusError;
   String param = 'ph';
   String? panel; // panel Pengaturan Kolam yang terbuka: 'nama' | 'hapus' | null
@@ -326,7 +327,8 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     super.initState();
     namaBaru.text = namaKolam;
     loadDevice();
-    poll = Timer.periodic(const Duration(seconds: 60), (_) => loadData());
+    // Kalau pengambilan device pertama gagal (jaringan), polling mencobanya lagi.
+    poll = Timer.periodic(const Duration(seconds: 60), (_) => deviceDicek ? loadData() : loadDevice());
   }
 
   @override
@@ -339,6 +341,8 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     try {
       final devices = await api.getKolamDevices(kolamId);
       device = devices.firstOrNull;
+      deviceDicek = true;
+      error = null;
       await loadData();
     } catch (e) {
       if (mounted) setState(() => error = '$e');
@@ -405,16 +409,18 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       if (status != null) StatusBadge(status),
-                      _Pill(
-                        Icons.power_outlined,
-                        device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}',
-                      ),
+                      if (deviceDicek)
+                        _Pill(
+                          Icons.power_outlined,
+                          device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}',
+                        ),
                       if (reading != null) _Pill(Icons.schedule, 'Pembacaan terakhir ${formatWaktu(reading['time'])}'),
                     ],
                   ),
                   ErrorText(error),
                   const SizedBox(height: 12),
-                  if (device == null) _klaim() else ..._data(reading),
+                  // Gagal ambil device ≠ belum punya device: jangan tampilkan form klaim.
+                  if (device != null) ..._data(reading) else if (deviceDicek) _klaim(),
                   const SizedBox(height: 12),
                   _pengaturan(),
                 ],
@@ -535,12 +541,19 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   SegmentedButton<String>(
                     showSelectedIcon: false,
                     segments: [
+                      // FittedBox: label tetap sebaris, mengecil di layar sempit alih-alih patah.
                       for (final p in paramKeys)
                         ButtonSegment(
                           value: p,
-                          label: Text(paramUi[p]!.short, style: TextStyle(color: Color(paramUi[p]!.color))),
+                          label: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(paramUi[p]!.short, style: TextStyle(color: Color(paramUi[p]!.color))),
+                          ),
                         ),
-                      const ButtonSegment(value: 'all', label: Text('Semua')),
+                      const ButtonSegment(
+                        value: 'all',
+                        label: FittedBox(fit: BoxFit.scaleDown, child: Text('Semua')),
+                      ),
                     ],
                     selected: {param},
                     onSelectionChanged: (s) => setState(() => param = s.first),
@@ -552,7 +565,10 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                       children: [
                         _Swatch(Color(paramUi[param]!.color)),
                         const SizedBox(width: 8),
-                        Text(paramUi[param]!.label, style: const TextStyle(fontWeight: FontWeight.w600, color: cInk)),
+                        Text(
+                          paramUi[param]!.label,
+                          style: const TextStyle(fontWeight: FontWeight.w600, color: cInk),
+                        ),
                         Text(' (${paramUi[param]!.unit})', style: const TextStyle(color: cMuted)),
                       ],
                     ),
@@ -672,10 +688,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   style: const TextStyle(fontSize: 13, color: cMuted),
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  'Ketik "$namaKolam" untuk mengonfirmasi',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
+                Text('Ketik "$namaKolam" untuk mengonfirmasi', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: ketikNama,
@@ -733,7 +746,10 @@ class _Pill extends StatelessWidget {
         Icon(icon, size: 14, color: cInk),
         const SizedBox(width: 6),
         Flexible(
-          child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cInk)),
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cInk),
+          ),
         ),
       ],
     ),
@@ -784,7 +800,9 @@ class _WarnaKondisiLegend extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.only(top: 10),
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: cBorder))),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: cBorder)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -814,7 +832,10 @@ class _StatusPojok extends StatelessWidget {
           children: [
             Dot(statusColor(status)),
             const SizedBox(width: 6),
-            Text(status!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk)),
+            Text(
+              status!,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
+            ),
           ],
         );
 }
@@ -832,9 +853,15 @@ class _LabelTrack extends StatelessWidget {
         children: [
           Expanded(child: Text(kiri, style: gaya)),
           Expanded(
-            child: Text(tengah, textAlign: TextAlign.center, style: gaya.copyWith(color: statusColor('Aman'))),
+            child: Text(
+              tengah,
+              textAlign: TextAlign.center,
+              style: gaya.copyWith(color: statusColor('Aman')),
+            ),
           ),
-          Expanded(child: Text(kanan, textAlign: TextAlign.right, style: gaya)),
+          Expanded(
+            child: Text(kanan, textAlign: TextAlign.right, style: gaya),
+          ),
         ],
       ),
     );

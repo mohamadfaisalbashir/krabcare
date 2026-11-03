@@ -2,8 +2,11 @@
 // (Map/List); nama field mengikuti schema Pydantic di backend/app/schemas/.
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'logic.dart';
@@ -12,6 +15,11 @@ import 'logic.dart';
 const apiBase = String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.krabcare.com/api/v1');
 
 String? token;
+
+/// Satu client untuk semua request: koneksi ke server dipakai ulang, bukan
+/// jabat tangan TLS baru tiap request. Connect yang macet (sinyal lemah,
+/// jaringan baru bangun) diputus setelah 10 detik supaya bisa dicoba lagi.
+final _client = IOClient(HttpClient()..connectionTimeout = const Duration(seconds: 10));
 
 Future<void> loadToken() async => token = (await SharedPreferences.getInstance()).getString('access_token');
 
@@ -60,18 +68,25 @@ Future<dynamic> _request(String method, String path, {Object? body, Map<String, 
   final uri = Uri.parse('$apiBase$path').replace(queryParameters: q.isEmpty ? null : q);
   final sentToken = token;
 
-  http.Response res;
-  try {
-    final req = http.Request(method, uri)
-      ..headers['Content-Type'] = 'application/json'
-      ..headers.addAll({if (sentToken != null) 'Authorization': 'Bearer $sentToken'});
-    if (body != null) req.body = jsonEncode(body);
-    res = await http.Response.fromStream(await req.send()).timeout(const Duration(seconds: 30));
-  } catch (_) {
-    throw ApiError(
-      'Tidak bisa menghubungi server di $apiBase. Pastikan backend hidup dan '
-      'alamat ini terjangkau dari perangkat Anda.',
-    );
+  http.Response? res;
+  for (var coba = 1; res == null; coba++) {
+    try {
+      final req = http.Request(method, uri)
+        ..headers['Content-Type'] = 'application/json'
+        ..headers.addAll({if (sentToken != null) 'Authorization': 'Bearer $sentToken'});
+      if (body != null) req.body = jsonEncode(body);
+      res = await _client.send(req).then(http.Response.fromStream).timeout(const Duration(seconds: 30));
+    } catch (e) {
+      debugPrint('$method $path gagal (percobaan $coba): $e');
+      // Hanya GET yang aman diulang; POST/PUT/DELETE bisa tercatat dua kali.
+      if (method != 'GET' || coba == 3) {
+        throw ApiError(
+          'Tidak bisa menghubungi server di $apiBase. Pastikan backend hidup dan '
+          'alamat ini terjangkau dari perangkat Anda.',
+        );
+      }
+      await Future<void>.delayed(Duration(seconds: coba));
+    }
   }
 
   // 401 tanpa token = kredensial login salah, bukan sesi habis.

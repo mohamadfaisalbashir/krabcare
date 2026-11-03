@@ -59,6 +59,10 @@ graphify-out
 *.md.bak
 *.docx
 *.pdf
+*.csv
+*.png
+*.jpeg
+*.jsonl
 
 # Raspi
 raspi/

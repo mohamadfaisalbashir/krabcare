@@ -80,6 +80,8 @@ Future<void> main() async {
       navigatorKey: navigatorKey,
       scaffoldMessengerKey: messengerKey,
       debugShowCheckedModeBanner: false,
+      // Ukuran font sistem HP diabaikan supaya tata letak sama di semua HP.
+      builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
       home: const AuthGate(),
     ),
   );
