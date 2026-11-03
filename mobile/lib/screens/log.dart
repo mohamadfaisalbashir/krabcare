@@ -31,14 +31,27 @@ class _LogScreenState extends State<LogScreen> {
   bool loading = true, loadingMore = false, hasMore = false;
   String? error;
   int _req = 0; // abaikan balasan permintaan lama saat filter berganti cepat
+  bool ringkas = false; // header rentang waktu dikuncupkan jadi baris judul saja
+  bool keAtas = false; // tombol "kembali ke atas" tampil setelah digulir cukup jauh
+  final _scroll = ScrollController();
 
   bool get isAmonia => param == _amonia;
 
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(() {
+      final v = _scroll.offset > 600;
+      if (v != keAtas) setState(() => keAtas = v);
+    });
     _loadSensors();
     reload();
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSensors() async {
@@ -171,9 +184,17 @@ class _LogScreenState extends State<LogScreen> {
           ),
         ],
       ),
+      floatingActionButton: keAtas
+          ? FloatingActionButton.small(
+              tooltip: 'Kembali ke atas',
+              onPressed: () => _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut),
+              child: const Icon(Icons.arrow_upward),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: reload,
         child: CustomScrollView(
+          controller: _scroll,
           slivers: [
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -258,63 +279,72 @@ class _LogScreenState extends State<LogScreen> {
 
   Widget _rentangWaktu(String Function(DateTime?) tgl) => Section(
     title: 'Rentang waktu',
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SegmentedButton<String>(
-          showSelectedIcon: false,
-          segments: const [
-            ButtonSegment(value: 'hari', label: Text('Per hari')),
-            ButtonSegment(value: 'jam', label: Text('Per jam')),
-          ],
-          selected: {mode},
-          onSelectionChanged: (s) => set(() => mode = s.first),
-        ),
-        const SizedBox(height: 10),
-        if (mode == 'hari')
-          Row(
+    // Kuncup: header tinggal baris judul ini, tetap menempel; filternya tetap berlaku.
+    trailing: IconButton(
+      tooltip: ringkas ? 'Buka rentang waktu' : 'Tutup rentang waktu',
+      visualDensity: VisualDensity.compact,
+      icon: Icon(ringkas ? Icons.expand_more : Icons.expand_less),
+      onPressed: () => setState(() => ringkas = !ringkas),
+    ),
+    child: ringkas
+        ? null
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    final d = await _pilihTanggal(dari);
-                    if (d != null) set(() => dari = d);
-                  },
-                  child: Text('Dari: ${tgl(dari)}'),
-                ),
+              SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: 'hari', label: Text('Per hari')),
+                  ButtonSegment(value: 'jam', label: Text('Per jam')),
+                ],
+                selected: {mode},
+                onSelectionChanged: (s) => set(() => mode = s.first),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    final d = await _pilihTanggal(sampai);
-                    if (d != null) set(() => sampai = d);
-                  },
-                  child: Text('Sampai: ${tgl(sampai)}'),
+              const SizedBox(height: 10),
+              if (mode == 'hari')
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final d = await _pilihTanggal(dari);
+                          if (d != null) set(() => dari = d);
+                        },
+                        child: Text('Dari: ${tgl(dari)}'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final d = await _pilihTanggal(sampai);
+                          if (d != null) set(() => sampai = d);
+                        },
+                        child: Text('Sampai: ${tgl(sampai)}'),
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          final d = await _pilihTanggal(dari);
+                          if (d != null) set(() => dari = d);
+                        },
+                        child: Text(tgl(dari)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _Jam(jamDari, (v) => set(() => jamDari = v)),
+                    const Text(' – '),
+                    _Jam(jamSampai, (v) => set(() => jamSampai = v)),
+                  ],
                 ),
-              ),
-            ],
-          )
-        else
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    final d = await _pilihTanggal(dari);
-                    if (d != null) set(() => dari = d);
-                  },
-                  child: Text(tgl(dari)),
-                ),
-              ),
-              const SizedBox(width: 8),
-              _Jam(jamDari, (v) => set(() => jamDari = v)),
-              const Text(' – '),
-              _Jam(jamSampai, (v) => set(() => jamSampai = v)),
             ],
           ),
-      ],
-    ),
   );
 
   Widget _barisSensor(Json r) {

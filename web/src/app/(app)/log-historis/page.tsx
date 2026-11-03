@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -155,6 +156,16 @@ function LogHistorisView() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Header rentang waktu dikuncupkan jadi satu baris judul; filternya tetap berlaku.
+  const [ringkas, setRingkas] = useState(false);
+  // Tombol "kembali ke atas" muncul setelah halaman digulir cukup jauh.
+  const [keAtas, setKeAtas] = useState(false);
+
+  useEffect(() => {
+    const cek = () => setKeAtas(window.scrollY > 600);
+    window.addEventListener("scroll", cek, { passive: true });
+    return () => window.removeEventListener("scroll", cek);
+  }, []);
 
   // Daftar sensor diambil sekali, hanya untuk panel unduh yang butuh id device
   // dan nama kolam. Satu kolam = satu device (backend menolak klaim kedua
@@ -308,97 +319,124 @@ function LogHistorisView() {
           Tanpa overflow-hidden, karena outline fokus kolom tanggal dan tombol
           pil di dalamnya akan terpotong. */}
       <Card className="p-0">
-        {/* Pemilih mode rentang (hari/jam), lihat RangeMode di atas. Grid 2
-            kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. Judul
-            "Rentang Waktu" di atasnya sama dengan judul bagian di aplikasi mobile. */}
-        <div className="p-4 pb-0">
-          <p className="mb-2 text-sm font-semibold text-ink">Rentang Waktu</p>
-          <div className="grid grid-cols-2 gap-2">
-            {RANGE_MODES.map((m) => (
-              <FilterPill
-                key={m.value}
-                active={rangeMode === m.value}
-                onClick={() => setRangeMode(m.value)}
+        {/* Header lengket: tetap di atas layar saat log digulir, jadi rentang
+            dan status bisa diganti tanpa kembali ke atas. Latar putih menutup
+            baris yang lewat di bawahnya; z-10 menjaga dropdown jam di atas baris.
+            Garis bawahnya juga jadi pemisah dengan bagian berikutnya. */}
+        <div className="sticky top-0 z-10 rounded-t-xl2 border-b border-border bg-surface">
+          {/* Pemilih mode rentang (hari/jam), lihat RangeMode di atas. Grid 2
+              kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. Judul
+              "Rentang Waktu" di atasnya sama dengan judul bagian di aplikasi mobile. */}
+          <div className={clsx("p-4", !ringkas && "pb-0")}>
+            <div className={clsx("flex items-center justify-between", !ringkas && "mb-2")}>
+              <p className="text-sm font-semibold text-ink">Rentang Waktu</p>
+              {/* Kuncup: header tinggal baris judul ini, tetap menempel. */}
+              <button
+                type="button"
+                onClick={() => setRingkas((v) => !v)}
+                aria-expanded={!ringkas}
+                aria-label={ringkas ? "Buka rentang waktu" : "Tutup rentang waktu"}
+                className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
               >
-                {m.label}
-              </FilterPill>
-            ))}
-          </div>
-        </div>
-
-        {/* Satu baris kontrol: rentang waktu di kiri, pil status di kanan.
-            Di layar sempit keduanya menumpuk. */}
-        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Rentang waktu: bentuk kolomnya berubah sesuai `rangeMode`, tapi
-              semuanya bermuara ke start_time/end_time lewat rentangIso().
-              Kosong berarti semua waktu. Label "Rentang" di sini dihapus karena
-              sudah ada judul "Rentang Waktu" di atas pil mode. */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang 16px di
-                mobile supaya Safari iOS tidak memperbesar viewport. */}
-            {rangeMode === "hari" && (
-              <>
-                <input
-                  type="date"
-                  value={dari}
-                  max={sampai || undefined}
-                  onChange={(e) => setDari(e.target.value)}
-                  className="input-field w-auto py-1.5"
-                  aria-label="Tanggal mulai"
-                />
-                <span className="text-xs text-muted">s/d</span>
-                <input
-                  type="date"
-                  value={sampai}
-                  min={dari || undefined}
-                  onChange={(e) => setSampai(e.target.value)}
-                  className="input-field w-auto py-1.5"
-                  aria-label="Tanggal akhir"
-                />
-              </>
-            )}
-            {rangeMode === "jam" && (
-              <>
-                <input
-                  type="date"
-                  value={dari}
-                  onChange={(e) => setDari(e.target.value)}
-                  className="input-field w-auto py-1.5"
-                  aria-label="Tanggal"
-                />
-                {/* Dua HourSelect, jam bulat saja (HOUR_OPTIONS). Jam selesai boleh
-                    lebih kecil atau sama dengan jam mulai: itu berarti jendela
-                    melewati tengah malam, bukan kombinasi tidak valid, dan
-                    ditangani rentangIso(). */}
-                <HourSelect
-                  value={jamDari}
-                  onChange={setJamDari}
-                  options={HOUR_OPTIONS}
-                  format={jamLabel}
-                  label="Jam mulai"
-                />
-                <span className="text-xs text-muted">s/d</span>
-                <HourSelect
-                  value={jamSampai}
-                  onChange={setJamSampai}
-                  options={HOUR_OPTIONS}
-                  format={jamLabel}
-                  label="Jam akhir"
-                />
-              </>
-            )}
+                {ringkas ? (
+                  <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
+                ) : (
+                  <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
+                )}
+              </button>
+            </div>
+            <div className={clsx("grid grid-cols-2 gap-2", ringkas && "hidden")}>
+              {RANGE_MODES.map((m) => (
+                <FilterPill
+                  key={m.value}
+                  active={rangeMode === m.value}
+                  onClick={() => setRangeMode(m.value)}
+                >
+                  {m.label}
+                </FilterPill>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-            {STATUS_FILTERS.map((s) => (
-              <FilterPill
-                key={s}
-                active={statusFilter === s}
-                onClick={() => setStatusFilter(s)}
-              >
-                {s}
-              </FilterPill>
-            ))}
+          {/* Satu baris kontrol: rentang waktu di kiri, pil status di kanan.
+              Di layar sempit keduanya menumpuk. */}
+          <div
+            className={clsx(
+              "flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between",
+              ringkas && "hidden"
+            )}
+          >
+            {/* Rentang waktu: bentuk kolomnya berubah sesuai `rangeMode`, tapi
+                semuanya bermuara ke start_time/end_time lewat rentangIso().
+                Kosong berarti semua waktu. Label "Rentang" di sini dihapus karena
+                sudah ada judul "Rentang Waktu" di atas pil mode. */}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Tanpa text-xs: ukuran huruf diserahkan ke .input-field, yang 16px di
+                  mobile supaya Safari iOS tidak memperbesar viewport. */}
+              {rangeMode === "hari" && (
+                <>
+                  <input
+                    type="date"
+                    value={dari}
+                    max={sampai || undefined}
+                    onChange={(e) => setDari(e.target.value)}
+                    className="input-field w-auto py-1.5"
+                    aria-label="Tanggal mulai"
+                  />
+                  <span className="text-xs text-muted">s/d</span>
+                  <input
+                    type="date"
+                    value={sampai}
+                    min={dari || undefined}
+                    onChange={(e) => setSampai(e.target.value)}
+                    className="input-field w-auto py-1.5"
+                    aria-label="Tanggal akhir"
+                  />
+                </>
+              )}
+              {rangeMode === "jam" && (
+                <>
+                  <input
+                    type="date"
+                    value={dari}
+                    onChange={(e) => setDari(e.target.value)}
+                    className="input-field w-auto py-1.5"
+                    aria-label="Tanggal"
+                  />
+                  {/* Dua HourSelect, jam bulat saja (HOUR_OPTIONS). Jam selesai boleh
+                      lebih kecil atau sama dengan jam mulai: itu berarti jendela
+                      melewati tengah malam, bukan kombinasi tidak valid, dan
+                      ditangani rentangIso(). */}
+                  <HourSelect
+                    value={jamDari}
+                    onChange={setJamDari}
+                    options={HOUR_OPTIONS}
+                    format={jamLabel}
+                    label="Jam mulai"
+                  />
+                  <span className="text-xs text-muted">s/d</span>
+                  <HourSelect
+                    value={jamSampai}
+                    onChange={setJamSampai}
+                    options={HOUR_OPTIONS}
+                    format={jamLabel}
+                    label="Jam akhir"
+                  />
+                </>
+              )}
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
+              {STATUS_FILTERS.map((s) => (
+                <FilterPill
+                  key={s}
+                  active={statusFilter === s}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s}
+                </FilterPill>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -406,7 +444,7 @@ function LogHistorisView() {
             sudah mengerjakan hal yang sama; di bawah lg sidebar tidak dirender
             dan bar bawah tidak punya submenu, jadi tanpa ini parameter terkunci
             di pH. Grid 4 kolom rata supaya keempat pil sejajar. */}
-        <div className="grid grid-cols-4 gap-2 border-t border-border px-4 py-3 lg:hidden">
+        <div className="grid grid-cols-4 gap-2 px-4 py-3 lg:hidden">
           {[
             ...PARAM_KEYS.map((p) => ({ value: p as LogParam, label: PARAM_UI[p].short })),
             { value: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
@@ -431,7 +469,9 @@ function LogHistorisView() {
             memang belum ada apa pun untuk ditampilkan. */}
         <div
           className={clsx(
-            "divide-y divide-border border-t border-border transition-opacity duration-200 motion-reduce:transition-none",
+            // lg:border-t-0: di layar lebar pemilih parameter tersembunyi dan
+            // garis bawah header lengket sudah memisahkan.
+            "divide-y divide-border border-t border-border lg:border-t-0 transition-opacity duration-200 motion-reduce:transition-none",
             loading && "opacity-50"
           )}
         >
@@ -529,6 +569,25 @@ function LogHistorisView() {
           )}
         </div>
       </Card>
+
+      {/* Di atas MobileNav (4rem + safe area) di layar sempit. */}
+      {keAtas && (
+        <button
+          type="button"
+          onClick={() =>
+            window.scrollTo({
+              top: 0,
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                ? "auto"
+                : "smooth",
+            })
+          }
+          aria-label="Kembali ke atas"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg hover:bg-brand-700 lg:bottom-8 lg:right-8"
+        >
+          <ArrowUp className="h-5 w-5" strokeWidth={2.2} />
+        </button>
+      )}
     </div>
   );
 }

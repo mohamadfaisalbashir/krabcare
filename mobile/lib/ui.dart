@@ -114,7 +114,7 @@ class Logo extends StatelessWidget {
 class Section extends StatelessWidget {
   const Section({super.key, required this.title, required this.child, this.trailing, this.note});
   final String title;
-  final Widget child;
+  final Widget? child; // null = kartu tinggal baris judul (mis. header yang dikuncupkan)
   final Widget? trailing;
 
   /// Catatan pendek di bawah judul, padanan prop `note` Section di RakDetail.tsx.
@@ -140,8 +140,8 @@ class Section extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(note!, style: const TextStyle(fontSize: 13, color: cMuted)),
             ),
-          const SizedBox(height: 10),
-          child,
+          if (child != null) const SizedBox(height: 10),
+          ?child,
         ],
       ),
     ),
