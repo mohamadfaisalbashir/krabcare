@@ -437,6 +437,7 @@ async def list_notifications(
     limit: int,
     offset: int = 0,
     source: str | None = None,
+    device_id: int | None = None,
 ) -> list[Notification]:
     """Notifikasi milik `user`diurutkan dari terbaru dulu dan satu halaman cuma 20 baris. `offset` untuk "muat lebih banyak" """
     stmt = select(Notification).where(Notification.user_id == user.id)
@@ -444,6 +445,9 @@ async def list_notifications(
         stmt = stmt.where(Notification.is_read.is_(False))
     if source is not None:
         stmt = stmt.where(Notification.source == source)
+    # Sudah dibatasi user_id di atas, jadi device milik orang lain cuma menghasilkan list kosong.
+    if device_id is not None:
+        stmt = stmt.where(Notification.device_id == device_id)
     stmt = stmt.order_by(Notification.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())

@@ -106,6 +106,9 @@ Future<dynamic> _request(String method, String path, {Object? body, Map<String, 
 
 List<Json> _list(dynamic d) => (d as List).cast<Json>();
 
+/// Device yang terhubung ke kolam milik user (pemilih device di Log dan Notifikasi).
+typedef Sensor = ({int deviceId, String deviceCode, String kolamNama});
+
 const api = _Api();
 
 class _Api {
@@ -138,6 +141,24 @@ class _Api {
       _request('POST', '/kolam/$kolamId/devices/${Uri.encodeComponent(code)}');
   Future<List<Json>> listKolam() async => _list(await _request('GET', '/kolam'));
   Future<List<Json>> getKolamDevices(int id) async => _list(await _request('GET', '/kolam/$id/devices'));
+
+  /// Semua device di kolam milik user. Satu kolam yang gagal dimuat tidak mengosongkan daftar.
+  Future<List<Sensor>> sensorSaya() async {
+    final kolams = await listKolam();
+    final per = await Future.wait(
+      kolams.map((k) async {
+        try {
+          return [
+            for (final d in await getKolamDevices(k['id']))
+              (deviceId: d['id'] as int, deviceCode: d['device_code'] as String, kolamNama: k['nama'] as String),
+          ];
+        } catch (_) {
+          return <Sensor>[];
+        }
+      }),
+    );
+    return per.expand((e) => e).toList();
+  }
 
   // Devices (routers/devices.py, khusus admin)
   Future<List<Json>> listDevices() async => _list(await _request('GET', '/devices'));
@@ -180,6 +201,7 @@ class _Api {
   Future<List<Json>> getAmmoniaRisk([int? deviceId]) async =>
       _list(await _request('GET', '/quality/ammonia-risk', query: {'device_id': deviceId}));
   Future<List<Json>> getAmmoniaHistory({
+    int? deviceId,
     String? startTime,
     String? endTime,
     String? riskLevel,
@@ -191,6 +213,7 @@ class _Api {
       'GET',
       '/quality/ammonia-risk/history',
       query: {
+        'device_id': deviceId,
         'start_time': startTime,
         'end_time': endTime,
         'risk_level': riskLevel,
@@ -202,14 +225,25 @@ class _Api {
   );
 
   // Notifications (routers/notifications.py)
-  Future<List<Json>> getNotifications({bool unreadOnly = false, int? limit, int? offset, String? source}) async =>
-      _list(
-        await _request(
-          'GET',
-          '/notifications',
-          query: {'unread_only': unreadOnly ? 'true' : null, 'limit': limit, 'offset': offset, 'source': source},
-        ),
-      );
+  Future<List<Json>> getNotifications({
+    bool unreadOnly = false,
+    int? limit,
+    int? offset,
+    String? source,
+    int? deviceId,
+  }) async => _list(
+    await _request(
+      'GET',
+      '/notifications',
+      query: {
+        'unread_only': unreadOnly ? 'true' : null,
+        'limit': limit,
+        'offset': offset,
+        'source': source,
+        'device_id': deviceId,
+      },
+    ),
+  );
   Future<void> markNotificationRead(int id) => _request('POST', '/notifications/$id/read');
   Future<void> markAllNotificationsRead() => _request('POST', '/notifications/read-all');
   Future<void> deleteNotification(int id) => _request('DELETE', '/notifications/$id');

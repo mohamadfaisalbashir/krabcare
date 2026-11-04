@@ -63,6 +63,7 @@ graphify-out
 *.png
 *.jpeg
 *.jsonl
+*.xlsx
 
 # Raspi
 raspi/

@@ -36,6 +36,8 @@ class NotifikasiScreen extends StatefulWidget {
 
 class _NotifikasiScreenState extends State<NotifikasiScreen> {
   int tab = 0;
+  int? deviceSel; // null = semua device
+  List<Sensor> sensors = []; // kosong (atau gagal dimuat) = baris device disembunyikan
   List<Json> items = [];
   bool loading = true, loadingMore = false, hasMore = false;
   String? error;
@@ -44,6 +46,9 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   @override
   void initState() {
     super.initState();
+    api.sensorSaya().then((s) {
+      if (mounted) setState(() => sensors = s);
+    }, onError: (_) {});
     load();
     // Hanya halaman pertama yang disegarkan, supaya halaman yang sudah dimuat tidak hilang.
     poll = Timer.periodic(const Duration(seconds: 60), (_) => load(silent: true));
@@ -56,14 +61,14 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   }
 
   Future<List<Json>> _page(int offset) =>
-      api.getNotifications(limit: _pageSize, offset: offset, source: _tabs[tab].source);
+      api.getNotifications(limit: _pageSize, offset: offset, source: _tabs[tab].source, deviceId: deviceSel);
 
   Future<void> load({bool silent = false}) async {
-    final t = tab;
+    final t = tab, d = deviceSel;
     if (!silent) setState(() => loading = true);
     try {
       final page = await _page(0);
-      if (!mounted || t != tab) return;
+      if (!mounted || t != tab || d != deviceSel) return;
       setState(() {
         items = silent && items.length > page.length ? [...page, ...items.skip(page.length)] : page;
         if (!silent) hasMore = page.length == _pageSize;
@@ -90,6 +95,14 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
     } finally {
       if (mounted) setState(() => loadingMore = false);
     }
+  }
+
+  void _pilihDevice(int? id) {
+    setState(() {
+      deviceSel = id;
+      items = <Json>[];
+    });
+    load();
   }
 
   Future<void> markRead(Json n) async {
@@ -206,6 +219,32 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               ],
             ),
           ),
+          // Pilihan device, disaring di server seperti tab jenis di atasnya.
+          if (sensors.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                ChoiceChip(
+                  label: const Text('Semua device'),
+                  selected: deviceSel == null,
+                  onSelected: (_) => _pilihDevice(null),
+                ),
+                for (final s in sensors)
+                  ChoiceChip(
+                    label: Text('${s.deviceCode} · ${s.kolamNama}'),
+                    selected: deviceSel == s.deviceId,
+                    onSelected: (_) => _pilihDevice(s.deviceId),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Pilih device untuk melihat notifikasinya saja, atau pilih Semua device untuk melihat semuanya.',
+              style: TextStyle(color: cMuted, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 10),
           ErrorText(error),
           if (loading)
@@ -214,9 +253,13 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               child: Center(child: CircularProgressIndicator()),
             )
           else if (items.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: Text('Belum ada notifikasi.')),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: Text(
+                  tab != 0 || deviceSel != null ? 'Tidak ada notifikasi untuk filter ini.' : 'Belum ada notifikasi.',
+                ),
+              ),
             )
           else
             Card(

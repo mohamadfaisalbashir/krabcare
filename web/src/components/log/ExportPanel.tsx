@@ -33,13 +33,15 @@ const AMONIA_MAX_PAGES = 20;
  *
  * Lebih sederhana dari fetchAllReadings karena endpoint ini punya `offset`,
  * jadi tidak perlu keyset cursor. `only_measured` menyaring ke horizon 0,
- * yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS. device_id tidak
- * dikirim: scope backend sudah membatasi ke device milik user.
+ * yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS. Tanpa `deviceId`,
+ * scope backend sudah membatasi ke device milik user. Dengan satu device,
+ * device_id dikirim supaya jatah halamannya tidak terbagi ke device lain.
  */
-async function ambilAmonia(start: string, end: string) {
+async function ambilAmonia(start: string, end: string, deviceId?: number) {
   const semua: AmmoniaRiskLog[] = [];
   for (let i = 0; i < AMONIA_MAX_PAGES; i++) {
     const page = await api.getAmmoniaHistory({
+      ...(deviceId ? { device_id: deviceId } : {}),
       start_time: start,
       end_time: end,
       only_measured: true,
@@ -108,9 +110,10 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       const params =
         paramSel === "semua" ? PARAM_KEYS : paramSel === "amonia" ? [] : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
-      const amonia = petaAmoniaDari(await ambilAmonia(start, end));
+      const satuDevice = sensors.length === 1 ? sensors[0] : null;
+      const amonia = petaAmoniaDari(await ambilAmonia(start, end, satuDevice?.deviceId));
 
-      const filename = namaBerkas("semua", params, from, to, format);
+      const filename = namaBerkas(satuDevice?.deviceCode ?? "semua", params, from, to, format);
       if (format === "xlsx") {
         await downloadXlsx(rows, params, kolamByDevice, amonia, filename);
       } else {
@@ -142,6 +145,15 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           dari data paling lama. Ikut disertakan waktu data itu sampai di server,
           untuk mengukur berapa lama pengirimannya dari alat.
         </p>
+        {/* Device dipilih di kartu Device di atas panel ini. */}
+        {sensors.length > 0 && (
+          <p className="mt-1 text-xs font-semibold text-ink">
+            Device:{" "}
+            {sensors.length === 1
+              ? `${sensors[0].deviceCode} · ${sensors[0].kolamNama}`
+              : `semua (${sensors.length})`}
+          </p>
+        )}
       </div>
 
       {/* flex-wrap wajib: ketiga field punya lebar tetap yang bersama tombolnya

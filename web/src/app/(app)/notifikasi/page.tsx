@@ -8,8 +8,8 @@ import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
 import StatusBadge from "@/components/ui/StatusBadge";
-import { Notification, NotifSource } from "@/lib/types";
-import { api } from "@/lib/api";
+import { Notification, NotifSource, Sensor } from "@/lib/types";
+import { api, ambilSensorSaya } from "@/lib/api";
 import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/notif-store";
 
 /** Satu permintaan = 20 baris, sama seperti pola "muat lebih banyak" di
@@ -42,6 +42,9 @@ const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
 export default function NotifikasiPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<NotifFilter>("semua");
+  // Device di kolam milik user. Kalau gagal dimuat, baris pilihan device disembunyikan.
+  const [sensors, setSensors] = useState<Sensor[]>([]);
+  const [device, setDevice] = useState<number | "semua">("semua");
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -52,10 +55,21 @@ export default function NotifikasiPage() {
   // tempat, bukan cuma di halaman ini (lib/notif-store.ts).
   const unread = useUnreadCount();
 
+  useEffect(() => {
+    ambilSensorSaya()
+      .then(setSensors)
+      .catch(() => {});
+  }, []);
+
   const muatHalaman = useCallback(
     (offset: number) =>
-      api.getNotifications({ limit: PAGE, offset, source: FILTER_SOURCE[filter] }),
-    [filter]
+      api.getNotifications({
+        limit: PAGE,
+        offset,
+        source: FILTER_SOURCE[filter],
+        device_id: device === "semua" ? undefined : device,
+      }),
+    [filter, device]
   );
 
   useEffect(() => {
@@ -87,8 +101,8 @@ export default function NotifikasiPage() {
       batal = true;
       clearInterval(id);
     };
-    // muatHalaman berubah identitas tiap `filter` berganti, jadi efek ini
-    // otomatis memuat ulang dari offset 0 saat ganti tab.
+    // muatHalaman berubah identitas tiap `filter` atau `device` berganti, jadi
+    // efek ini otomatis memuat ulang dari offset 0 saat ganti tab atau device.
   }, [muatHalaman]);
 
   async function handleMuatLagi() {
@@ -163,8 +177,8 @@ export default function NotifikasiPage() {
     }
   }
 
-  // Tanpa penyaringan klien: server yang menyaring (lihat FILTER_SOURCE).
-  const filteredNotifications = notifications;
+  // Tanpa penyaringan klien: server yang menyaring jenis dan device.
+  const adaFilter = filter !== "semua" || device !== "semua";
 
   return (
     <>
@@ -190,18 +204,9 @@ export default function NotifikasiPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-1.5">
             {FILTER_BUTTONS.map((btn) => (
-              <button
-                key={btn.id}
-                type="button"
-                onClick={() => setFilter(btn.id)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  filter === btn.id
-                    ? "bg-brand-600 text-white shadow-sm"
-                    : "border border-border bg-surface text-muted hover:bg-bg hover:text-ink"
-                }`}
-              >
+              <Chip key={btn.id} active={filter === btn.id} onClick={() => setFilter(btn.id)}>
                 {btn.label}
-              </button>
+              </Chip>
             ))}
           </div>
 
@@ -229,20 +234,40 @@ export default function NotifikasiPage() {
           )}
         </div>
 
+        {/* Pilihan device, disaring di server seperti tab jenis di atasnya. */}
+        {sensors.length > 0 && (
+          <div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Chip active={device === "semua"} onClick={() => setDevice("semua")}>
+                Semua device
+              </Chip>
+              {sensors.map((s) => (
+                <Chip
+                  key={s.deviceId}
+                  active={device === s.deviceId}
+                  onClick={() => setDevice(s.deviceId)}
+                >
+                  {s.deviceCode} · {s.kolamNama}
+                </Chip>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Pilih device untuk melihat notifikasinya saja, atau pilih Semua device untuk melihat
+              semuanya.
+            </p>
+          </div>
+        )}
+
         <Card className="p-0">
           {loading ? (
             <NotifikasiSkeleton />
           ) : notifications.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted">
-              Belum ada notifikasi.
-            </p>
-          ) : filteredNotifications.length === 0 ? (
-            <p className="p-6 text-center text-sm text-muted">
-              Tidak ada notifikasi untuk kategori ini.
+              {adaFilter ? "Tidak ada notifikasi untuk filter ini." : "Belum ada notifikasi."}
             </p>
           ) : (
             <div className="divide-y divide-border">
-              {filteredNotifications.map((n) => (
+              {notifications.map((n) => (
                 <NotificationItem key={n.id} item={n} onRead={handleRead} onDelete={handleDelete} />
               ))}
             </div>
@@ -258,6 +283,31 @@ export default function NotifikasiPage() {
         </Card>
       </div>
     </>
+  );
+}
+
+/** Tombol filter bulat, dipakai baris jenis dan baris device. */
+function Chip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+        active
+          ? "bg-brand-600 text-white shadow-sm"
+          : "border border-border bg-surface text-muted hover:bg-bg hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

@@ -20,7 +20,7 @@ import {
   riskToStatus,
 } from "@/lib/ammonia";
 import { dayRangeToIso } from "@/lib/export";
-import { api } from "@/lib/api";
+import { api, ambilSensorSaya } from "@/lib/api";
 import clsx from "clsx";
 import { formatWaktu } from "@/lib/tanggal";
 import HourSelect from "@/components/ui/HourSelect";
@@ -142,6 +142,10 @@ function LogHistorisView() {
   const [ammoniaRows, setAmmoniaRows] = useState<AmmoniaRiskLog[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [sensors, setSensors] = useState<Sensor[]>([]);
+  // Supaya teks "belum ada device" tidak berkedip selama daftarnya dimuat.
+  const [sensorsSiap, setSensorsSiap] = useState(false);
+  // Device yang dilihat dan diunduh. "semua" = semua device di kolam milik user.
+  const [deviceSel, setDeviceSel] = useState<number | "semua">("semua");
   const [statusFilter, setStatusFilter] = useState<StatusLabel | "Semua">("Semua");
   const [rangeMode, setRangeMode] = useState<RangeMode>("hari");
   // Kosong = semua waktu. Format "yyyy-mm-dd". Mode "hari" memakai keduanya,
@@ -167,42 +171,26 @@ function LogHistorisView() {
     return () => window.removeEventListener("scroll", cek);
   }, []);
 
-  // Daftar sensor diambil sekali, hanya untuk panel unduh yang butuh id device
-  // dan nama kolam. Satu kolam = satu device (backend menolak klaim kedua
-  // dengan 409), tapi disimpan sebagai daftar datar kalau aturan itu berubah.
+  // Daftar sensor diambil sekali, untuk kartu Device dan panel unduh.
   useEffect(() => {
-    async function loadSensors() {
-      try {
-        const kolams = await api.listKolam();
-        const perKolam = await Promise.all(
-          kolams.map(async (k) => {
-            try {
-              const devices = await api.getKolamDevices(k.id);
-              return devices.map((d) => ({
-                deviceId: d.id,
-                deviceCode: d.device_code,
-                kolamNama: k.nama,
-              }));
-            } catch {
-              // Satu kolam bermasalah tidak boleh mengosongkan seluruh daftar.
-              return [];
-            }
-          })
-        );
-        setSensors(perKolam.flat());
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal memuat daftar sensor.");
-      }
-    }
-    loadSensors();
+    ambilSensorSaya()
+      .then(setSensors)
+      .catch((err: unknown) =>
+        setError(err instanceof Error ? err.message : "Gagal memuat daftar sensor.")
+      )
+      .finally(() => setSensorsSiap(true));
   }, []);
 
+  const sensorTerpilih =
+    deviceSel === "semua" ? sensors : sensors.filter((s) => s.deviceId === deviceSel);
+
   // Satu permintaan untuk seluruh halaman, bukan satu per sensor: parameter,
-  // status, dan rentang waktu disaring di SQL sebelum LIMIT/OFFSET, jadi 25
-  // baris yang dikirim backend adalah 25 baris yang tampil.
+  // status, device, dan rentang waktu disaring di SQL sebelum LIMIT/OFFSET, jadi
+  // 25 baris yang dikirim backend adalah 25 baris yang tampil.
   //
-  // device_id tidak dikirim: scope backend sudah membatasi ke device milik user,
-  // dan urutan di sini kronologis, bukan "terbaru per device" seperti dashboard.
+  // Tanpa device terpilih, device_id tidak dikirim: scope backend sudah
+  // membatasi ke device milik user, dan urutan di sini kronologis, bukan
+  // "terbaru per device" seperti dashboard.
   //
   // Satu fungsi untuk kedua mode. Keduanya menghasilkan start_time/end_time ISO
   // yang sama, jadi bagian pengambilan data tidak perlu tahu mode yang aktif.
@@ -237,6 +225,7 @@ function LogHistorisView() {
       const bersama = {
         limit: PAGE,
         offset,
+        ...(deviceSel !== "semua" ? { device_id: deviceSel } : {}),
         ...(rentang.start ? { start_time: rentang.start } : {}),
         ...(rentang.end ? { end_time: rentang.end } : {}),
       };
@@ -260,7 +249,7 @@ function LogHistorisView() {
       });
       return { sensor: halaman, amonia: [], jumlah: halaman.length };
     },
-    [param, isAmonia, statusFilter, rentangIso]
+    [param, isAmonia, statusFilter, rentangIso, deviceSel]
   );
 
   // Ganti parameter/status/rentang, kembali ke halaman pertama.
@@ -307,7 +296,39 @@ function LogHistorisView() {
 
   return (
     <div className="flex-1 space-y-5 p-5 sm:p-8">
-      <ExportPanel sensors={sensors} />
+      {/* Satu pilihan device untuk seluruh halaman: daftar log di bawah dan
+          panel unduh sama-sama mengikutinya. */}
+      <Card className="p-4">
+        <h3 className="mb-3 font-display text-base font-semibold text-ink">Device</h3>
+        {sensors.length === 0 ? (
+          sensorsSiap && (
+            <p className="text-sm text-muted">Belum ada device yang terhubung ke kolam Anda.</p>
+          )
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <FilterPill active={deviceSel === "semua"} onClick={() => setDeviceSel("semua")}>
+                Semua device
+              </FilterPill>
+              {sensors.map((s) => (
+                <FilterPill
+                  key={s.deviceId}
+                  active={deviceSel === s.deviceId}
+                  onClick={() => setDeviceSel(s.deviceId)}
+                >
+                  {s.deviceCode} · {s.kolamNama}
+                </FilterPill>
+              ))}
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Pilih device yang datanya ingin Anda lihat. Daftar log dan berkas unduhan di bawah
+              akan mengikuti pilihan ini.
+            </p>
+          </>
+        )}
+      </Card>
+
+      <ExportPanel sensors={sensorTerpilih} />
 
       {error && (
         <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">

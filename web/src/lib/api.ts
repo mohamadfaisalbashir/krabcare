@@ -353,10 +353,13 @@ export const api = {
     /** Disaring di SQL. Menyaring di klien setelah limit bikin tab filter
      *  tampak kosong padahal barisnya ada di halaman berikutnya. */
     source?: import("./types").NotifSource;
+    /** Sama seperti `source`, disaring di SQL. */
+    device_id?: number;
   }) => {
     const qs = new URLSearchParams();
     if (params?.unread_only) qs.set("unread_only", "true");
     if (params?.source) qs.set("source", params.source);
+    if (params?.device_id) qs.set("device_id", String(params.device_id));
     if (params?.limit) qs.set("limit", String(params.limit));
     // != null, bukan cek falsy: offset=0 itu halaman pertama, bukan "tidak diisi".
     if (params?.offset != null) qs.set("offset", String(params.offset));
@@ -382,3 +385,28 @@ export const api = {
   deleteAllNotifications: () =>
     request<{ deleted: number }>(`/notifications`, { method: "DELETE" }),
 };
+
+/**
+ * Semua device yang terhubung ke kolam milik user, untuk pemilih device di
+ * Log Historis dan Notifikasi. Satu kolam = satu device (backend menolak klaim
+ * kedua dengan 409), tapi disimpan sebagai daftar datar kalau aturan itu berubah.
+ */
+export async function ambilSensorSaya(): Promise<import("./types").Sensor[]> {
+  const kolams = await api.listKolam();
+  const perKolam = await Promise.all(
+    kolams.map(async (k) => {
+      try {
+        const devices = await api.getKolamDevices(k.id);
+        return devices.map((d) => ({
+          deviceId: d.id,
+          deviceCode: d.device_code,
+          kolamNama: k.nama,
+        }));
+      } catch {
+        // Satu kolam bermasalah tidak boleh mengosongkan seluruh daftar.
+        return [];
+      }
+    })
+  );
+  return perKolam.flat();
+}

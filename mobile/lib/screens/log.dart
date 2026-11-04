@@ -14,8 +14,6 @@ import '../ui.dart';
 const _page = 25;
 const _amonia = 'amonia';
 
-typedef Sensor = ({int deviceId, String deviceCode, String kolamNama});
-
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
   @override
@@ -28,6 +26,8 @@ class _LogScreenState extends State<LogScreen> {
   int jamDari = 0, jamSampai = 0;
   List<Json> rows = [];
   List<Sensor> sensors = [];
+  bool sensorsSiap = false; // supaya teks "belum ada device" tidak muncul selama memuat
+  int? deviceSel; // null = semua device; dipakai daftar log dan berkas unduhan
   bool loading = true, loadingMore = false, hasMore = false;
   String? error;
   int _req = 0; // abaikan balasan permintaan lama saat filter berganti cepat
@@ -56,24 +56,17 @@ class _LogScreenState extends State<LogScreen> {
 
   Future<void> _loadSensors() async {
     try {
-      final kolams = await api.listKolam();
-      final per = await Future.wait(
-        kolams.map((k) async {
-          try {
-            return [
-              for (final d in await api.getKolamDevices(k['id']))
-                (deviceId: d['id'] as int, deviceCode: d['device_code'] as String, kolamNama: k['nama'] as String),
-            ];
-          } catch (_) {
-            return <Sensor>[];
-          }
-        }),
-      );
-      if (mounted) setState(() => sensors = per.expand((e) => e).toList());
+      final s = await api.sensorSaya();
+      if (mounted) setState(() => sensors = s);
     } catch (e) {
       if (mounted) setState(() => error = '$e');
+    } finally {
+      if (mounted) setState(() => sensorsSiap = true);
     }
   }
+
+  List<Sensor> get sensorTerpilih =>
+      deviceSel == null ? sensors : sensors.where((s) => s.deviceId == deviceSel).toList();
 
   ({String? start, String? end}) _rentang() {
     if (mode == 'hari') {
@@ -94,6 +87,7 @@ class _LogScreenState extends State<LogScreen> {
     final r = _rentang();
     if (isAmonia) {
       return api.getAmmoniaHistory(
+        deviceId: deviceSel,
         startTime: r.start,
         endTime: r.end,
         onlyMeasured: true,
@@ -103,6 +97,7 @@ class _LogScreenState extends State<LogScreen> {
       );
     }
     return api.getReadings(
+      deviceId: deviceSel,
       startTime: r.start,
       endTime: r.end,
       param: param,
@@ -179,7 +174,7 @@ class _LogScreenState extends State<LogScreen> {
             onPressed: () => showModalBottomSheet(
               context: context,
               isScrollControlled: true,
-              builder: (_) => ExportSheet(sensors: sensors),
+              builder: (_) => ExportSheet(sensors: sensorTerpilih),
             ),
           ),
         ],
@@ -196,6 +191,10 @@ class _LogScreenState extends State<LogScreen> {
         child: CustomScrollView(
           controller: _scroll,
           slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              sliver: SliverToBoxAdapter(child: _pilihDevice()),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               sliver: SliverToBoxAdapter(
@@ -276,6 +275,43 @@ class _LogScreenState extends State<LogScreen> {
       ),
     );
   }
+
+  /// Satu pilihan device untuk seluruh layar: daftar log dan lembar unduh sama-sama mengikutinya.
+  Widget _pilihDevice() => Section(
+    title: 'Device',
+    child: sensors.isEmpty
+        ? (sensorsSiap
+              ? const Text('Belum ada device yang terhubung ke kolam Anda.', style: TextStyle(color: cMuted))
+              : null)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  ChoiceChip(
+                    label: const Text('Semua device'),
+                    selected: deviceSel == null,
+                    onSelected: (_) => set(() => deviceSel = null),
+                  ),
+                  for (final s in sensors)
+                    ChoiceChip(
+                      label: Text('${s.deviceCode} · ${s.kolamNama}'),
+                      selected: deviceSel == s.deviceId,
+                      onSelected: (_) => set(() => deviceSel = s.deviceId),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Pilih device yang datanya ingin Anda lihat. Daftar log dan berkas unduhan '
+                'akan mengikuti pilihan ini.',
+                style: TextStyle(color: cMuted, fontSize: 12),
+              ),
+            ],
+          ),
+  );
 
   Widget _rentangWaktu(String Function(DateTime?) tgl) => Section(
     title: 'Rentang waktu',
@@ -434,11 +470,16 @@ class _ExportSheetState extends State<ExportSheet> {
   int progress = 0;
   String? error, note;
 
+  /// Satu device terpilih, atau null kalau unduhan mencakup beberapa device.
+  Sensor? get _satuDevice => widget.sensors.length == 1 ? widget.sensors.first : null;
+
   /// Riwayat amonia terukur; endpoint ini punya offset, jadi paging biasa cukup.
+  /// Dengan satu device, device_id dikirim supaya jatah halamannya tidak terbagi.
   Future<List<Json>> _ambilAmonia(String start, String end) async {
     final semua = <Json>[];
     for (var i = 0; i < maxPages; i++) {
       final page = await api.getAmmoniaHistory(
+        deviceId: _satuDevice?.deviceId,
         startTime: start,
         endTime: end,
         onlyMeasured: true,
@@ -490,7 +531,7 @@ class _ExportSheetState extends State<ExportSheet> {
           : [paramSel];
       final kolamByDevice = {for (final s in widget.sensors) s.deviceId: s.kolamNama};
       final amonia = petaAmonia(await _ambilAmonia(r.start, r.end));
-      final name = namaBerkas('semua', params, isoDay(from), isoDay(to), format);
+      final name = namaBerkas(_satuDevice?.deviceCode ?? 'semua', params, isoDay(from), isoDay(to), format);
 
       final Uint8List bytes = format == 'xlsx'
           ? _xlsx(rows, params, kolamByDevice, amonia)
@@ -573,6 +614,15 @@ class _ExportSheetState extends State<ExportSheet> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text('Unduh data sensor', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+          // Device dipilih di bagian Device pada layar Log historis.
+          if (widget.sensors.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Device: ${_satuDevice == null ? 'semua (${widget.sensors.length})' : '${_satuDevice!.deviceCode} · ${_satuDevice!.kolamNama}'}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           const SizedBox(height: 12),
           Row(
             children: [
