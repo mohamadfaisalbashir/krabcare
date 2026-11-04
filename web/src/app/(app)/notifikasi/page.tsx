@@ -237,19 +237,26 @@ export default function NotifikasiPage() {
         {/* Pilihan device, disaring di server seperti tab jenis di atasnya. */}
         {sensors.length > 0 && (
           <div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Chip active={device === "semua"} onClick={() => setDevice("semua")}>
-                Semua device
-              </Chip>
-              {sensors.map((s) => (
-                <Chip
-                  key={s.deviceId}
-                  active={device === s.deviceId}
-                  onClick={() => setDevice(s.deviceId)}
-                >
-                  {s.deviceCode} · {s.kolamNama}
-                </Chip>
-              ))}
+            {/* Dropdown, sama gayanya dengan pilihan Parameter di Log Historis. */}
+            <div className="sm:w-72">
+              <label htmlFor="notif-device" className="label-field">
+                Device
+              </label>
+              <select
+                id="notif-device"
+                value={device}
+                onChange={(e) =>
+                  setDevice(e.target.value === "semua" ? "semua" : Number(e.target.value))
+                }
+                className="input-field"
+              >
+                <option value="semua">Semua device</option>
+                {sensors.map((s) => (
+                  <option key={s.deviceId} value={s.deviceId}>
+                    {s.deviceCode} · {s.kolamNama}
+                  </option>
+                ))}
+              </select>
             </div>
             <p className="mt-2 text-xs text-muted">
               Pilih device untuk melihat notifikasinya saja, atau pilih Semua device untuk melihat

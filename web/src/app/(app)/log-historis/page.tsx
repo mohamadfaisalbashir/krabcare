@@ -299,26 +299,36 @@ function LogHistorisView() {
       {/* Satu pilihan device untuk seluruh halaman: daftar log di bawah dan
           panel unduh sama-sama mengikutinya. */}
       <Card className="p-4">
-        <h3 className="mb-3 font-display text-base font-semibold text-ink">Device</h3>
+        {/* Judul kartu sekaligus label dropdown, supaya tidak ada label ganda. */}
+        <label
+          htmlFor="pilih-device"
+          className="mb-3 block font-display text-base font-semibold text-ink"
+        >
+          Device
+        </label>
         {sensors.length === 0 ? (
           sensorsSiap && (
             <p className="text-sm text-muted">Belum ada device yang terhubung ke kolam Anda.</p>
           )
         ) : (
           <>
-            <div className="flex flex-wrap gap-2">
-              <FilterPill active={deviceSel === "semua"} onClick={() => setDeviceSel("semua")}>
-                Semua device
-              </FilterPill>
-              {sensors.map((s) => (
-                <FilterPill
-                  key={s.deviceId}
-                  active={deviceSel === s.deviceId}
-                  onClick={() => setDeviceSel(s.deviceId)}
-                >
-                  {s.deviceCode} · {s.kolamNama}
-                </FilterPill>
-              ))}
+            {/* Dropdown, sama gayanya dengan pilihan Parameter di panel unduh. */}
+            <div className="sm:w-72">
+              <select
+                id="pilih-device"
+                value={deviceSel}
+                onChange={(e) =>
+                  setDeviceSel(e.target.value === "semua" ? "semua" : Number(e.target.value))
+                }
+                className="input-field"
+              >
+                <option value="semua">Semua device</option>
+                {sensors.map((s) => (
+                  <option key={s.deviceId} value={s.deviceId}>
+                    {s.deviceCode} · {s.kolamNama}
+                  </option>
+                ))}
+              </select>
             </div>
             <p className="mt-2 text-xs text-muted">
               Pilih device yang datanya ingin Anda lihat. Daftar log dan berkas unduhan di bawah

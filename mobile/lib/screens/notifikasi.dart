@@ -221,23 +221,18 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
           ),
           // Pilihan device, disaring di server seperti tab jenis di atasnya.
           if (sensors.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                ChoiceChip(
-                  label: const Text('Semua device'),
-                  selected: deviceSel == null,
-                  onSelected: (_) => _pilihDevice(null),
-                ),
+            const SizedBox(height: 12),
+            // Dropdown, sama gayanya dengan pilihan Parameter di lembar unduh Log.
+            DropdownButtonFormField<int?>(
+              initialValue: deviceSel,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Device'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Semua device')),
                 for (final s in sensors)
-                  ChoiceChip(
-                    label: Text('${s.deviceCode} · ${s.kolamNama}'),
-                    selected: deviceSel == s.deviceId,
-                    onSelected: (_) => _pilihDevice(s.deviceId),
-                  ),
+                  DropdownMenuItem(value: s.deviceId, child: Text('${s.deviceCode} · ${s.kolamNama}')),
               ],
+              onChanged: _pilihDevice,
             ),
             const SizedBox(height: 6),
             const Text(

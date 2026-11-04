@@ -284,24 +284,20 @@ class _LogScreenState extends State<LogScreen> {
               ? const Text('Belum ada device yang terhubung ke kolam Anda.', style: TextStyle(color: cMuted))
               : null)
         : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  ChoiceChip(
-                    label: const Text('Semua device'),
-                    selected: deviceSel == null,
-                    onSelected: (_) => set(() => deviceSel = null),
-                  ),
+              // Dropdown, sama gayanya dengan pilihan Parameter di lembar unduh. Tanpa
+              // labelText: judul Section di atasnya sudah bertuliskan "Device".
+              DropdownButtonFormField<int?>(
+                initialValue: deviceSel,
+                isExpanded: true,
+                decoration: const InputDecoration(),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Semua device')),
                   for (final s in sensors)
-                    ChoiceChip(
-                      label: Text('${s.deviceCode} · ${s.kolamNama}'),
-                      selected: deviceSel == s.deviceId,
-                      onSelected: (_) => set(() => deviceSel = s.deviceId),
-                    ),
+                    DropdownMenuItem(value: s.deviceId, child: Text('${s.deviceCode} · ${s.kolamNama}')),
                 ],
+                onChanged: (v) => set(() => deviceSel = v),
               ),
               const SizedBox(height: 6),
               const Text(
@@ -466,6 +462,7 @@ class _ExportSheetState extends State<ExportSheet> {
   // 7 hari terakhir, termasuk hari ini (WIB). day - 6 dinormalkan DateTime, aman lintas bulan.
   late DateTime to = hariIniWib(), from = DateTime(to.year, to.month, to.day - 6);
   String paramSel = 'semua', format = 'csv';
+  String urutan = 'terlama'; // urutan baris di berkas; 'terlama' = perilaku awal
   bool busy = false;
   int progress = 0;
   String? error, note;
@@ -520,8 +517,9 @@ class _ExportSheetState extends State<ExportSheet> {
       final results = await Future.wait(
         widget.sensors.map((s) => fetchAllReadings(getPage, s.deviceId, r.start, r.end)),
       );
-      final rows = results.expand((x) => x.rows).toList()
+      final naik = results.expand((x) => x.rows).toList()
         ..sort((a, b) => DateTime.parse(a['time']).compareTo(DateTime.parse(b['time'])));
+      final rows = urutan == 'terbaru' ? naik.reversed.toList() : naik;
       if (rows.isEmpty) return setState(() => error = 'Tidak ada data pada rentang tanggal itu.');
 
       final params = paramSel == 'semua'
@@ -548,7 +546,7 @@ class _ExportSheetState extends State<ExportSheet> {
         setState(
           () => note =
               'Batas ${maxPages * chunk} baris per sensor tercapai. Data paling lama terpotong, '
-              "jadi berkas ini tidak mulai dari tanggal 'Dari' yang dipilih. Persempit rentang tanggalnya.",
+              'jadi data di awal rentang tanggal tidak ikut. Persempit rentang tanggalnya.',
         );
       }
     } catch (e) {
@@ -664,6 +662,16 @@ class _ExportSheetState extends State<ExportSheet> {
             ],
             selected: {format},
             onSelectionChanged: (s) => setState(() => format = s.first),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: urutan,
+            decoration: const InputDecoration(labelText: 'Urutan'),
+            items: const [
+              DropdownMenuItem(value: 'terlama', child: Text('Terlama dulu')),
+              DropdownMenuItem(value: 'terbaru', child: Text('Terbaru dulu')),
+            ],
+            onChanged: (v) => setState(() => urutan = v!),
           ),
           ErrorText(error),
           if (note != null) Text(note!, style: TextStyle(color: statusColor('Waspada'))),

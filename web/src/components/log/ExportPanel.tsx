@@ -62,6 +62,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
   // pilihan ini keberadaannya tidak kelihatan di layar.
   const [paramSel, setParamSel] = useState<ParamKey | "semua" | "amonia">("semua");
   const [format, setFormat] = useState<ExportFormat>("csv");
+  // Urutan baris di berkas. "terlama" = perilaku awal, mulai dari data paling lama.
+  const [urutan, setUrutan] = useState<"terlama" | "terbaru">("terlama");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -102,6 +104,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       const rows = results
         .flatMap((r) => r.rows)
         .sort((a, b) => a.time.localeCompare(b.time));
+      if (urutan === "terbaru") rows.reverse();
       if (rows.length === 0) {
         setError("Tidak ada data pada rentang tanggal itu.");
         return;
@@ -122,11 +125,11 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
       if (results.some((r) => r.truncated)) {
         // Paging berjalan dari terbaru ke terlama, jadi yang terpotong adalah
-        // data paling lama, dan potongan itu ada di awal berkas.
+        // data paling lama. Letaknya di awal atau akhir berkas tergantung urutan.
         setNote(
           `Batas ${(MAX_PAGES * 1000).toLocaleString("id-ID")} baris per sensor tercapai. ` +
-            "Data paling lama terpotong, jadi berkas ini tidak mulai dari tanggal " +
-            "'Dari' yang dipilih. Persempit rentang tanggalnya."
+            "Data paling lama terpotong, jadi data di awal rentang tanggal tidak ikut. " +
+            "Persempit rentang tanggalnya."
         );
       }
     } catch (err) {
@@ -141,8 +144,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       <div className="mb-3">
         <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
         <p className="mt-1 text-xs text-muted">
-          Berisi nilai apa adanya pada rentang tanggal yang dipilih, urut mulai
-          dari data paling lama. Ikut disertakan waktu data itu sampai di server,
+          Berisi nilai apa adanya pada rentang tanggal yang dipilih, diurutkan
+          sesuai pilihan Urutan. Ikut disertakan waktu data itu sampai di server,
           untuk mengukur berapa lama pengirimannya dari alat.
         </p>
         {/* Device dipilih di kartu Device di atas panel ini. */}
@@ -210,6 +213,21 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           >
             <option value="csv">CSV</option>
             <option value="xlsx">Excel (XLSX)</option>
+          </select>
+        </div>
+
+        <div className="sm:w-44">
+          <label htmlFor="unduh-urutan" className="label-field">
+            Urutan
+          </label>
+          <select
+            id="unduh-urutan"
+            value={urutan}
+            onChange={(e) => setUrutan(e.target.value as "terlama" | "terbaru")}
+            className="input-field"
+          >
+            <option value="terlama">Terlama dulu</option>
+            <option value="terbaru">Terbaru dulu</option>
           </select>
         </div>
 
