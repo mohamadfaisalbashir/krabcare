@@ -33,6 +33,17 @@ def jam_wib(t: datetime) -> str:
         t = t.replace(tzinfo=timezone.utc)
     return t.astimezone(WIB).strftime("%H:%M")
 
+# Data yang lebih tua dari ini (mis. backlog buffer Raspi setelah internet pulih)
+# tetap disimpan sebagai notifikasi, tapi tidak di-push ke HP.
+PUSH_MAKS_UMUR = timedelta(minutes=10)
+
+
+def _masih_segar(t: datetime, batas: datetime) -> bool:
+    """Data cukup baru untuk di-push. Naive dianggap UTC, sama seperti jam_wib."""
+    if t.tzinfo is None:
+        t = t.replace(tzinfo=timezone.utc)
+    return t >= batas
+
 _UNIQUE_KEY = [
     Notification.device_id,
     Notification.source,
@@ -294,17 +305,24 @@ async def dispatch_from_quality_ingest(
     )
     claimed = {device.device_code: (device, kolam) for device, kolam in result.all()}
 
+    # Hanya berisi notifikasi yang akan di-push. Notifikasi dari data basi tetap
+    # tersimpan (oleh create_*) tapi tidak masuk list ini.
+    # ponytail: kalau transisi ke buruk terjadi saat offline dan backlog tiba lebih
+    # dulu dari data baru, user tidak dapat push sama sekali (data baru tidak
+    # berubah kategori). Upgrade: push ulang status basi terakhir yang masih berlaku.
     new_notifications: list[Notification] = []
+    batas = datetime.now(timezone.utc) - PUSH_MAKS_UMUR
 
     for c in classifications:
         pasangan = claimed.get(c.device_code)
         if pasangan is None:
             continue  # device belum diklaim, atau device_code tidak dikenal
         device, kolam = pasangan
+        waktu_data = c.sensor_reading_time or c.time
         notif = await create_classification_notification(
-            db, device, kolam, c.quality_category, c.quality_score, c.sensor_reading_time or c.time
+            db, device, kolam, c.quality_category, c.quality_score, waktu_data
         )
-        if notif is not None:
+        if notif is not None and _masih_segar(waktu_data, batas):
             new_notifications.append(notif)
 
     predictions_by_device: dict[str, list[dict]] = {}
@@ -312,7 +330,12 @@ async def dispatch_from_quality_ingest(
         if p.predicted_category is None or p.predicted_category not in ANOMALY_CATEGORIES:
             continue
         predictions_by_device.setdefault(p.device_code, []).append(
-            {"target_time": p.target_time, "category": p.predicted_category, "horizon_minutes": p.horizon_minutes}
+            {
+                "time": p.time,
+                "target_time": p.target_time,
+                "category": p.predicted_category,
+                "horizon_minutes": p.horizon_minutes,
+            }
         )
 
     for device_code, anomalies in predictions_by_device.items():
@@ -320,7 +343,11 @@ async def dispatch_from_quality_ingest(
         if pasangan is None:
             continue
         device, kolam = pasangan
-        new_notifications.extend(await create_prediction_notifications(db, device, kolam, anomalies))
+        # Umur prediksi dari waktu datanya, bukan target_time (bisa 60 menit ke depan).
+        segar = [a for a in anomalies if _masih_segar(a["time"], batas)]
+        basi = [a for a in anomalies if not _masih_segar(a["time"], batas)]
+        new_notifications.extend(await create_prediction_notifications(db, device, kolam, segar))
+        await create_prediction_notifications(db, device, kolam, basi)  # disimpan saja, tanpa push
 
     # Evaluasi notifikasi per parameter (pH, suhu, salinitas, amonia)
     ammonia_now_by_device: dict[str, "AmmoniaRiskIn"] = {}
@@ -356,6 +383,7 @@ async def dispatch_from_quality_ingest(
 
         if reading_time is None:
             continue
+        push_param = _masih_segar(reading_time, batas)
 
         # 1. Parameter pH
         if ph_val is not None:
@@ -363,7 +391,7 @@ async def dispatch_from_quality_ingest(
             notif_ph = await create_parameter_notification(
                 db, device, kolam, "ph", ph_cat, PARAM_CONFIG["ph"]["label"], f"nilai {ph_val:.1f} pH", reading_time
             )
-            if notif_ph:
+            if notif_ph and push_param:
                 new_notifications.append(notif_ph)
 
         # 2. Parameter Suhu
@@ -372,7 +400,7 @@ async def dispatch_from_quality_ingest(
             notif_temp = await create_parameter_notification(
                 db, device, kolam, "temperature_c", temp_cat, PARAM_CONFIG["temperature_c"]["label"], f"nilai {temp_val:.1f} °C", reading_time
             )
-            if notif_temp:
+            if notif_temp and push_param:
                 new_notifications.append(notif_temp)
 
         # 3. Parameter Salinitas
@@ -381,7 +409,7 @@ async def dispatch_from_quality_ingest(
             notif_sal = await create_parameter_notification(
                 db, device, kolam, "salinity_ppt", sal_cat, PARAM_CONFIG["salinity_ppt"]["label"], f"nilai {sal_val:.1f} ppt", reading_time
             )
-            if notif_sal:
+            if notif_sal and push_param:
                 new_notifications.append(notif_sal)
 
         # 4. Parameter Amonia
@@ -396,7 +424,7 @@ async def dispatch_from_quality_ingest(
                 notif_ammonia = await create_parameter_notification(
                     db, device, kolam, "ammonia", ammonia_cat, "risiko amonia", fraksi_str, reading_time
                 )
-                if notif_ammonia:
+                if notif_ammonia and push_param:
                     new_notifications.append(notif_ammonia)
 
     if new_notifications:
