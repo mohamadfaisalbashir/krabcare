@@ -33,6 +33,11 @@ def jam_wib(t: datetime) -> str:
         t = t.replace(tzinfo=timezone.utc)
     return t.astimezone(WIB).strftime("%H:%M")
 
+
+def _label_device(device: Device, kolam: Kolam) -> str:
+    """Penyebut device di teks notifikasi: "Nama Kolam (ID device)"."""
+    return f"{kolam.nama} ({device.device_code})"
+
 # Data yang lebih tua dari ini (mis. backlog buffer Raspi setelah internet pulih)
 # tetap disimpan sebagai notifikasi, tapi tidak di-push ke HP.
 PUSH_MAKS_UMUR = timedelta(minutes=10)
@@ -92,13 +97,13 @@ async def create_classification_notification(
         if category == "baik":
             return None
         message = (
-            f"Kualitas air {device.device_code} tercatat dalam kondisi "
+            f"Kualitas air {_label_device(device, kolam)} tercatat dalam kondisi "
             f"{label_baru.upper()} (skor {quality_score:.1f})."
         )
     else:
         label_lama = CATEGORY_LABEL.get(previous, previous)
         message = (
-            f"Kondisi kolam {device.device_code} berubah dari {label_lama} ke {label_baru} "
+            f"Kondisi kolam {_label_device(device, kolam)} berubah dari {label_lama} ke {label_baru} "
             f"(skor {quality_score:.1f})."
         )
 
@@ -191,13 +196,13 @@ async def create_parameter_notification(
         if category == "baik":
             return None
         message = (
-            f"Kondisi {param_label} {device.device_code} tercatat dalam kondisi "
+            f"Kondisi {param_label} {_label_device(device, kolam)} tercatat dalam kondisi "
             f"{label_baru.upper()} ({value_str})."
         )
     else:
         label_lama = CATEGORY_LABEL.get(previous, previous)
         message = (
-            f"Kondisi {param_label} {device.device_code} berubah dari {label_lama} ke {label_baru} "
+            f"Kondisi {param_label} {_label_device(device, kolam)} berubah dari {label_lama} ke {label_baru} "
             f"({value_str})."
         )
 
@@ -232,7 +237,7 @@ async def create_prediction_notifications(
             "quality_category": a["category"],
             "event_time": a["target_time"],
             "message": (
-                f"Prediksi: kualitas air {device.device_code} berpotensi "
+                f"Prediksi: kualitas air {_label_device(device, kolam)} berpotensi "
                 f"{CATEGORY_LABEL.get(a['category'], a['category']).upper()} "
                 f"sekitar {jam_wib(a['target_time'])} WIB ({a['horizon_minutes']} menit lagi)."
             ),

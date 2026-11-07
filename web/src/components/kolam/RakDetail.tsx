@@ -207,13 +207,14 @@ export default function RakDetail({
             <h2 className="min-w-0 truncate font-display font-semibold text-brand-700 text-[26.67px] sm:text-[32.67px]">
               {kolam.nama}
             </h2>
-            <Button
-              variant="ghost"
-              className="shrink-0"
+            {/* Gaya pil sama dengan DetailPill di bawahnya. */}
+            <button
+              type="button"
               onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-white/70 transition-colors duration-150 hover:bg-white"
             >
-              <Pencil className="h-4 w-4" /> Ubah nama
-            </Button>
+              <Pencil className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} /> Ubah nama
+            </button>
           </div>
 
           {/* Ubah identitas rak (PUT /kolam/:id) */}

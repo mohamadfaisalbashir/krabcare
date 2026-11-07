@@ -153,7 +153,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           <p className="mt-1 text-xs font-semibold text-ink">
             Device:{" "}
             {sensors.length === 1
-              ? `${sensors[0].deviceCode} · ${sensors[0].kolamNama}`
+              ? `${sensors[0].kolamNama} (${sensors[0].deviceCode})`
               : `semua (${sensors.length})`}
           </p>
         )}

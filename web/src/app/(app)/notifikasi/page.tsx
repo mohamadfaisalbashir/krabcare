@@ -253,7 +253,7 @@ export default function NotifikasiPage() {
                 <option value="semua">Semua device</option>
                 {sensors.map((s) => (
                   <option key={s.deviceId} value={s.deviceId}>
-                    {s.deviceCode} · {s.kolamNama}
+                    {s.kolamNama} ({s.deviceCode})
                   </option>
                 ))}
               </select>
