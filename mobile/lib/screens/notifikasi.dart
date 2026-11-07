@@ -230,7 +230,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               items: [
                 const DropdownMenuItem(value: null, child: Text('Semua device')),
                 for (final s in sensors)
-                  DropdownMenuItem(value: s.deviceId, child: Text('${s.deviceCode} · ${s.kolamNama}')),
+                  DropdownMenuItem(value: s.deviceId, child: Text('${s.kolamNama} (${s.deviceCode})')),
               ],
               onChanged: _pilihDevice,
             ),

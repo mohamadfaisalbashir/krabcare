@@ -408,9 +408,19 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Gaya pil sama dengan _Pill "Terhubung ke" di bawahnya.
                       OutlinedButton.icon(
                         onPressed: () => setState(() => panel = panel == 'nama' ? null : 'nama'),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        style: OutlinedButton.styleFrom(
+                          shape: const StadiumBorder(),
+                          side: const BorderSide(color: cBorder),
+                          backgroundColor: Colors.white,
+                          foregroundColor: cInk,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          minimumSize: Size.zero,
+                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 14),
                         label: const Text('Ubah nama'),
                       ),
                     ],

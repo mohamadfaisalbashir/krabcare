@@ -295,7 +295,7 @@ class _LogScreenState extends State<LogScreen> {
                 items: [
                   const DropdownMenuItem(value: null, child: Text('Semua device')),
                   for (final s in sensors)
-                    DropdownMenuItem(value: s.deviceId, child: Text('${s.deviceCode} · ${s.kolamNama}')),
+                    DropdownMenuItem(value: s.deviceId, child: Text('${s.kolamNama} (${s.deviceCode})')),
                 ],
                 onChanged: (v) => set(() => deviceSel = v),
               ),
@@ -617,7 +617,7 @@ class _ExportSheetState extends State<ExportSheet> {
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'Device: ${_satuDevice == null ? 'semua (${widget.sensors.length})' : '${_satuDevice!.deviceCode} · ${_satuDevice!.kolamNama}'}',
+                'Device: ${_satuDevice == null ? 'semua (${widget.sensors.length})' : '${_satuDevice!.kolamNama} (${_satuDevice!.deviceCode})'}',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
