@@ -117,6 +117,15 @@ String formatJam(String iso) {
 
 String formatWaktu(String iso) => '${formatTanggal(iso)} ${formatJam(iso)}';
 
+/// Kolam dianggap Online kalau bacaan terakhirnya sampai di server paling lama
+/// sekian menit lalu. Sensor kirim tiap ~1 menit. Samakan dengan web/src/lib/tanggal.ts.
+const onlineMaksMenit = 3;
+
+/// `receivedAt` = received_at bacaan terbaru (jam server saat data masuk).
+bool isOnline(String? receivedAt) =>
+    receivedAt != null &&
+    DateTime.now().difference(DateTime.parse(receivedAt)) <= const Duration(minutes: onlineMaksMenit);
+
 String formatWaktuDetik(String iso) => '${formatWaktu(iso)}:${_p(wib(iso).second)}';
 
 /// yyyy-mm-dd dari tanggal kalender, untuk nama berkas ekspor.

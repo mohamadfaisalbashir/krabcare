@@ -278,6 +278,8 @@ class _PondCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // Ikon wifi, bukan titik: titik di kartu ini sudah dipakai status kualitas air.
+                  if (item.devices.isNotEmpty) _OnlineLabel(isOnline(r?['received_at'])),
                   const Icon(Icons.chevron_right, color: cAxis),
                 ],
               ),
@@ -459,6 +461,11 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                           Icons.power_outlined,
                           device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}',
                         ),
+                      // Dihitung ulang tiap polling 60 detik, karena loadData memanggil setState.
+                      if (device != null)
+                        isOnline(reading?['received_at'])
+                            ? _Pill(Icons.wifi, 'Online', iconColor: statusColor('Aman'))
+                            : _Pill(Icons.wifi_off, 'Offline', iconColor: statusColor('Bahaya')),
                       if (reading != null) _Pill(Icons.schedule, 'Pembacaan terakhir ${formatWaktu(reading['time'])}'),
                     ],
                   ),
@@ -756,11 +763,33 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   );
 }
 
+/// Status Online/Offline di kartu kolam, padanan label di PondCard web.
+class _OnlineLabel extends StatelessWidget {
+  const _OnlineLabel(this.online);
+  final bool online;
+  @override
+  Widget build(BuildContext context) {
+    final c = statusColor(online ? 'Aman' : 'Bahaya');
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(online ? Icons.wifi : Icons.wifi_off, size: 14, color: c),
+          const SizedBox(width: 4),
+          Text(online ? 'Online' : 'Offline', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c)),
+        ],
+      ),
+    );
+  }
+}
+
 /// DetailPill web: ikon + teks di atas latar putih bergaris tipis.
 class _Pill extends StatelessWidget {
-  const _Pill(this.icon, this.text);
+  const _Pill(this.icon, this.text, {this.iconColor = cInk});
   final IconData icon;
   final String text;
+  final Color iconColor;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -772,7 +801,7 @@ class _Pill extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: cInk),
+        Icon(icon, size: 14, color: iconColor),
         const SizedBox(width: 6),
         Flexible(
           child: Text(

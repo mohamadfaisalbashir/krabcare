@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlugZap, Pencil, Trash2, Clock3, X } from "lucide-react";
+import { PlugZap, Pencil, Trash2, Clock3, X, Wifi, WifiOff } from "lucide-react";
 import clsx from "clsx";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -26,7 +26,7 @@ import {
 import { DISCLAIMER as AMONIA_DISCLAIMER } from "@/lib/ammonia";
 import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { api } from "@/lib/api";
-import { formatWaktu } from "@/lib/tanggal";
+import { formatWaktu, isOnline } from "@/lib/tanggal";
 
 // Judul & catatan tiap bagian, ditulis sekali. biar saat ganti posisi sama
 const SECTION = {
@@ -196,6 +196,9 @@ export default function RakDetail({
     ? formatWaktu(reading.time)
     : null;
 
+  // Dihitung ulang tiap polling 60 detik, karena setReading memicu render.
+  const online = isOnline(reading?.received_at);
+
   return (
     <div className="glass overflow-hidden">
       {/* Kepala, tanpa foto: dashboard di atasnya sudah punya banner berfoto. */}
@@ -247,6 +250,15 @@ export default function RakDetail({
                 ? `Terhubung ke ${device.device_code}`
                 : "Belum terhubung ke device"}
             </DetailPill>
+            {/* Ditahan selama bacaan pertama belum sampai, supaya tidak sempat berkedip "Offline". */}
+            {device && !dataLoading && (
+              <DetailPill
+                icon={online ? Wifi : WifiOff}
+                iconClassName={online ? "text-status-aman" : "text-status-bahaya"}
+              >
+                {online ? "Online" : "Offline"}
+              </DetailPill>
+            )}
             {updated && <DetailPill icon={Clock3}>Pembacaan terakhir {updated}</DetailPill>}
           </div>
         </div>
@@ -460,14 +472,16 @@ function ParamChip({ param }: { param: ParamKey }) {
 
 function DetailPill({
   icon: Icon,
+  iconClassName,
   children,
 }: {
   icon: React.ElementType;
+  iconClassName?: string;
   children: React.ReactNode;
 }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-white/70">
-      <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+      <Icon className={clsx("h-3.5 w-3.5 shrink-0", iconClassName)} strokeWidth={2.2} />
       {children}
     </span>
   );

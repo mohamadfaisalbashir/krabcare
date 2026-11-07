@@ -1,8 +1,9 @@
 "use client";
 
-import { Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind } from "lucide-react";
+import { Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind, Wifi, WifiOff } from "lucide-react";
 import { KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
 import { formatFraksi } from "@/lib/ammonia";
+import { isOnline } from "@/lib/tanggal";
 import clsx from "clsx";
 
 /** Lebar kartu saat mode rail. Jangan selebar layar: di 375px sisa ~100px
@@ -54,6 +55,9 @@ export default function PondCard({
       })
     : "N/A";
 
+  // Dashboard polling 60 detik membuat kartu dirender ulang, jadi status ini ikut segar.
+  const online = isOnline(latestReading?.received_at);
+
   return (
     // <button>, bukan <Link>: detail rak terbuka di bawah kartu ini, bukan di
     // halaman lain, jadi tautan menjanjikan perpindahan yang tidak terjadi.
@@ -83,15 +87,33 @@ export default function PondCard({
         <span className={clsx("flex h-10 w-10 items-center justify-center rounded-lg", tone.tile)}>
           <Waves className="h-5 w-5" strokeWidth={2.2} />
         </span>
-        {/* Chevron ke bawah, bukan panah keluar: detailnya terbuka di bawah
-            kartu, bukan di halaman lain. */}
-        <ChevronDown
-          className={clsx(
-            "h-4 w-4 transition duration-300 ease-smooth motion-reduce:transition-none",
-            selected ? "rotate-180 text-brand-600" : "text-muted group-hover:text-brand-600"
+        <div className="flex items-center gap-2">
+          {/* Ikon wifi, bukan titik: titik di kartu ini sudah dipakai status kualitas air. */}
+          {item.devices.length > 0 && (
+            <span
+              className={clsx(
+                "inline-flex items-center gap-1 text-[11px] font-medium",
+                online ? "text-status-aman" : "text-status-bahaya"
+              )}
+            >
+              {online ? (
+                <Wifi className="h-3.5 w-3.5" strokeWidth={2.2} />
+              ) : (
+                <WifiOff className="h-3.5 w-3.5" strokeWidth={2.2} />
+              )}
+              {online ? "Online" : "Offline"}
+            </span>
           )}
-          strokeWidth={2.2}
-        />
+          {/* Chevron ke bawah, bukan panah keluar: detailnya terbuka di bawah
+              kartu, bukan di halaman lain. */}
+          <ChevronDown
+            className={clsx(
+              "h-4 w-4 transition duration-300 ease-smooth motion-reduce:transition-none",
+              selected ? "rotate-180 text-brand-600" : "text-muted group-hover:text-brand-600"
+            )}
+            strokeWidth={2.2}
+          />
+        </div>
       </div>
 
       <h3 className="truncate font-display text-sm font-semibold text-ink">

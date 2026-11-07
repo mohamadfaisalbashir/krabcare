@@ -36,6 +36,15 @@ export function formatWaktuDetik(iso: string): string {
   return `${b.tanggal} ${b.jam}:${b.detik}`;
 }
 
+/** Kolam dianggap Online kalau bacaan terakhirnya sampai di server paling lama
+ *  sekian menit lalu. Sensor kirim tiap ~1 menit. Samakan dengan mobile/lib/logic.dart. */
+export const ONLINE_MAKS_MENIT = 3;
+
+/** `receivedAt` = received_at bacaan terbaru (jam server saat data masuk). */
+export function isOnline(receivedAt: string | null | undefined, now = Date.now()): boolean {
+  return !!receivedAt && now - new Date(receivedAt).getTime() <= ONLINE_MAKS_MENIT * 60_000;
+}
+
 /** yyyy-mm-dd hari ini di Jakarta (± `geserHari`), untuk nilai `<input type="date">`. */
 export function tanggalWib(geserHari = 0): string {
   return new Date(Date.now() + WIB_MS + geserHari * 86_400_000).toISOString().slice(0, 10);
