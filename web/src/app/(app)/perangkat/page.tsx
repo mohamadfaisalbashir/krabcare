@@ -33,15 +33,28 @@ const DEVICE_TYPE_LABEL: Record<Device["device_type"], string> = {
  */
 const TIPE_BISA_DIDAFTAR: Device["device_type"][] = ["slave_node", "master_node"];
 
+/**
+ * Keterangan jalur data satu device, dari devices.parent_device_id (slave ->
+ * master). Backend tidak memakai relasi ini untuk logika ingest: yang
+ * meneruskan data slave adalah firmware master. Ini catatan untuk admin.
+ */
+function keteranganJalur(d: DeviceAdmin, byId: Map<number, DeviceAdmin>): string {
+  if (d.device_type !== "slave_node") return "";
+  const master = d.parent_device_id != null ? byId.get(d.parent_device_id) : undefined;
+  return master ? `Lewat master ${master.device_code}` : "Master belum ditentukan";
+}
+
 /** Baris satu device dengan aksi pasang, lepas, atau hapus. */
 function DeviceRow({
   d,
+  jalur,
   onAssign,
   onUnclaim,
   onDelete,
   busy,
 }: {
   d: DeviceAdmin;
+  jalur: string;
   onAssign?: (d: DeviceAdmin) => void;
   onUnclaim?: (d: DeviceAdmin) => void;
   onDelete: (d: DeviceAdmin) => void;
@@ -53,6 +66,7 @@ function DeviceRow({
         <p className="font-mono text-sm font-semibold text-ink">{d.device_code}</p>
         <p className="text-xs text-muted">
           {DEVICE_TYPE_LABEL[d.device_type]}
+          {jalur ? ` · ${jalur}` : ""}
           {d.kolam_nama ? ` · Kolam: ${d.kolam_nama}` : ""}
           {d.owner_nama ? ` (Milik: ${d.owner_nama})` : ""}
         </p>
@@ -125,6 +139,8 @@ export default function PerangkatPage() {
 
   const [deviceCode, setDeviceCode] = useState("");
   const [deviceType, setDeviceType] = useState<Device["device_type"]>("slave_node");
+  /** Master tempat slave baru mengirim lewat ESP-NOW. "" = belum ditentukan. */
+  const [parentId, setParentId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [formMessage, setFormMessage] = useState<Message>(null);
 
@@ -164,6 +180,8 @@ export default function PerangkatPage() {
         device_code: deviceCode.trim(),
         device_type: deviceType,
         rack_label: null,
+        // Hanya slave yang punya master.
+        parent_device_id: deviceType === "slave_node" && parentId ? Number(parentId) : null,
       });
       setDevices((list) =>
         [{ ...created, kolam_id: null, kolam_nama: null, owner_nama: null }, ...list].sort((a, b) =>
@@ -175,6 +193,7 @@ export default function PerangkatPage() {
         text: `Device '${created.device_code}' berhasil ditambahkan, siap diklaim ke kolam.`,
       });
       setDeviceCode("");
+      setParentId("");
     } catch (err) {
       setFormMessage({
         type: "err",
@@ -273,6 +292,8 @@ export default function PerangkatPage() {
 
   const belumDiklaim = devices.filter((d) => d.kolam_id == null);
   const sudahDiklaim = devices.filter((d) => d.kolam_id != null);
+  const byId = new Map(devices.map((d) => [d.id, d]));
+  const masters = devices.filter((d) => d.device_type === "master_node");
 
   return (
     <>
@@ -321,6 +342,33 @@ export default function PerangkatPage() {
               </select>
             </div>
 
+            {deviceType === "slave_node" && (
+              <div className="sm:col-span-2">
+                <label htmlFor="device-parent" className="label-field">
+                  Terhubung ke master
+                </label>
+                <select
+                  id="device-parent"
+                  className="input-field"
+                  value={parentId}
+                  onChange={(e) => setParentId(e.target.value)}
+                >
+                  <option value="">Belum ditentukan</option>
+                  {masters.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.device_code}
+                      {m.kolam_nama ? `, kolam ${m.kolam_nama}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-muted">
+                  {masters.length === 0
+                    ? "Belum ada master terdaftar. Daftarkan master (ESP32 yang tersambung ke Raspberry Pi) lebih dulu."
+                    : "Master adalah ESP32 yang tersambung kabel ke Raspberry Pi dan meneruskan data slave ini."}
+                </p>
+              </div>
+            )}
+
             <div className="sm:col-span-2">
               <FormMessage message={formMessage} />
             </div>
@@ -368,6 +416,7 @@ export default function PerangkatPage() {
                   <DeviceRow
                     key={d.id}
                     d={d}
+                    jalur={keteranganJalur(d, byId)}
                     onAssign={handleOpenAssign}
                     onDelete={handleDelete}
                     busy={busyDeviceId === d.id}
@@ -402,6 +451,7 @@ export default function PerangkatPage() {
                   <DeviceRow
                     key={d.id}
                     d={d}
+                    jalur={keteranganJalur(d, byId)}
                     onUnclaim={handleUnclaim}
                     onDelete={handleDelete}
                     busy={busyDeviceId === d.id}

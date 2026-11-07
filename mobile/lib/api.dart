@@ -163,8 +163,13 @@ class _Api {
   // Devices (routers/devices.py, khusus admin)
   Future<List<Json>> listDevices() async => _list(await _request('GET', '/devices'));
   Future<List<Json>> getTargetKolams() async => _list(await _request('GET', '/devices/target-kolams'));
-  Future<void> createDevice(String code, String type) =>
-      _request('POST', '/devices', body: {'device_code': code, 'device_type': type, 'rack_label': null});
+  /// [parentId] = id master tempat slave mengirim lewat ESP-NOW; null untuk master
+  /// atau slave yang master-nya belum ditentukan.
+  Future<void> createDevice(String code, String type, {int? parentId}) => _request(
+    'POST',
+    '/devices',
+    body: {'device_code': code, 'device_type': type, 'rack_label': null, 'parent_device_id': parentId},
+  );
   Future<void> claimDeviceToKolam(int deviceId, int kolamId) =>
       _request('POST', '/devices/$deviceId/claim', body: {'kolam_id': kolamId});
   Future<void> unclaimDevice(int deviceId) => _request('POST', '/devices/$deviceId/unclaim');

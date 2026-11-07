@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PlugZap, Pencil, Trash2, Clock3, X } from "lucide-react";
 import clsx from "clsx";
 import Input from "@/components/ui/Input";
@@ -82,6 +82,16 @@ export default function RakDetail({
   const [rakMessage, setRakMessage] = useState<string | null>(null);
   // Satu state, bukan dua boolean: membuka satu panel otomatis menutup yang lain.
   const [panel, setPanel] = useState<"nama" | "hapus" | null>(null);
+  const hapusRef = useRef<HTMLDivElement>(null);
+
+  // Zona berbahaya ada paling bawah, sering di luar layar. Gulir ke sana saat dibuka.
+  useEffect(() => {
+    if (panel !== "hapus") return;
+    hapusRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [panel]);
 
   const loadDevice = useCallback(async () => {
     setLoading(true);
@@ -193,9 +203,42 @@ export default function RakDetail({
         <div className="min-w-0">
           <p className="text-[16.67px] font-semibold text-[#266B70]">Detail Kolam</p>
           {/* Nama rak buatan pengguna, panjangnya tidak terbatas, jadi dipotong alih-alih mendorong tombol Tutup keluar. */}
-          <h2 className="mt-0.5 truncate font-display font-semibold text-brand-700 text-[26.67px] sm:text-[32.67px]">
-            {kolam.nama}
-          </h2>
+          <div className="mt-0.5 flex min-w-0 items-center gap-3">
+            <h2 className="min-w-0 truncate font-display font-semibold text-brand-700 text-[26.67px] sm:text-[32.67px]">
+              {kolam.nama}
+            </h2>
+            <Button
+              variant="ghost"
+              className="shrink-0"
+              onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
+            >
+              <Pencil className="h-4 w-4" /> Ubah nama
+            </Button>
+          </div>
+
+          {/* Ubah identitas rak (PUT /kolam/:id) */}
+          {panel === "nama" && (
+            <form
+              onSubmit={handleRenameRak}
+              className="mt-3 flex flex-col gap-4 sm:max-w-2xl sm:flex-row sm:items-end"
+            >
+              <div className="sm:w-64">
+                <Input
+                  label="Nama kolam"
+                  value={namaRak}
+                  onChange={(e) => setNamaRak(e.target.value)}
+                  required
+                />
+              </div>
+              <Button type="submit" disabled={savingRak || namaRak === kolam.nama}>
+                {savingRak ? "Menyimpan..." : "Simpan"}
+              </Button>
+            </form>
+          )}
+          {panel === "nama" && rakMessage && (
+            <p className="mt-3 text-sm text-muted">{rakMessage}</p>
+          )}
+
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {statusLabel && <StatusBadge status={statusLabel} size="sm" />}
             <DetailPill icon={PlugZap}>
@@ -318,47 +361,16 @@ export default function RakDetail({
 
           {/* Tindakan yang mengubah atau menghapus dikumpulkan paling bawah terpisah dari data*/}
           <Section {...SECTION.pengaturan}>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
-              >
-                <Pencil className="h-4 w-4" /> Ubah nama kolam
-              </Button>
-              <button
-                type="button"
-                className="btn-danger"
-                onClick={() => setPanel((p) => (p === "hapus" ? null : "hapus"))}
-              >
-                <Trash2 className="h-4 w-4" /> Hapus Kolam
-              </button>
-            </div>
-
-            {/* Ubah identitas rak (PUT /kolam/:id) */}
-            {panel === "nama" && (
-              <form
-                onSubmit={handleRenameRak}
-                className="mt-4 flex flex-col gap-4 sm:max-w-2xl sm:flex-row sm:items-end"
-              >
-                <div className="sm:w-64">
-                  <Input
-                    label="Nama kolam"
-                    value={namaRak}
-                    onChange={(e) => setNamaRak(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" disabled={savingRak || namaRak === kolam.nama}>
-                  {savingRak ? "Menyimpan..." : "Simpan"}
-                </Button>
-              </form>
-            )}
-            {panel === "nama" && rakMessage && (
-              <p className="mt-3 text-sm text-muted">{rakMessage}</p>
-            )}
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={() => setPanel((p) => (p === "hapus" ? null : "hapus"))}
+            >
+              <Trash2 className="h-4 w-4" /> Hapus Kolam
+            </button>
 
             {panel === "hapus" && (
-              <div className="mt-4">
+              <div ref={hapusRef} className="mt-4">
                 <DangerZone
                   kolamId={kolamId}
                   nama={kolam.nama}
@@ -557,10 +569,7 @@ function DetailSkeleton() {
       </Section>
 
       <Section {...SECTION.pengaturan}>
-        <div className="flex flex-wrap gap-3">
-          <Skeleton className="h-[38px] w-36 rounded-lg" />
-          <Skeleton className="h-[38px] w-28 rounded-lg" />
-        </div>
+        <Skeleton className="h-[38px] w-28 rounded-lg" />
       </Section>
     </>
   );

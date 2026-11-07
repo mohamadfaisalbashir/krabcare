@@ -20,6 +20,7 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
   bool loading = true, submitting = false;
   int? busyId;
   String tipe = 'slave_node';
+  int? parentId; // master slave baru; null = belum ditentukan
   String? listError;
   Msg? formMsg, aksiMsg;
   final kode = TextEditingController();
@@ -54,8 +55,9 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
     });
     try {
       final code = kode.text.trim();
-      await api.createDevice(code, tipe);
+      await api.createDevice(code, tipe, parentId: tipe == 'slave_node' ? parentId : null);
       kode.clear();
+      parentId = null;
       setState(() => formMsg = (ok: true, text: "Device '$code' berhasil ditambahkan, siap diklaim ke kolam."));
       await load();
     } catch (e) {
@@ -138,14 +140,24 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
     }
   }
 
+  /// Keterangan jalur data slave dari parent_device_id (sama dengan keteranganJalur
+  /// di perangkat/page.tsx). Hanya catatan untuk admin: yang meneruskan data slave
+  /// adalah firmware master, backend tidak memakai relasi ini untuk logika.
+  String? _jalur(Json d) {
+    if (d['device_type'] != 'slave_node') return null;
+    final master = devices.where((m) => m['id'] == d['parent_device_id']).firstOrNull;
+    return master == null ? 'Master belum ditentukan' : 'Lewat master ${master['device_code']}';
+  }
+
   Widget _row(Json d) {
     final busy = busyId == d['id'];
     final klaim = d['kolam_id'] != null;
+    final jalur = _jalur(d);
     return ListTile(
       title: Text('${d['device_code']}', style: mono.copyWith(fontWeight: FontWeight.w600)),
       subtitle: Text(
         [
-          _tipeLabel[d['device_type']] ?? '${d['device_type']}',
+          [_tipeLabel[d['device_type']] ?? '${d['device_type']}', ?jalur].join(' · '),
           if (klaim) 'Kolam: ${d['kolam_nama']} (Milik: ${d['owner_nama']})',
           d['last_seen_at'] == null ? 'Belum pernah kirim data' : 'Terakhir aktif: ${formatWaktu(d['last_seen_at'])}',
         ].join('\n'),
@@ -182,6 +194,7 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
   Widget build(BuildContext context) {
     final belum = devices.where((d) => d['kolam_id'] == null).toList();
     final sudah = devices.where((d) => d['kolam_id'] != null).toList();
+    final masters = devices.where((d) => d['device_type'] == 'master_node').toList();
     Widget daftar(String judul, List<Json> list) => Section(
       title: '$judul (${list.length})',
       child: list.isEmpty
@@ -218,6 +231,35 @@ class _PerangkatScreenState extends State<PerangkatScreen> {
                     ],
                     onChanged: (v) => setState(() => tipe = v!),
                   ),
+                  if (tipe == 'slave_node') ...[
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<int?>(
+                      // initialValue hanya dibaca saat dibuat: key memaksa bangun ulang
+                      // sesudah form dikosongkan atau daftar master berubah.
+                      key: ValueKey('master-$parentId-${masters.length}'),
+                      initialValue: parentId,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: 'Terhubung ke master',
+                        helperText: masters.isEmpty
+                            ? 'Belum ada master. Daftarkan ESP32 yang tersambung ke Raspberry Pi lebih dulu.'
+                            : 'ESP32 yang tersambung kabel ke Raspberry Pi dan meneruskan data slave ini.',
+                        helperMaxLines: 3,
+                      ),
+                      items: [
+                        const DropdownMenuItem<int?>(value: null, child: Text('Belum ditentukan')),
+                        for (final m in masters)
+                          DropdownMenuItem<int?>(
+                            value: m['id'] as int,
+                            child: Text(
+                              '${m['device_code']}${m['kolam_nama'] == null ? '' : ', kolam ${m['kolam_nama']}'}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                      onChanged: (v) => setState(() => parentId = v),
+                    ),
+                  ],
                   if (formMsg != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 6),

@@ -49,6 +49,7 @@ Thumbs.db
 
 # Backup database
 backups/
+*.sql.gz
 
 # Eksperimen riset lokal
 experiments/

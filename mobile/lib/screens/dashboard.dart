@@ -321,6 +321,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   String? panel; // panel Pengaturan Kolam yang terbuka: 'nama' | 'hapus' | null
   Timer? poll;
   final kode = TextEditingController(), namaBaru = TextEditingController(), ketikNama = TextEditingController();
+  final hapusKey = GlobalKey(); // kotak Zona berbahaya, tujuan gulir saat Hapus Kolam ditekan
 
   @override
   void initState() {
@@ -398,10 +399,44 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 children: [
-                  Text(
-                    namaKolam,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: cBrand700),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          namaKolam,
+                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: cBrand700),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() => panel = panel == 'nama' ? null : 'nama'),
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        label: const Text('Ubah nama'),
+                      ),
+                    ],
                   ),
+                  if (panel == 'nama') ...[
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: namaBaru,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(labelText: 'Nama kolam'),
+                    ),
+                    if (rakMsg != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(rakMsg!)),
+                    const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: busy || namaBaru.text.trim().isEmpty || namaBaru.text.trim() == namaKolam
+                          ? null
+                          : () => run(() async {
+                              await api.updateKolam(kolamId, namaBaru.text.trim());
+                              setState(() {
+                                namaKolam = namaBaru.text.trim();
+                                rakMsg = 'Nama kolam berhasil diperbarui.';
+                              });
+                            }, (e) => setState(() => rakMsg = e)),
+                      child: Text(busy ? 'Menyimpan...' : 'Simpan'),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -613,48 +648,32 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            OutlinedButton.icon(
-              onPressed: () => setState(() => panel = panel == 'nama' ? null : 'nama'),
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text('Ubah nama kolam'),
-            ),
-            FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
-              onPressed: () => setState(() => panel = panel == 'hapus' ? null : 'hapus'),
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: const Text('Hapus Kolam'),
-            ),
-          ],
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilledButton.icon(
+            style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
+            onPressed: () {
+              setState(() => panel = panel == 'hapus' ? null : 'hapus');
+              if (panel != 'hapus') return;
+              // Kotaknya baru ada setelah rebuild, jadi gulir di frame berikutnya.
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                final c = hapusKey.currentContext;
+                if (c == null) return;
+                Scrollable.ensureVisible(
+                  c,
+                  duration: MediaQuery.of(context).disableAnimations ? Duration.zero : const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              });
+            },
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Hapus Kolam'),
+          ),
         ),
-        if (panel == 'nama') ...[
-          const SizedBox(height: 12),
-          TextField(
-            controller: namaBaru,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(labelText: 'Nama kolam'),
-          ),
-          if (rakMsg != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(rakMsg!)),
-          const SizedBox(height: 8),
-          FilledButton(
-            onPressed: busy || namaBaru.text.trim().isEmpty || namaBaru.text.trim() == namaKolam
-                ? null
-                : () => run(() async {
-                    await api.updateKolam(kolamId, namaBaru.text.trim());
-                    setState(() {
-                      namaKolam = namaBaru.text.trim();
-                      rakMsg = 'Nama kolam berhasil diperbarui.';
-                    });
-                  }, (e) => setState(() => rakMsg = e)),
-            child: Text(busy ? 'Menyimpan...' : 'Simpan'),
-          ),
-        ],
         if (panel == 'hapus') ...[
           const SizedBox(height: 12),
           Container(
+            key: hapusKey,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: statusStyle['Bahaya']!.bg.withValues(alpha: .6),
