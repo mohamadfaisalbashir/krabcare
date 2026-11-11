@@ -217,7 +217,14 @@ export const api = {
       method: "POST",
     }),
 
-  /** GET /kolam → KolamOut[] */
+  /** PUT /kolam/urutan → 204. Simpan urutan kartu dashboard, id dari atas ke bawah. */
+  reorderKolam: (kolamIds: number[]) =>
+    request<void>("/kolam/urutan", {
+      method: "PUT",
+      body: JSON.stringify({ kolam_ids: kolamIds }),
+    }),
+
+  /** GET /kolam → KolamOut[], sudah dalam urutan tampil dashboard. */
   listKolam: () => request<import("./types").Kolam[]>("/kolam"),
 
   /** GET /kolam/:id → KolamOut */

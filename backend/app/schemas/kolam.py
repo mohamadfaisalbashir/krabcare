@@ -17,10 +17,16 @@ class KolamUpdateIn(BaseModel):
     nama: str = Field(min_length=1)
 
 
+class KolamUrutanIn(BaseModel):
+    #: Id kolam dalam urutan tampil yang baru, dari atas ke bawah.
+    kolam_ids: list[int]
+
+
 class KolamOut(BaseModel):
     id: int
     nama: str
     is_active: bool
+    urutan: int | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

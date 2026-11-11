@@ -21,6 +21,9 @@ class Kolam(Base):
     )
     nama: Mapped[str] = mapped_column(Text, nullable=False)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
+    # Posisi kartu di dashboard hasil drag and drop. NULL = belum pernah diatur,
+    # urutannya ditentukan aturan default di kolam_service.list_kolam.
+    urutan: Mapped[int | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )

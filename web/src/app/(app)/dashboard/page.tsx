@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { Plus, Waves } from "lucide-react";
 import clsx from "clsx";
 import AccountChip from "@/components/layout/AccountChip";
+import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, rectSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import PondCard, { PONDCARD_WIDTH } from "@/components/dashboard/PondCard";
 import Rail from "@/components/dashboard/Rail";
 import RakDetail from "@/components/kolam/RakDetail";
@@ -192,19 +203,46 @@ export default function DashboardPage() {
 
   const variant = selected === null ? "grid" : "rail";
 
-  // Dirakit sekali, dipakai dua tata letak (grid dan rail).
+  // Jarak 6px sebelum dianggap menyeret, supaya klik biasa tetap membuka detail.
+  // Sentuhan perlu ditahan dulu, kalau tidak, menggulir halaman di HP ikut menyeret kartu.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+  );
+
+  // Urutan langsung diganti di layar, baru disimpan ke backend. Gagal simpan =
+  // muat ulang supaya layar kembali ke urutan yang benar-benar tersimpan.
+  function handleDragEnd({ active, over }: DragEndEvent) {
+    if (!over || active.id === over.id) return;
+    const from = items.findIndex((i) => i.kolam.id === active.id);
+    const to = items.findIndex((i) => i.kolam.id === over.id);
+    const next = arrayMove(items, from, to);
+    setItems(next);
+    api.reorderKolam(next.map((i) => i.kolam.id)).catch((err) => {
+      setError(err instanceof Error ? err.message : "Gagal menyimpan urutan kolam.");
+      loadDashboard(true);
+    });
+  }
+
+  // Menekan kartu yang sama = menutup, sesuai arah chevron-nya.
+  const toggleSelect = (id: number) => setSelected((prev) => (prev === id ? null : id));
+
+  // Rail tidak bisa diurutkan: di sana seretan dipakai untuk menggulir baris.
   const cards = loading ? (
     <KolamSkeleton variant={variant} />
+  ) : variant === "grid" ? (
+    items.map((item) => (
+      <SortablePondCard key={item.kolam.id} item={item} onSelect={toggleSelect} />
+    ))
   ) : (
     items.map((item) => (
       <PondCard
         key={item.kolam.id}
         item={item}
-        variant={variant}
+        variant="rail"
         selected={item.kolam.id === selected}
         panelId={PANEL_ID}
-        // Menekan kartu yang sama = menutup, sesuai arah chevron-nya.
-        onSelect={(id) => setSelected((prev) => (prev === id ? null : id))}
+        onSelect={toggleSelect}
       />
     ))
   );
@@ -282,10 +320,14 @@ export default function DashboardPage() {
             Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {cards}
-            <TambahKolamTile variant="grid" onClick={() => setShowForm((v) => !v)} />
-          </div>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={items.map((i) => i.kolam.id)} strategy={rectSortingStrategy}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {cards}
+                <TambahKolamTile variant="grid" onClick={() => setShowForm((v) => !v)} />
+              </div>
+            </SortableContext>
+          </DndContext>
         </div>
       ) : (
         // geseran seret + wheel, dan gradien tepi.
@@ -362,6 +404,42 @@ export default function DashboardPage() {
         )}
       </div>
     </div>
+  );
+}
+
+// Kartu mode grid yang bisa ditarik untuk diurutkan. Di mode grid belum ada rak
+// terpilih, jadi selected selalu false.
+function SortablePondCard({
+  item,
+  onSelect,
+}: {
+  item: KolamDashboard;
+  onSelect: (kolamId: number) => void;
+}) {
+  const { setNodeRef, listeners, transform, transition, isDragging } = useSortable({
+    id: item.kolam.id,
+  });
+  return (
+    <PondCard
+      item={item}
+      variant="grid"
+      selected={false}
+      panelId={PANEL_ID}
+      onSelect={onSelect}
+      sortable={{
+        setNodeRef,
+        listeners,
+        isDragging,
+        style: {
+          transform: CSS.Translate.toString(transform),
+          // Kartu yang sedang ditarik harus menempel ke kursor tanpa jeda. Tanpa
+          // "none", kelas `transition` di kartu ikut menganimasikan transform-nya
+          // dan kartu terasa tertinggal di belakang kursor.
+          transition: isDragging ? "none" : transition,
+          touchAction: "manipulation",
+        },
+      }}
+    />
   );
 }
 

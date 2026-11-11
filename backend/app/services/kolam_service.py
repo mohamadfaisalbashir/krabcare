@@ -1,10 +1,10 @@
 """Manajemen kolam & klaim device, dasar isolasi kepemilikan data."""
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Device, Kolam, User
-from app.models.enums import UserRole
+from app.models.enums import DeviceType, UserRole
 from app.schemas.kolam import KolamCreateIn, KolamUpdateIn
 
 
@@ -43,9 +43,36 @@ async def create_kolam(db: AsyncSession, owner: User, payload: KolamCreateIn) ->
 
 
 async def list_kolam(db: AsyncSession, owner: User) -> list[Kolam]:
-    """Kolam milik `owner` saja."""
-    result = await db.execute(select(Kolam).where(Kolam.owner_user_id == owner.id))
+    """Kolam milik `owner` saja, dalam urutan tampil dashboard.
+
+    Urutan hasil drag and drop (`urutan`) menang. Kolam yang belum punya urutan:
+    kolam ber-device master naik ke paling atas, sisanya di paling bawah.
+    """
+    has_master = (
+        select(Device.id)
+        .where(Device.kolam_id == Kolam.id, Device.device_type == DeviceType.MASTER_NODE)
+        .exists()
+    )
+    sort_key = case(
+        (Kolam.urutan.is_not(None), Kolam.urutan),
+        (has_master, -1),
+        else_=2147483647,
+    )
+    result = await db.execute(
+        select(Kolam).where(Kolam.owner_user_id == owner.id).order_by(sort_key, Kolam.id)
+    )
     return list(result.scalars().all())
+
+
+async def set_urutan(db: AsyncSession, owner: User, kolam_ids: list[int]) -> None:
+    """Simpan urutan tampil. Id yang bukan milik `owner` diabaikan diam-diam."""
+    result = await db.execute(
+        select(Kolam).where(Kolam.owner_user_id == owner.id, Kolam.id.in_(kolam_ids))
+    )
+    posisi = {kolam_id: i for i, kolam_id in enumerate(kolam_ids)}
+    for kolam in result.scalars().all():
+        kolam.urutan = posisi[kolam.id]
+    await db.commit()
 
 
 async def get_owned_kolam(db: AsyncSession, owner: User, kolam_id: int) -> Kolam | None:

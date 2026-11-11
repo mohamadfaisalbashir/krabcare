@@ -45,6 +45,8 @@ export interface Kolam {
   id: number;
   nama: string;
   is_active: boolean;
+  /** Posisi kartu di dashboard hasil drag and drop. null = belum pernah diatur. */
+  urutan: number | null;
   created_at: string;
 }
 

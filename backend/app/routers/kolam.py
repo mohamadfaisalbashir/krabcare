@@ -7,7 +7,7 @@ from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import User
 from app.schemas.device import DeviceOut
-from app.schemas.kolam import KolamCreateIn, KolamOut, KolamUpdateIn
+from app.schemas.kolam import KolamCreateIn, KolamOut, KolamUpdateIn, KolamUrutanIn
 from app.services import kolam_service
 from app.services.kolam_service import DeviceAlreadyClaimedError, DeviceNotFoundError
 
@@ -41,6 +41,18 @@ async def list_kolam(
     """Daftar kolam milik user ini saja."""
     items = await kolam_service.list_kolam(db, current_user)
     return [KolamOut.model_validate(k) for k in items]
+
+
+# Harus di atas PUT /{kolam_id}: kalau di bawah, "urutan" ditangkap sebagai
+# kolam_id dan gagal validasi int (422).
+@router.put("/urutan", status_code=status.HTTP_204_NO_CONTENT)
+async def set_urutan_kolam(
+    payload: KolamUrutanIn,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Simpan urutan kartu kolam di dashboard (hasil drag and drop)."""
+    await kolam_service.set_urutan(db, current_user, payload.kolam_ids)
 
 
 @router.get("/{kolam_id}", response_model=KolamOut)

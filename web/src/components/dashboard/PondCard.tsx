@@ -5,6 +5,7 @@ import { KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
 import { formatFraksi } from "@/lib/ammonia";
 import { isOnline } from "@/lib/tanggal";
 import clsx from "clsx";
+import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 
 /** Lebar kartu saat mode rail. Jangan selebar layar: di 375px sisa ~100px
  *  kartu berikutnya adalah satu-satunya petunjuk barisnya bisa digeser.
@@ -21,12 +22,23 @@ const TONE: Record<StatusLabel, { tile: string; dot: string; text: string }> = {
 
 const KOSONG = { tile: "bg-white/50 text-muted", dot: "bg-border", text: "text-muted" };
 
+/** Bagian useSortable (dnd-kit) yang dipasang ke tombol kartu. `attributes`
+ *  dnd-kit sengaja tidak dipakai: ia mengganti peran tombol jadi "sortable"
+ *  padahal tidak ada sensor keyboard untuk mengurutkan. */
+export type PondCardSortable = {
+  setNodeRef: (el: HTMLElement | null) => void;
+  style: React.CSSProperties;
+  listeners: DraggableSyntheticListeners;
+  isDragging: boolean;
+};
+
 export default function PondCard({
   item,
   variant,
   selected,
   panelId,
   onSelect,
+  sortable,
 }: {
   item: KolamDashboard;
   /** grid = mengisi lebar kolomnya (tata letak awal). rail = lebar tetap dan
@@ -37,6 +49,8 @@ export default function PondCard({
    *  membuka panel yang mana. */
   panelId: string;
   onSelect: (kolamId: number) => void;
+  /** Diisi dashboard di mode grid supaya kartu bisa ditarik untuk diurutkan. */
+  sortable?: PondCardSortable;
 }) {
   const { kolam, quality, latestReading, ammonia } = item;
 
@@ -63,6 +77,9 @@ export default function PondCard({
     // halaman lain, jadi tautan menjanjikan perpindahan yang tidak terjadi.
     <button
       type="button"
+      ref={sortable?.setNodeRef}
+      style={sortable?.style}
+      {...sortable?.listeners}
       onClick={() => onSelect(kolam.id)}
       aria-expanded={selected}
       aria-controls={panelId}
@@ -78,9 +95,13 @@ export default function PondCard({
             // membiarkannya meluber untuk digeser.
             `${PONDCARD_WIDTH} shrink-0`
           : "w-full",
-        selected
-          ? "bg-white/75 ring-2 ring-brand-500/60"
-          : "hover:-translate-y-0.5 hover:bg-white/70"
+        // Saat diurutkan, transform dipegang dnd-kit lewat style inline, jadi
+        // efek angkat hover (juga transform) dimatikan supaya tidak bentrok.
+        sortable?.isDragging
+          ? "relative z-20 cursor-grabbing bg-white/80 shadow-xl"
+          : selected
+            ? "bg-white/75 ring-2 ring-brand-500/60"
+            : clsx("hover:bg-white/70", !sortable && "hover:-translate-y-0.5")
       )}
     >
       <div className="mb-3 flex items-start justify-between">
