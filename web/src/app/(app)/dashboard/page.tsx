@@ -8,6 +8,7 @@ import AccountChip from "@/components/layout/AccountChip";
 import {
   DndContext,
   DragEndEvent,
+  Modifier,
   PointerSensor,
   TouchSensor,
   closestCenter,
@@ -36,6 +37,22 @@ import { api } from "@/lib/api";
 import { useUser } from "@/lib/user-store";
 
 const PANEL_ID = "detail-rak";
+
+/*
+Kartu yang ditarik dikunci di dalam kotak grid. Tanpa ini kartu bisa dibawa
+keluar grid, halaman memanjang mengikutinya, auto-scroll dnd-kit ikut menggulir,
+halaman memanjang lagi, dan kartu terlempar jauh ke area kosong di bawah.
+containerNodeRect = kotak elemen induk kartu, yaitu div grid.
+*/
+const restrictToGrid: Modifier = ({ transform, draggingNodeRect: card, containerNodeRect: grid }) => {
+  if (!card || !grid) return transform;
+  const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+  return {
+    ...transform,
+    x: clamp(transform.x, grid.left - card.left, grid.right - card.right),
+    y: clamp(transform.y, grid.top - card.top, grid.bottom - card.bottom),
+  };
+};
 
 // Label status UI dari klasifikasi fuzzy terbaru. `null` = device kolam ini belum pernah mengirim data. 
 function getStatusLabel(item: KolamDashboard): StatusLabel | null {
@@ -320,7 +337,12 @@ export default function DashboardPage() {
             Pilih kartu kolam untuk membuka detailnya: parameter terkini,
             prediksi, dan grafik pemantauan.
           </p>
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToGrid]}
+            onDragEnd={handleDragEnd}
+          >
             <SortableContext items={items.map((i) => i.kolam.id)} strategy={rectSortingStrategy}>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {cards}
