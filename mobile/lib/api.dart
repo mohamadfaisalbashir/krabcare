@@ -184,6 +184,7 @@ class _Api {
     int? offset,
     String? param,
     String? status,
+    int? intervalMinutes, // satu reading per device tiap N menit; null/0 = semua data
   }) async => _list(
     await _request(
       'GET',
@@ -196,6 +197,7 @@ class _Api {
         'offset': offset,
         'param': param,
         'status': status,
+        'interval_minutes': intervalMinutes == 0 ? null : intervalMinutes,
       },
     ),
   );
@@ -213,6 +215,7 @@ class _Api {
     bool onlyMeasured = false,
     int? limit,
     int? offset,
+    int? intervalMinutes,
   }) async => _list(
     await _request(
       'GET',
@@ -225,6 +228,7 @@ class _Api {
         'only_measured': onlyMeasured ? 'true' : null,
         'limit': limit,
         'offset': offset,
+        'interval_minutes': intervalMinutes == 0 ? null : intervalMinutes,
       },
     ),
   );

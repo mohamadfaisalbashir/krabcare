@@ -56,7 +56,8 @@ experiments/
 data/
 
 # Lain lain
-graphify-out
+graphify-out/
+krabcare_tests/
 *.md.bak
 *.docx
 *.pdf

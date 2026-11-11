@@ -107,6 +107,9 @@ async def ammonia_risk_history(
     ),
     limit: int = Query(default=25, gt=0, le=1000),
     offset: int = Query(default=0, ge=0),
+    interval_minutes: int | None = Query(
+        default=None, gt=0, le=1440, description="Satu baris per device per N menit"
+    ),
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[AmmoniaRiskLogOut]:
@@ -125,6 +128,7 @@ async def ammonia_risk_history(
         limit,
         offset,
         scope.allowed_device_ids,
+        interval_minutes,
     )
     return [
         AmmoniaRiskLogOut(

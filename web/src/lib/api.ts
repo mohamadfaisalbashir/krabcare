@@ -277,8 +277,11 @@ export const api = {
     offset?: number;
     param?: import("./parameter").ParamKey;
     status?: "aman" | "waspada" | "bahaya";
+    /** Satu reading per device per N menit. Kosong/0 = semua data. */
+    interval_minutes?: number;
   }) => {
     const qs = new URLSearchParams();
+    if (params?.interval_minutes) qs.set("interval_minutes", String(params.interval_minutes));
     if (params?.device_id) qs.set("device_id", String(params.device_id));
     if (params?.device_code) qs.set("device_code", params.device_code);
     if (params?.start_time) qs.set("start_time", params.start_time);
@@ -327,8 +330,10 @@ export const api = {
     only_measured?: boolean;
     limit?: number;
     offset?: number;
+    interval_minutes?: number;
   }) => {
     const qs = new URLSearchParams();
+    if (params?.interval_minutes) qs.set("interval_minutes", String(params.interval_minutes));
     if (params?.device_id) qs.set("device_id", String(params.device_id));
     if (params?.start_time) qs.set("start_time", params.start_time);
     if (params?.end_time) qs.set("end_time", params.end_time);

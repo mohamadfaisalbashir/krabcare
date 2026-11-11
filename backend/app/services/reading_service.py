@@ -2,11 +2,21 @@
 
 from datetime import datetime
 
-from sqlalchemy import Row, select
+from sqlalchemy import Row, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.water_thresholds import ParamKey, StatusFilter, kolom, predikat_status
 from app.models import Device, SensorReading
+
+
+def ember_waktu(kolom, menit: int):
+    """Nomor ember `menit`-an sejak epoch, untuk DISTINCT ON per interval.
+
+    Ember 15/30/60 menit di UTC sejajar dengan jam WIB karena selisihnya 7 jam
+    bulat. literal_column, bukan bind param: ekspresi ini muncul di DISTINCT ON
+    dan ORDER BY, dan Postgres menolak kalau keduanya beda nomor parameter.
+    """
+    return func.floor(func.extract("epoch", kolom) / literal_column(str(int(menit) * 60)))
 
 
 async def get_readings(
@@ -20,6 +30,7 @@ async def get_readings(
     param: ParamKey | None = None,
     status: StatusFilter | None = None,
     offset: int = 0,
+    interval_minutes: int | None = None,
 ) -> list[Row]:
     """Histori reading + device_code, terbaru dulu.
 
@@ -34,25 +45,52 @@ async def get_readings(
     bisa membuat satu baris terlihat dua kali atau terlewat. Bisa diterima untuk
     log kronologis; pola keyset cursor-nya ada di web/src/lib/export.ts
     (fetchAllReadings) kalau kelak butuh ketepatan penuh.
+
+    `interval_minutes` menyisakan satu reading per device per ember waktu,
+    yaitu yang paling awal di ember itu (nilai asli, bukan rata-rata, supaya
+    received_at dan latensinya tetap bermakna). Karena yang dipilih selalu
+    yang paling awal, memotong end_time di tengah ember tidak mengubah
+    pilihannya, jadi paging mundur di fetchAllReadings tetap aman.
+
+    ponytail: DISTINCT ON dihitung atas seluruh rentang sebelum LIMIT. Cukup
+    untuk data satu tambak; pakai continuous aggregate Timescale kalau lambat.
     """
+    kondisi = []
+    if device_id is not None:
+        kondisi.append(SensorReading.device_id == device_id)
+    if device_code is not None:
+        kondisi.append(Device.device_code == device_code)
+    if start_time is not None:
+        kondisi.append(SensorReading.time >= start_time)
+    if end_time is not None:
+        kondisi.append(SensorReading.time <= end_time)
+    if allowed_device_ids is not None:
+        kondisi.append(SensorReading.device_id.in_(allowed_device_ids))
+    if param is not None:
+        kondisi.append(kolom(param).is_not(None))
+        if status is not None:
+            kondisi.append(predikat_status(param, status))
+
     stmt = select(SensorReading, Device.device_code).join(
         Device, SensorReading.device_id == Device.id
     )
-
-    if device_id is not None:
-        stmt = stmt.where(SensorReading.device_id == device_id)
-    if device_code is not None:
-        stmt = stmt.where(Device.device_code == device_code)
-    if start_time is not None:
-        stmt = stmt.where(SensorReading.time >= start_time)
-    if end_time is not None:
-        stmt = stmt.where(SensorReading.time <= end_time)
-    if allowed_device_ids is not None:
-        stmt = stmt.where(SensorReading.device_id.in_(allowed_device_ids))
-    if param is not None:
-        stmt = stmt.where(kolom(param).is_not(None))
-        if status is not None:
-            stmt = stmt.where(predikat_status(param, status))
+    if interval_minutes:
+        ember = ember_waktu(SensorReading.time, interval_minutes)
+        terpilih = (
+            select(SensorReading.device_id, SensorReading.time)
+            .join(Device, SensorReading.device_id == Device.id)
+            .where(*kondisi)
+            .distinct(SensorReading.device_id, ember)
+            .order_by(SensorReading.device_id, ember, SensorReading.time)
+            .subquery()
+        )
+        stmt = stmt.join(
+            terpilih,
+            (SensorReading.device_id == terpilih.c.device_id)
+            & (SensorReading.time == terpilih.c.time),
+        )
+    else:
+        stmt = stmt.where(*kondisi)
 
     # device_id sebagai tiebreaker: `time` cuma unik di dalam satu device, jadi
     # tanpa ini dua baris berwaktu sama bisa bertukar posisi antar permintaan dan

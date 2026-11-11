@@ -14,6 +14,9 @@ import '../ui.dart';
 const _page = 25;
 const _amonia = 'amonia';
 
+/// Interval tampil/unduh dalam menit; 0 = semua data apa adanya.
+const _intervals = {0: 'Semua', 15: '15 mnt', 30: '30 mnt', 60: '60 mnt'};
+
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
   @override
@@ -24,6 +27,7 @@ class _LogScreenState extends State<LogScreen> {
   String param = 'ph', statusFilter = 'Semua', mode = 'hari';
   DateTime? dari, sampai;
   int jamDari = 0, jamSampai = 0;
+  int intervalMenit = 0; // satu data per device tiap N menit, diambil di backend
   List<Json> rows = [];
   List<Sensor> sensors = [];
   bool sensorsSiap = false; // supaya teks "belum ada device" tidak muncul selama memuat
@@ -94,6 +98,7 @@ class _LogScreenState extends State<LogScreen> {
         riskLevel: statusToRisk[statusFilter],
         limit: _page,
         offset: offset,
+        intervalMinutes: intervalMenit,
       );
     }
     return api.getReadings(
@@ -104,6 +109,7 @@ class _LogScreenState extends State<LogScreen> {
       status: statusFilter == 'Semua' ? null : statusFilter.toLowerCase(),
       limit: _page,
       offset: offset,
+      intervalMinutes: intervalMenit,
     );
   }
 
@@ -375,6 +381,17 @@ class _LogScreenState extends State<LogScreen> {
                     _Jam(jamSampai, (v) => set(() => jamSampai = v)),
                   ],
                 ),
+              const SizedBox(height: 10),
+              const Text('Interval', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              SegmentedButton<int>(
+                showSelectedIcon: false,
+                segments: [
+                  for (final e in _intervals.entries) ButtonSegment(value: e.key, label: Text(e.value)),
+                ],
+                selected: {intervalMenit},
+                onSelectionChanged: (s) => set(() => intervalMenit = s.first),
+              ),
             ],
           ),
   );
@@ -463,6 +480,7 @@ class _ExportSheetState extends State<ExportSheet> {
   late DateTime to = hariIniWib(), from = DateTime(to.year, to.month, to.day - 6);
   String paramSel = 'semua', format = 'csv';
   String urutan = 'terlama'; // urutan baris di berkas; 'terlama' = perilaku awal
+  int intervalMenit = 0; // satu baris per device tiap N menit; 0 = semua data
   bool busy = false;
   int progress = 0;
   String? error, note;
@@ -508,7 +526,13 @@ class _ExportSheetState extends State<ExportSheet> {
         required String endTime,
         required int limit,
       }) async {
-        final rows = await api.getReadings(deviceId: deviceId, startTime: startTime, endTime: endTime, limit: limit);
+        final rows = await api.getReadings(
+          deviceId: deviceId,
+          startTime: startTime,
+          endTime: endTime,
+          limit: limit,
+          intervalMinutes: intervalMenit,
+        );
         if (mounted) setState(() => progress += rows.length);
         return rows;
       }
@@ -672,6 +696,16 @@ class _ExportSheetState extends State<ExportSheet> {
               DropdownMenuItem(value: 'terbaru', child: Text('Terbaru dulu')),
             ],
             onChanged: (v) => setState(() => urutan = v!),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<int>(
+            initialValue: intervalMenit,
+            decoration: const InputDecoration(labelText: 'Interval'),
+            items: [
+              for (final e in _intervals.entries)
+                DropdownMenuItem(value: e.key, child: Text(e.key == 0 ? 'Semua data' : '${e.key} menit')),
+            ],
+            onChanged: (v) => setState(() => intervalMenit = v!),
           ),
           ErrorText(error),
           if (note != null) Text(note!, style: TextStyle(color: statusColor('Waspada'))),

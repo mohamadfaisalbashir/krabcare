@@ -34,6 +34,14 @@ export function dayRangeToIso(from: string, to: string) {
   };
 }
 
+/** Interval tampil/unduh dalam menit. 0 = semua data apa adanya. */
+export const INTERVALS = [
+  { value: 0, label: "Semua data" },
+  { value: 15, label: "15 menit" },
+  { value: 30, label: "30 menit" },
+  { value: 60, label: "60 menit" },
+] as const;
+
 export type GetPage = (p: {
   device_id: number;
   start_time: string;

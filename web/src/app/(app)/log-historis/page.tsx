@@ -19,7 +19,7 @@ import {
   formatFraksi,
   riskToStatus,
 } from "@/lib/ammonia";
-import { dayRangeToIso } from "@/lib/export";
+import { dayRangeToIso, INTERVALS } from "@/lib/export";
 import { api, ambilSensorSaya } from "@/lib/api";
 import clsx from "clsx";
 import { formatWaktu } from "@/lib/tanggal";
@@ -157,6 +157,8 @@ function LogHistorisView() {
   // aturan wraparound di rentangIso().
   const [jamDari, setJamDari] = useState("00");
   const [jamSampai, setJamSampai] = useState("00");
+  // Satu baris per device tiap N menit (diambil di backend). 0 = semua data.
+  const [intervalMenit, setIntervalMenit] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -228,6 +230,7 @@ function LogHistorisView() {
         ...(deviceSel !== "semua" ? { device_id: deviceSel } : {}),
         ...(rentang.start ? { start_time: rentang.start } : {}),
         ...(rentang.end ? { end_time: rentang.end } : {}),
+        ...(intervalMenit ? { interval_minutes: intervalMenit } : {}),
       };
 
       if (isAmonia) {
@@ -249,7 +252,7 @@ function LogHistorisView() {
       });
       return { sensor: halaman, amonia: [], jumlah: halaman.length };
     },
-    [param, isAmonia, statusFilter, rentangIso, deviceSel]
+    [param, isAmonia, statusFilter, rentangIso, deviceSel, intervalMenit]
   );
 
   // Ganti parameter/status/rentang, kembali ke halaman pertama.
@@ -386,6 +389,22 @@ function LogHistorisView() {
                   {m.label}
                 </FilterPill>
               ))}
+            </div>
+            {/* Interval: satu data per device tiap 15/30/60 menit, supaya rentang
+                panjang tidak tenggelam dalam ribuan baris. */}
+            <div className={clsx("mt-3", ringkas && "hidden")}>
+              <p className="mb-2 text-xs font-semibold text-muted">Interval</p>
+              <div className="grid grid-cols-4 gap-2">
+                {INTERVALS.map((iv) => (
+                  <FilterPill
+                    key={iv.value}
+                    active={intervalMenit === iv.value}
+                    onClick={() => setIntervalMenit(iv.value)}
+                  >
+                    {iv.label}
+                  </FilterPill>
+                ))}
+              </div>
             </div>
           </div>
 

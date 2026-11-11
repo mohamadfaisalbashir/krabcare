@@ -24,6 +24,9 @@ async def list_readings(
     offset: int = Query(default=0, ge=0),
     param: ParamKey | None = None,
     status: StatusFilter | None = None,
+    interval_minutes: int | None = Query(
+        default=None, gt=0, le=1440, description="Satu reading per device per N menit"
+    ),
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[SensorReadingOut]:
@@ -51,6 +54,7 @@ async def list_readings(
         param=param,
         status=status,
         offset=offset,
+        interval_minutes=interval_minutes,
     )
     return [
         SensorReadingOut(

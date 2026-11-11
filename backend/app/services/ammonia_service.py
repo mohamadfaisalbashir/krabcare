@@ -11,6 +11,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import AmmoniaRisk, Device
+from app.services.reading_service import ember_waktu
 
 #: horizon_minutes untuk baris "kondisi terukur", bukan ramalan. Harus sama
 #: dengan HORIZON_TERUKUR di raspi/edge_pipeline.py.
@@ -103,29 +104,56 @@ async def get_history(
     limit: int,
     offset: int,
     allowed_device_ids: set[int] | None = None,
+    interval_minutes: int | None = None,
 ) -> list[Row]:
     """Log historis risiko amonia + device_code, terbaru dulu.
+
+    `interval_minutes`: satu baris per device per horizon per ember
+    target_time, yang paling awal, sama seperti reading_service.get_readings.
 
     ponytail: paginasi OFFSET, sama seperti reading_service.get_readings, baris
     baru yang masuk di antara dua halaman bisa membuat satu baris terlihat dua
     kali. Bisa diterima untuk log kronologis.
     """
+    kondisi = []
+    if device_id is not None:
+        kondisi.append(AmmoniaRisk.device_id == device_id)
+    if start_time is not None:
+        kondisi.append(AmmoniaRisk.target_time >= start_time)
+    if end_time is not None:
+        kondisi.append(AmmoniaRisk.target_time <= end_time)
+    if risk_level is not None:
+        kondisi.append(AmmoniaRisk.risk_level == risk_level)
+    if only_measured:
+        kondisi.append(AmmoniaRisk.horizon_minutes == HORIZON_TERUKUR)
+    if allowed_device_ids is not None:
+        kondisi.append(AmmoniaRisk.device_id.in_(allowed_device_ids))
+
     stmt = select(AmmoniaRisk, Device.device_code).join(
         Device, AmmoniaRisk.device_id == Device.id
     )
-
-    if device_id is not None:
-        stmt = stmt.where(AmmoniaRisk.device_id == device_id)
-    if start_time is not None:
-        stmt = stmt.where(AmmoniaRisk.target_time >= start_time)
-    if end_time is not None:
-        stmt = stmt.where(AmmoniaRisk.target_time <= end_time)
-    if risk_level is not None:
-        stmt = stmt.where(AmmoniaRisk.risk_level == risk_level)
-    if only_measured:
-        stmt = stmt.where(AmmoniaRisk.horizon_minutes == HORIZON_TERUKUR)
-    if allowed_device_ids is not None:
-        stmt = stmt.where(AmmoniaRisk.device_id.in_(allowed_device_ids))
+    if interval_minutes:
+        ember = ember_waktu(AmmoniaRisk.target_time, interval_minutes)
+        terpilih = (
+            select(AmmoniaRisk.device_id, AmmoniaRisk.time, AmmoniaRisk.horizon_minutes)
+            .where(*kondisi)
+            .distinct(AmmoniaRisk.device_id, AmmoniaRisk.horizon_minutes, ember)
+            .order_by(
+                AmmoniaRisk.device_id,
+                AmmoniaRisk.horizon_minutes,
+                ember,
+                AmmoniaRisk.target_time,
+            )
+            .subquery()
+        )
+        stmt = stmt.join(
+            terpilih,
+            (AmmoniaRisk.device_id == terpilih.c.device_id)
+            & (AmmoniaRisk.time == terpilih.c.time)
+            & (AmmoniaRisk.horizon_minutes == terpilih.c.horizon_minutes),
+        )
+    else:
+        stmt = stmt.where(*kondisi)
 
     # Urut pakai target_time (waktu yang dinilai), bukan `time` (kapan
     # dihitung): baris ramalan lahir sekarang untuk waktu di masa depan, jadi

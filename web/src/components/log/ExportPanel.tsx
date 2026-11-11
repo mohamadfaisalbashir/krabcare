@@ -18,6 +18,7 @@ import {
   downloadCsv,
   downloadXlsx,
   MAX_PAGES,
+  INTERVALS,
   type ExportFormat,
   type GetPage,
 } from "@/lib/export";
@@ -64,6 +65,8 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
   const [format, setFormat] = useState<ExportFormat>("csv");
   // Urutan baris di berkas. "terlama" = perilaku awal, mulai dari data paling lama.
   const [urutan, setUrutan] = useState<"terlama" | "terbaru">("terlama");
+  // Satu baris per device tiap N menit. 0 = semua data apa adanya.
+  const [intervalMenit, setIntervalMenit] = useState(0);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +91,9 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       // getPage sebagai parameter, bukan import di lib/export.ts, supaya modul
       // itu tetap bebas dependensi dan bisa diuji `node --test`.
       const getPage: GetPage = async (p) => {
-        const rows = await api.getReadings(p);
+        const rows = await api.getReadings(
+          intervalMenit ? { ...p, interval_minutes: intervalMenit } : p
+        );
         setProgress((n) => n + rows.length);
         return rows;
       };
@@ -213,6 +218,24 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           >
             <option value="csv">CSV</option>
             <option value="xlsx">Excel (XLSX)</option>
+          </select>
+        </div>
+
+        <div className="sm:w-36">
+          <label htmlFor="unduh-interval" className="label-field">
+            Interval
+          </label>
+          <select
+            id="unduh-interval"
+            value={intervalMenit}
+            onChange={(e) => setIntervalMenit(Number(e.target.value))}
+            className="input-field"
+          >
+            {INTERVALS.map((iv) => (
+              <option key={iv.value} value={iv.value}>
+                {iv.label}
+              </option>
+            ))}
           </select>
         </div>
 

@@ -332,7 +332,9 @@ async def dispatch_from_quality_ingest(
 
     predictions_by_device: dict[str, list[dict]] = {}
     for p in predictions:
-        if p.predicted_category is None or p.predicted_category not in ANOMALY_CATEGORIES:
+        # Prediksi cuma jadi notifikasi kalau berbahaya. Waspada ("sedang") tetap
+        # terlihat di kartu prediksi dashboard, tidak perlu membunyikan HP.
+        if p.predicted_category != "buruk":
             continue
         predictions_by_device.setdefault(p.device_code, []).append(
             {
