@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind, Wifi, WifiOff } from "lucide-react";
-import { KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
+import { KolamDashboard, SENSOR_ERROR_TEKS, StatusLabel, categoryToLabel } from "@/lib/types";
 import { formatFraksi } from "@/lib/ammonia";
 import { PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { isOnline } from "@/lib/tanggal";
@@ -54,10 +54,12 @@ export default function PondCard({
   sortable?: PondCardSortable;
 }) {
   const { kolam, quality, latestReading, ammonia } = item;
-  // Nama pendek sensor yang terindikasi error, mis. "pH, Suhu". Kosong = sehat.
-  const sensorError = PARAM_KEYS.filter((p) => item.sensorStatus[p])
-    .map((p) => PARAM_UI[p].short)
-    .join(", ");
+  // Satu baris per sensor yang terindikasi error, beserta alasannya, mis.
+  // "pH (Nilai melonjak tidak wajar)". Kosong = semua sensor sehat.
+  const sensorError = PARAM_KEYS.flatMap((p) => {
+    const sebab = item.sensorStatus[p];
+    return sebab ? [`${PARAM_UI[p].short} (${SENSOR_ERROR_TEKS[sebab]})`] : [];
+  });
 
   // null = belum ada klasifikasi (device belum diklaim atau belum kirim data).
   // Jangan dipaksa jadi "Waspada", kolam kosong bukan anomali.
@@ -154,12 +156,17 @@ export default function PondCard({
         <span className="text-muted">· {updated}</span>
       </p>
 
-      {sensorError && (
-        <p className="mt-1 flex items-center gap-1 truncate text-[11px] font-semibold text-status-bahaya">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
-          Sensor error: {sensorError}
+      {/* Tanpa truncate: alasannya justru bagian yang perlu terbaca, jadi
+          baris panjang dibiarkan turun ke baris berikutnya. */}
+      {sensorError.map((teks) => (
+        <p
+          key={teks}
+          className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-status-bahaya"
+        >
+          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+          <span>Sensor error: {teks}</span>
         </p>
-      )}
+      ))}
 
       {/* Garis pemisah putih, bukan `border-border` yang keabuan: di atas kaca,
           garis terang terbaca sebagai tepi lempeng. */}

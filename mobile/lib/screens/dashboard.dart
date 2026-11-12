@@ -326,11 +326,10 @@ class _PondCard extends StatelessWidget {
                             if (r != null) Text('  ·  ${formatJam(r['time'])}', style: TextStyle(color: cInk)),
                           ],
                         ),
-                        if (item.sensor.isNotEmpty)
-                          _SensorError([
-                            for (final p in paramKeys)
-                              if (item.sensor[p] != null) paramUi[p]!.short,
-                          ].join(', ')),
+                        // Satu baris per sensor yang error, beserta alasannya.
+                        for (final p in paramKeys)
+                          if (item.sensor[p] != null)
+                            _SensorError('${paramUi[p]!.short} (${_sensorErrorTeks[item.sensor[p]] ?? ''})'),
                       ],
                     ),
                   ),
