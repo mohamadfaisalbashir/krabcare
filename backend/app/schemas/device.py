@@ -5,6 +5,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from app.models.enums import DeviceType
+from app.schemas.user import MAKS_INPUT
 
 
 class DeviceCreateIn(BaseModel):
@@ -15,9 +16,9 @@ class DeviceCreateIn(BaseModel):
     baru terhubung lewat POST /kolam/:id/devices/:code.
     """
 
-    device_code: str = Field(min_length=1, max_length=100)
+    device_code: str = Field(min_length=1, max_length=MAKS_INPUT)
     device_type: DeviceType = DeviceType.SLAVE_NODE
-    rack_label: str | None = None
+    rack_label: str | None = Field(default=None, max_length=MAKS_INPUT)
     parent_device_id: int | None = None
 
 

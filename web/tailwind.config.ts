@@ -1,14 +1,33 @@
 import type { Config } from "tailwindcss";
 
+/** Warna yang nilainya berganti antara mode terang dan gelap. Nilainya ada di
+ *  globals.css (:root dan .dark) sebagai triplet "R G B", supaya pengubah alpha
+ *  Tailwind (bg-surface/60, theme("colors.muted / 30%")) tetap berfungsi. */
+const v = (nama: string) => `rgb(var(--c-${nama}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  // Kelas `dark` di <html>, dipasang skrip kecil di app/layout.tsx dari pilihan
+  // pengguna di halaman Profil.
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
         // Palet "Muara": warna air payau, lumpur mangrove, dan cangkang kepiting.
-        bg: "#F2F6F2",
-        surface: "#FFFFFF",
-        ink: "#122B26",
+        // Hex di komentar adalah nilai mode terang; nilai mode gelapnya di globals.css.
+        bg: v("bg"), // #F2F6F2
+        surface: v("surface"), // #FFFFFF
+        ink: v("ink"), // #122B26
+        // Lembar kaca di atas foto dashboard: putih di mode terang, gelap di
+        // mode gelap. Dipakai menggantikan bg-white/NN, border-white/NN, dan
+        // ring-white/NN pada panel kaca.
+        kaca: v("kaca"),
+        // Warna merek untuk TEKS dan ikon (tautan, judul aktif). Dipisah dari
+        // brand-600/700 karena di mode gelap keduanya tidak bisa sama: tombol
+        // bg-brand-600 berteks putih harus tetap gelap, sedangkan teks merek di
+        // atas latar gelap harus terang. aksen = brand-600, aksen-kuat =
+        // brand-700 di mode terang.
+        aksen: { DEFAULT: v("aksen"), kuat: v("aksen-kuat") },
         // Namanya "muted" tapi warnanya bukan abu-abu lagi. #5C7A72 yang lama
         // cuma 4,69:1 di atas putih, dan sebagian besar pemakaiannya duduk di
         // atas kartu `.glass` (putih 55% di atas foto) sehingga kontras
@@ -18,8 +37,8 @@ const config: Config = {
         // Hirarki dibawa ukuran dan tebal huruf, bukan kepudaran. Jangan
         // dikembalikan jadi abu-abu. Tiga pemakaian non-teks di globals.css
         // sudah diturunkan alpha-nya supaya tampilannya tidak ikut menggelap.
-        muted: "#1E332D",
-        border: "#DCE5DD",
+        muted: v("muted"), // #1E332D
+        border: v("border"), // #DCE5DD
         // Warna dominan aplikasi: #19A8B2 (brand-500).
         //
         // Step 600/700 lebih gelap karena teks putih di atas #19A8B2 cuma
@@ -28,8 +47,9 @@ const config: Config = {
         // wordmark, dan outline fokus memakai 600/700:
         //   putih di 600 = 4.52:1, putih di 700 = 5.82:1, 700 di 50 = 5.25:1
         brand: {
-          50: "#E8F6F7",
-          100: "#C6E9EC",
+          // 50 dan 100 dipakai sebagai latar tipis, jadi ikut berganti di mode gelap.
+          50: v("brand-50"), // #E8F6F7
+          100: v("brand-100"), // #C6E9EC
           300: "#7ACDD2",
           500: "#19A8B2",
           600: "#12838C",
@@ -50,12 +70,12 @@ const config: Config = {
           700: "#8E611F",
         },
         status: {
-          aman: "#1F9D55",
-          amanBg: "#E4F6EB",
-          waspada: "#B9740E",
-          waspadaBg: "#FBF0DA",
-          bahaya: "#C23B22",
-          bahayaBg: "#FBE7E2",
+          aman: v("aman"), // #1F9D55
+          amanBg: v("aman-bg"), // #E4F6EB
+          waspada: v("waspada"), // #B9740E
+          waspadaBg: v("waspada-bg"), // #FBF0DA
+          bahaya: v("bahaya"), // #C23B22
+          bahayaBg: v("bahaya-bg"), // #FBE7E2
         },
       },
       // Satu keluarga huruf untuk seluruh UI, judul maupun isi, mengikuti

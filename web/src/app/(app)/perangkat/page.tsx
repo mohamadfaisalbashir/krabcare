@@ -84,7 +84,7 @@ function DeviceRow({
             type="button"
             onClick={() => onAssign(d)}
             disabled={busy}
-            className="flex items-center gap-1 rounded-lg border border-brand-300 bg-brand-50/70 px-2.5 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-50"
+            className="flex items-center gap-1 rounded-lg border border-brand-300 bg-brand-50/70 px-2.5 py-1.5 text-xs font-semibold text-aksen-kuat transition hover:bg-brand-100 disabled:opacity-50"
             title="Pasang ke kolam user"
           >
             <Link2 className="h-3.5 w-3.5" />

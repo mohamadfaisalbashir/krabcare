@@ -19,9 +19,15 @@ def create_app() -> FastAPI:
     risiko amonia dihitung di edge (raspi/edge_pipeline.py) lalu masuk lewat
     POST /ingest/quality; backend cuma menyimpan dan melayani permintaan.
     """
+    # Dokumentasi interaktif memetakan seluruh endpoint dan skemanya. Berguna
+    # saat development, tapi di production cuma memudahkan orang luar memindai API.
+    produksi = settings.ENVIRONMENT == "production"
     app = FastAPI(
         title=settings.PROJECT_NAME,
         debug=settings.DEBUG,
+        docs_url=None if produksi else "/docs",
+        redoc_url=None if produksi else "/redoc",
+        openapi_url=None if produksi else "/openapi.json",
     )
 
     # Development saja: terima juga origin LAN (misal http://192.168.1.7:3000)

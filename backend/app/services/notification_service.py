@@ -5,13 +5,15 @@ from datetime import datetime, timedelta, timezone
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 
 from app.core.push import send_push
 from app.models import Device, Kolam, Notification, PushToken, SensorReading, User
+from app.services import sensor_status
 
 if TYPE_CHECKING:
     from app.schemas.ammonia import AmmoniaRiskIn
@@ -48,6 +50,46 @@ def _masih_segar(t: datetime, batas: datetime) -> bool:
     if t.tzinfo is None:
         t = t.replace(tzinfo=timezone.utc)
     return t >= batas
+
+# Notifikasi yang lebih tua dari ini dihapus otomatis dan tidak ditampilkan.
+NOTIF_MAKS_UMUR = timedelta(days=7)
+
+
+async def hapus_notifikasi_lama(db: AsyncSession) -> None:
+    """Buang notifikasi yang umurnya lewat NOTIF_MAKS_UMUR.
+
+    Baris terbaru per (device, source, parameter) disisakan walau sudah tua:
+    transition check (_last_*_category) membacanya sebagai status terakhir.
+    Kalau ikut terhapus, kolam yang menetap di Bahaya dianggap "baru" Bahaya
+    lagi dan memicu notifikasi + push ulang tiap minggu. Baris sisa itu
+    disembunyikan oleh list_notifications. Prediksi tidak punya transition
+    check, jadi dihapus semua.
+
+    ponytail: dipanggil tiap ingest, tanpa scheduler. Tabelnya kecil (isinya
+    cuma seminggu). Pindah ke job terjadwal kalau DELETE ini mulai terasa.
+    """
+    lebih_baru = aliased(Notification)
+    ada_yang_lebih_baru = (
+        select(lebih_baru.id)
+        .where(
+            lebih_baru.device_id == Notification.device_id,
+            lebih_baru.source == Notification.source,
+            lebih_baru.parameter.is_not_distinct_from(Notification.parameter),
+            lebih_baru.event_time > Notification.event_time,
+        )
+        .correlate(Notification)
+        .exists()
+    )
+    await db.execute(
+        delete(Notification)
+        .where(
+            Notification.created_at < datetime.now(timezone.utc) - NOTIF_MAKS_UMUR,
+            or_(Notification.source == "prediction", ada_yang_lebih_baru),
+        )
+        .execution_options(synchronize_session=False)
+    )
+    await db.commit()
+
 
 _UNIQUE_KEY = [
     Notification.device_id,
@@ -98,13 +140,13 @@ async def create_classification_notification(
             return None
         message = (
             f"Kualitas air {_label_device(device, kolam)} tercatat dalam kondisi "
-            f"{label_baru.upper()} (skor {quality_score:.1f})."
+            f"{label_baru.upper()} (skor {quality_score:.2f})."
         )
     else:
         label_lama = CATEGORY_LABEL.get(previous, previous)
         message = (
             f"Kondisi kolam {_label_device(device, kolam)} berubah dari {label_lama} ke {label_baru} "
-            f"(skor {quality_score:.1f})."
+            f"(skor {quality_score:.2f})."
         )
 
     return await _insert_abaikan_duplikat(
@@ -161,13 +203,15 @@ def classify_param_value(param_key: str, value: float) -> str:
         return "sedang"
     return "baik"
 
-async def _last_parameter_category(db: AsyncSession, device_id: int, parameter: str) -> str | None:
+async def _last_parameter_category(
+    db: AsyncSession, device_id: int, parameter: str, source: str = "parameter"
+) -> str | None:
     """Kategori pada notifikasi parameter terakhir device ini, acuan transition-check."""
     result = await db.execute(
         select(Notification.quality_category)
         .where(
             Notification.device_id == device_id,
-            Notification.source == "parameter",
+            Notification.source == source,
             Notification.parameter == parameter,
         )
         .order_by(Notification.event_time.desc())
@@ -263,7 +307,9 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         tokens = result.scalars().all()
         if not tokens:
             continue
-        if notif.parameter:
+        if notif.source == "sensor":
+            title = "Sensor Error" if notif.quality_category in ANOMALY_CATEGORIES else "Sensor Kembali Normal"
+        elif notif.parameter:
             param_label = PARAM_CONFIG.get(notif.parameter, {}).get(
                 "label", "Risiko amonia" if notif.parameter == "ammonia" else notif.parameter
             )
@@ -275,9 +321,11 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         else:
             title = "Peringatan Kualitas Air" if notif.quality_category in ANOMALY_CATEGORIES else "Kualitas Air Membaik"
         any_success = False
+        # kolam_id dibaca app mobile saat push diketuk, untuk membuka detail kolamnya.
+        data = {"kolam_id": str(notif.kolam_id)}
         for token in tokens:
             try:
-                if send_push(token.fcm_token, title, notif.message):
+                if send_push(token.fcm_token, title, notif.message, data):
                     any_success = True
             except Exception:
                 logger.exception("Gagal kirim push ke user_id=%s", notif.user_id)
@@ -302,6 +350,8 @@ async def dispatch_from_quality_ingest(
     )
     if not device_codes:
         return
+
+    await hapus_notifikasi_lama(db)
 
     result = await db.execute(
         select(Device, Kolam)
@@ -332,9 +382,7 @@ async def dispatch_from_quality_ingest(
 
     predictions_by_device: dict[str, list[dict]] = {}
     for p in predictions:
-        # Prediksi cuma jadi notifikasi kalau berbahaya. Waspada ("sedang") tetap
-        # terlihat di kartu prediksi dashboard, tidak perlu membunyikan HP.
-        if p.predicted_category != "buruk":
+        if p.predicted_category is None or p.predicted_category not in ANOMALY_CATEGORIES:
             continue
         predictions_by_device.setdefault(p.device_code, []).append(
             {
@@ -396,7 +444,7 @@ async def dispatch_from_quality_ingest(
         if ph_val is not None:
             ph_cat = classify_param_value("ph", ph_val)
             notif_ph = await create_parameter_notification(
-                db, device, kolam, "ph", ph_cat, PARAM_CONFIG["ph"]["label"], f"nilai {ph_val:.1f} pH", reading_time
+                db, device, kolam, "ph", ph_cat, PARAM_CONFIG["ph"]["label"], f"nilai {ph_val:.2f} pH", reading_time
             )
             if notif_ph and push_param:
                 new_notifications.append(notif_ph)
@@ -405,7 +453,7 @@ async def dispatch_from_quality_ingest(
         if temp_val is not None:
             temp_cat = classify_param_value("temperature_c", temp_val)
             notif_temp = await create_parameter_notification(
-                db, device, kolam, "temperature_c", temp_cat, PARAM_CONFIG["temperature_c"]["label"], f"nilai {temp_val:.1f} °C", reading_time
+                db, device, kolam, "temperature_c", temp_cat, PARAM_CONFIG["temperature_c"]["label"], f"nilai {temp_val:.2f} °C", reading_time
             )
             if notif_temp and push_param:
                 new_notifications.append(notif_temp)
@@ -414,7 +462,7 @@ async def dispatch_from_quality_ingest(
         if sal_val is not None:
             sal_cat = classify_param_value("salinity_ppt", sal_val)
             notif_sal = await create_parameter_notification(
-                db, device, kolam, "salinity_ppt", sal_cat, PARAM_CONFIG["salinity_ppt"]["label"], f"nilai {sal_val:.1f} ppt", reading_time
+                db, device, kolam, "salinity_ppt", sal_cat, PARAM_CONFIG["salinity_ppt"]["label"], f"nilai {sal_val:.2f} ppt", reading_time
             )
             if notif_sal and push_param:
                 new_notifications.append(notif_sal)
@@ -424,7 +472,7 @@ async def dispatch_from_quality_ingest(
             ammonia_cat = AMMONIA_RISK_TO_CATEGORY.get(a_now.risk_level.lower())
             if ammonia_cat:
                 fraksi_str = (
-                    f"fraksi NH3 {a_now.fraction_nh3_pct:.1f}%"
+                    f"fraksi NH3 {a_now.fraction_nh3_pct:.2f}%"
                     if a_now.fraction_nh3_pct is not None
                     else a_now.risk_level
                 )
@@ -437,6 +485,67 @@ async def dispatch_from_quality_ingest(
     if new_notifications:
         await dispatch_push(db, new_notifications)
 
+
+SENSOR_LABEL: dict[str, str] = {"ph": "pH", "temperature_c": "suhu", "salinity_ppt": "salinitas"}
+SENSOR_SEBAB: dict[str, str] = {
+    "lonjakan": "Nilainya melonjak tidak wajar dalam waktu singkat.",
+    "kosong": "Nilainya tidak terbaca.",
+}
+
+
+async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> None:
+    """Notifikasi sensor error untuk device yang baru mengirim reading
+    (POST /ingest/readings). Dibuat hanya saat statusnya berubah: mulai error,
+    atau pulih. Deteksinya di services/sensor_status.py.
+
+    Kategori memakai enum yang sudah ada: "buruk" = error, "baik" = pulih.
+    Teksnya sengaja tidak memuat kata Aman/Waspada/Bahaya, karena klien
+    mewarnai kata-kata itu di dalam pesan.
+    """
+    result = await db.execute(
+        select(Device, Kolam)
+        .join(Kolam, Device.kolam_id == Kolam.id)
+        .where(Device.device_code.in_(device_codes))
+    )
+    batas = datetime.now(timezone.utc) - PUSH_MAKS_UMUR
+    baru: list[Notification] = []
+
+    for device, kolam in result.all():
+        rows = await sensor_status.pembacaan_terakhir(db, device.id)
+        if not rows:
+            continue
+        error = sensor_status.deteksi_sensor_error(rows)
+        for parameter, label in SENSOR_LABEL.items():
+            category = "buruk" if parameter in error else "baik"
+            previous = await _last_parameter_category(db, device.id, parameter, source="sensor")
+            if previous == category or (previous is None and category == "baik"):
+                continue
+            message = (
+                f"Sensor {label} {_label_device(device, kolam)} kemungkinan error. "
+                f"{SENSOR_SEBAB[error[parameter]]}"
+                if parameter in error
+                else f"Sensor {label} {_label_device(device, kolam)} kembali normal."
+            )
+            notif = await _insert_abaikan_duplikat(
+                db,
+                {
+                    "user_id": kolam.owner_user_id,
+                    "device_id": device.id,
+                    "kolam_id": kolam.id,
+                    "source": "sensor",
+                    "parameter": parameter,
+                    "quality_category": category,
+                    "event_time": rows[0].time,
+                    "message": message,
+                },
+            )
+            if notif is not None and _masih_segar(rows[0].time, batas):
+                baru.append(notif)
+
+    if baru:
+        await dispatch_push(db, baru)
+
+
 async def list_notifications(
     db: AsyncSession,
     user: User,
@@ -447,7 +556,12 @@ async def list_notifications(
     device_id: int | None = None,
 ) -> list[Notification]:
     """Notifikasi milik `user`diurutkan dari terbaru dulu dan satu halaman cuma 20 baris. `offset` untuk "muat lebih banyak" """
-    stmt = select(Notification).where(Notification.user_id == user.id)
+    # Batas umur ikut disaring di sini: hapus_notifikasi_lama menyisakan satu
+    # baris tua per device sebagai acuan status, dan baris itu tidak untuk ditampilkan.
+    stmt = select(Notification).where(
+        Notification.user_id == user.id,
+        Notification.created_at >= datetime.now(timezone.utc) - NOTIF_MAKS_UMUR,
+    )
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
     if source is not None:

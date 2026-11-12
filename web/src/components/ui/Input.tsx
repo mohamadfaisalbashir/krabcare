@@ -15,7 +15,7 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
  * Mata bawaan Edge/Chromium (::-ms-reveal) dimatikan di globals.css, kalau
  * tidak ada dua ikon berdampingan dan yang bawaan menutupi tombol ini.
  */
-export default function Input({ label, id, type, className, ...rest }: Props) {
+export default function Input({ label, id, type, className, maxLength = 50, ...rest }: Props) {
   const fallbackId = useId();
   const inputId = id ?? `${label.toLowerCase().replace(/\s+/g, "-")}-${fallbackId}`;
   const [terlihat, setTerlihat] = useState(false);
@@ -32,6 +32,9 @@ export default function Input({ label, id, type, className, ...rest }: Props) {
         <input
           id={inputId}
           type={tipeEfektif}
+          // Semua kolom isian dibatasi 50 karakter, sama dengan MAKS_INPUT di
+          // backend (schemas/user.py). Bisa ditimpa lewat prop kalau perlu.
+          maxLength={maxLength}
           // pr-11 hanya saat ada tombolnya, supaya teks sandi panjang tidak
           // merayap ke bawah ikon.
           className={`input-field ${isPassword ? "pr-11" : ""} ${className ?? ""}`}

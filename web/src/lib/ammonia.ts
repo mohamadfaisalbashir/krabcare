@@ -48,9 +48,10 @@ export function skalaPersen(fractionPct: number): number {
   return Math.max(0, Math.min(100, (fractionPct / SKALA_MAKS) * 100));
 }
 
-/** Satu desimal, koma ala Indonesia: 5.9985 -> "6,0". */
+/** Dua desimal, koma ala Indonesia: 5.9985 -> "6,00". Dua desimal supaya
+ *  angka di dekat ambang tidak terbaca berselisih dengan label statusnya. */
 export function formatFraksi(fractionPct: number): string {
-  return fractionPct.toFixed(1).replace(".", ",");
+  return fractionPct.toFixed(2).replace(".", ",");
 }
 
 /** Kalimat tren dari deret fraksi ramalan. Bentuknya mengikuti trendSentence()

@@ -20,6 +20,7 @@ import {
   FuzzyPrediction,
   DeviceAmmonia,
   AmmoniaRisk,
+  SensorStatus,
   StatusLabel,
   categoryToLabel,
 } from "@/lib/types";
@@ -56,7 +57,12 @@ export default function RakDetail({
   // Dipanggil tiap kali reading/kualitas/amonia device ini dimuat di sini.
   onDataUpdate?: (
     kolamId: number,
-    data: { reading: SensorReading | null; quality: LatestQuality | null; ammonia: AmmoniaRisk | null }
+    data: {
+      reading: SensorReading | null;
+      quality: LatestQuality | null;
+      ammonia: AmmoniaRisk | null;
+      sensorStatus: SensorStatus;
+    }
   ) => void;
 }) {
   const kolamId = kolam.id;
@@ -68,6 +74,7 @@ export default function RakDetail({
   const [history, setHistory] = useState<SensorReading[]>([]);
   const [predictions, setPredictions] = useState<FuzzyPrediction[]>([]);
   const [ammonia, setAmmonia] = useState<DeviceAmmonia | null>(null);
+  const [sensorStatus, setSensorStatus] = useState<SensorStatus>({});
   const [activeParam, setActiveParam] = useState<ParamKey | "all">("ph");
   const [loading, setLoading] = useState(true);
   // Terpisah dari `loading` yang cuma menutup pengambilan device. Membedakan "bacaan belum sampai" dari "rak ini belum punya bacaan"
@@ -118,6 +125,7 @@ export default function RakDetail({
       setHistory([]);
       setPredictions([]);
       setAmmonia(null);
+      setSensorStatus({});
       setDataLoading(false);
       return;
     }
@@ -126,12 +134,15 @@ export default function RakDetail({
 
     async function loadDeviceData(deviceId: number) {
       try {
-        const [qualityList, readings, predictionList, ammoniaList] = await Promise.all([
-          api.getLatestQuality(deviceId),
-          api.getReadings({ device_id: deviceId, limit: 100 }),
-          api.getPredictions(deviceId),
-          api.getAmmoniaRisk(deviceId),
-        ]);
+        const [qualityList, readings, predictionList, ammoniaList, sensorStatus] =
+          await Promise.all([
+            api.getLatestQuality(deviceId),
+            api.getReadings({ device_id: deviceId, limit: 100 }),
+            api.getPredictions(deviceId),
+            api.getAmmoniaRisk(deviceId),
+            // Label tambahan saja: kalau gagal, data utama tetap tampil tanpa label.
+            api.getSensorStatus(deviceId).catch((): SensorStatus => ({})),
+          ]);
         const quality = qualityList[0] ?? null;
         const reading = readings[0] ?? null;
         const ammonia = ammoniaList[0] ?? null;
@@ -141,7 +152,13 @@ export default function RakDetail({
         setHistory([...readings].reverse());
         setPredictions(predictionList[0]?.predictions ?? []);
         setAmmonia(ammonia);
-        onDataUpdate?.(kolamId, { reading, quality, ammonia: ammonia?.current ?? null });
+        setSensorStatus(sensorStatus);
+        onDataUpdate?.(kolamId, {
+          reading,
+          quality,
+          ammonia: ammonia?.current ?? null,
+          sensorStatus,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal memuat data sensor.");
       } finally {
@@ -204,17 +221,17 @@ export default function RakDetail({
       {/* Kepala, tanpa foto: dashboard di atasnya sudah punya banner berfoto. */}
       <div className="flex items-start justify-between gap-3 px-5 pb-4 pt-5 sm:px-6">
         <div className="min-w-0">
-          <p className="text-[16.67px] font-semibold text-[#266B70]">Detail Kolam</p>
+          <p className="text-[16.67px] font-semibold text-[#266B70] dark:text-aksen">Detail Kolam</p>
           {/* Nama rak buatan pengguna, panjangnya tidak terbatas, jadi dipotong alih-alih mendorong tombol Tutup keluar. */}
           <div className="mt-0.5 flex min-w-0 items-center gap-3">
-            <h2 className="min-w-0 truncate font-display font-semibold text-brand-700 text-[26.67px] sm:text-[32.67px]">
+            <h2 className="min-w-0 truncate font-display font-semibold text-aksen-kuat text-[26.67px] sm:text-[32.67px]">
               {kolam.nama}
             </h2>
             {/* Gaya pil sama dengan DetailPill di bawahnya. */}
             <button
               type="button"
               onClick={() => setPanel((p) => (p === "nama" ? null : "nama"))}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-white/70 transition-colors duration-150 hover:bg-white"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-kaca/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-kaca/70 transition-colors duration-150 hover:bg-kaca"
             >
               <Pencil className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} /> Ubah nama
             </button>
@@ -266,7 +283,7 @@ export default function RakDetail({
           type="button"
           onClick={onClose}
           aria-label="Tutup detail kolam"
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-white/70 hover:text-ink"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors duration-150 hover:bg-kaca/70 hover:text-ink"
         >
           <X className="h-[18px] w-[18px]" strokeWidth={2.2} />
         </button>
@@ -284,7 +301,11 @@ export default function RakDetail({
 
           {/* Pembacaan terkini, satu baris, bukan empat kartu. */}
           <Section {...SECTION.terkini}>
-            <ParameterStrip reading={reading} ammonia={ammonia?.current ?? null} />
+            <ParameterStrip
+              reading={reading}
+              ammonia={ammonia?.current ?? null}
+              sensorStatus={sensorStatus}
+            />
             {/* Keterangan pita hijau*/}
             <p className="mt-3 text-sm leading-relaxed text-muted">
               <span className="font-semibold text-status-aman">
@@ -346,10 +367,10 @@ export default function RakDetail({
                       aria-pressed={activeParam === "all"}
                       onClick={() => setActiveParam("all")}
                       className={clsx(
-                        "w-full whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-white/70 transition-colors duration-200",
+                        "w-full whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold ring-1 ring-inset ring-kaca/70 transition-colors duration-200",
                         activeParam === "all"
-                          ? "bg-white text-brand-700 shadow-card"
-                          : "bg-white/50 text-muted hover:text-ink"
+                          ? "bg-surface text-aksen-kuat shadow-card dark:bg-brand-100"
+                          : "bg-kaca/50 text-muted hover:text-ink"
                       )}
                     >
                       Semua Parameter
@@ -416,7 +437,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-t border-white/60 px-5 py-5 sm:px-6">
+    <section className="border-t border-kaca/60 dark:border-border px-5 py-5 sm:px-6">
       {(title || aside) && (
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
@@ -436,7 +457,7 @@ function Section({
 // Legenda warna kondisi, dirender di dalam tiap bagian yang memakai warnanya (Parameter & Prediksi)
 function WarnaKondisiLegend() {
   return (
-    <div className="mt-3 flex flex-col items-start gap-1 border-t border-white/60 pt-2.5 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
+    <div className="mt-3 flex flex-col items-start gap-1 border-t border-kaca/60 dark:border-border pt-2.5 text-sm text-muted sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1.5">
       <span className="font-medium text-ink">Warna kondisi:</span>
       <span className="flex items-center gap-1.5 text-status-aman">
         <span aria-hidden className="h-2 w-2 rounded-full bg-status-aman" />
@@ -480,7 +501,7 @@ function DetailPill({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-white/70">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-kaca/60 px-2.5 py-1 text-sm font-medium text-ink ring-1 ring-inset ring-kaca/70">
       <Icon className={clsx("h-3.5 w-3.5 shrink-0", iconClassName)} strokeWidth={2.2} />
       {children}
     </span>
@@ -502,12 +523,12 @@ function ParamSwitch({
     <div
       role="tablist"
       aria-label="Parameter grafik"
-      className="relative flex w-full shrink-0 rounded-lg bg-white/50 p-1 ring-1 ring-inset ring-white/70 sm:w-auto"
+      className="relative flex w-full shrink-0 rounded-lg bg-kaca/50 p-1 ring-1 ring-inset ring-kaca/70 sm:w-auto"
     >
       <span
         aria-hidden
         className={clsx(
-          "absolute bottom-1 left-1 top-1 rounded-md bg-white shadow-card transition-transform duration-300 ease-smooth motion-reduce:transition-none",
+          "absolute bottom-1 left-1 top-1 rounded-md bg-surface shadow-card dark:bg-brand-100 transition-transform duration-300 ease-smooth motion-reduce:transition-none",
           value === "all" && "opacity-0"
         )}
         style={{
@@ -544,7 +565,7 @@ function ParamSwitch({
 // Kotak untuk rak yang device-nya belum pernah mengirim apa pun. Tingginya h-64 sama dengan grafik, supaya panel tidak berubah tinggi
 function ChartEmpty() {
   return (
-    <div className="flex h-64 items-center justify-center rounded-lg bg-white/40 text-sm text-muted">
+    <div className="flex h-64 items-center justify-center rounded-lg bg-kaca/40 text-sm text-muted">
       Belum ada pembacaan tersimpan untuk rak ini.
     </div>
   );

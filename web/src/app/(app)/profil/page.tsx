@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, ShieldCheck, Pencil, Trash2 } from "lucide-react";
+import { LogOut, ShieldCheck, Pencil, SunMoon, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -40,6 +40,19 @@ export default function ProfilPage() {
       setNamaTerisi(true);
     }
   }, [user, namaTerisi]);
+
+  // Dibaca dari <html> sesudah mount: skrip di app/layout.tsx sudah memasang
+  // kelasnya sebelum React hidup, dan server tidak tahu pilihan pengguna.
+  const [temaGelap, setTemaGelap] = useState(false);
+  useEffect(() => {
+    setTemaGelap(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  function pilihTema(gelap: boolean) {
+    document.documentElement.classList.toggle("dark", gelap);
+    window.localStorage.setItem("tema", gelap ? "gelap" : "terang");
+    setTemaGelap(gelap);
+  }
 
   async function handleSaveNama(e: React.FormEvent) {
     e.preventDefault();
@@ -181,6 +194,31 @@ export default function ProfilPage() {
               </form>
             </Card>
 
+            {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
+                (globals.css); pilihannya diingat per browser. */}
+            <Card>
+              <div className="mb-4 flex items-center gap-2.5">
+                <SunMoon className="h-5 w-5 text-brand-500" />
+                <h3 className="font-display text-base font-semibold text-ink">Tampilan</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
+                {[
+                  { gelap: false, label: "Terang" },
+                  { gelap: true, label: "Gelap" },
+                ].map((opsi) => (
+                  <button
+                    key={opsi.label}
+                    type="button"
+                    onClick={() => pilihTema(opsi.gelap)}
+                    aria-pressed={temaGelap === opsi.gelap}
+                    className={temaGelap === opsi.gelap ? "btn-primary" : "btn-ghost"}
+                  >
+                    {opsi.label}
+                  </button>
+                ))}
+              </div>
+            </Card>
+
             <button
               onClick={confirmLogout}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
@@ -226,7 +264,12 @@ export default function ProfilPage() {
 
                 <FormMessage message={passwordMessage} />
 
-                <Button type="submit" disabled={loading}>
+                {/* Pudar sampai ketiga kolom terisi, sama seperti "Simpan nama"
+                    yang pudar selama namanya belum berubah. */}
+                <Button
+                  type="submit"
+                  disabled={loading || !oldPassword || !newPassword || !confirmPassword}
+                >
                   {loading ? "Menyimpan..." : "Simpan perubahan"}
                 </Button>
               </form>

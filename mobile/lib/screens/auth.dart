@@ -26,7 +26,7 @@ class _AuthScaffold extends StatelessWidget {
     // Ikon status bar putih di atas foto gelap.
     value: SystemUiOverlayStyle.light,
     child: Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: cSurface,
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -77,7 +77,7 @@ class _AuthScaffold extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: cInk),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: cInk),
                 ),
                 const SizedBox(height: 16),
                 ...children,
@@ -147,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           children: [
             TextFormField(
+              inputFormatters: batas50,
               controller: email,
               keyboardType: TextInputType.emailAddress,
               autofillHints: const [AutofillHints.email],
@@ -155,6 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 12),
             TextFormField(
+              inputFormatters: batas50,
               controller: password,
               obscureText: hide,
               decoration: InputDecoration(
@@ -268,12 +270,14 @@ class _DaftarScreenState extends State<DaftarScreen> {
           child: Column(
             children: [
               TextFormField(
+                inputFormatters: batas50,
                 controller: nama,
                 decoration: const InputDecoration(labelText: 'Nama'),
                 validator: (v) => (v ?? '').trim().isEmpty ? 'Nama tidak boleh kosong.' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
+                inputFormatters: batas50,
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
@@ -342,6 +346,7 @@ class _LupaSandiScreenState extends State<LupaSandiScreen> {
             Form(
               key: form,
               child: TextFormField(
+                inputFormatters: batas50,
                 controller: email,
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(labelText: 'Email'),
@@ -445,6 +450,7 @@ class _VerifikasiEmailScreenState extends State<VerifikasiEmailScreen> {
         ErrorText(error),
         const SizedBox(height: 8),
         TextField(
+          inputFormatters: batas50,
           controller: email,
           keyboardType: TextInputType.emailAddress,
           decoration: const InputDecoration(labelText: 'Kirim ulang link aktivasi ke', hintText: 'nama@email.com'),

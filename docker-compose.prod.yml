@@ -10,7 +10,11 @@ services:
       ENVIRONMENT: production
       DEBUG: "false"
     # Menimpa CMD Dockerfile: tanpa --reload.
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    # --forwarded-allow-ips "*": percayai X-Forwarded-For dari Caddy supaya
+    # pembatas laju (core/rate_limit.py) menghitung per IP pengunjung, bukan per
+    # IP container Caddy. Aman karena port 8000 cuma terbuka ke 127.0.0.1 dan
+    # jaringan internal Docker, jadi header itu tidak bisa dikirim dari luar.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--forwarded-allow-ips", "*"]
     volumes:
       # Kunci service account Firebase (push FCM). Yang di-mount FOLDER, bukan
       # berkasnya: kalau firebase.json belum diunggah, Docker cuma membuat folder

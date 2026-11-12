@@ -66,7 +66,7 @@ export default function DaftarPage() {
             </p>
             <Link
               href="/verifikasi-email"
-              className="mt-4 inline-block py-1 text-sm font-semibold text-brand-600 hover:underline"
+              className="mt-4 inline-block py-1 text-sm font-semibold text-aksen hover:underline"
             >
               Tidak menerima emailnya?
             </Link>

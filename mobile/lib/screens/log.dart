@@ -287,7 +287,7 @@ class _LogScreenState extends State<LogScreen> {
     title: 'Device',
     child: sensors.isEmpty
         ? (sensorsSiap
-              ? const Text('Belum ada device yang terhubung ke kolam Anda.', style: TextStyle(color: cMuted))
+              ? Text('Belum ada device yang terhubung ke kolam Anda.', style: TextStyle(color: cMuted))
               : null)
         : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -306,7 +306,7 @@ class _LogScreenState extends State<LogScreen> {
                 onChanged: (v) => set(() => deviceSel = v),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Pilih device yang datanya ingin Anda lihat. Daftar log dan berkas unduhan '
                 'akan mengikuti pilihan ini.',
                 style: TextStyle(color: cMuted, fontSize: 12),
@@ -382,7 +382,7 @@ class _LogScreenState extends State<LogScreen> {
                   ],
                 ),
               const SizedBox(height: 10),
-              const Text('Interval', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Interval', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               SegmentedButton<int>(
                 showSelectedIcon: false,
@@ -415,7 +415,7 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ),
       ),
-      subtitle: Text(formatWaktu(r['time']), style: const TextStyle(color: cBrand700)),
+      subtitle: Text(formatWaktu(r['time']), style: TextStyle(color: cBrand700)),
       trailing: v == null ? null : StatusBadge(statusOf(param, v)),
     );
   }
@@ -439,7 +439,7 @@ class _LogScreenState extends State<LogScreen> {
           ],
         ),
       ),
-      subtitle: Text(formatWaktu(r['target_time']), style: const TextStyle(color: cBrand700)),
+      subtitle: Text(formatWaktu(r['target_time']), style: TextStyle(color: cBrand700)),
       trailing: status == null ? null : StatusBadge(status),
     );
   }

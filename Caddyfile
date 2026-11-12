@@ -1,12 +1,29 @@
 # Sertifikat Let's Encrypt diurus Caddy otomatis. Syaratnya DOMAIN sudah
 # mengarah ke IP VPS dan port 80/443 terbuka sebelum container dijalankan.
 # backend:8000 dijangkau lewat jaringan internal Docker, bukan port host.
+# Header keamanan untuk kedua situs:
+# - HSTS: browser selalu memakai HTTPS untuk domain ini selama setahun.
+# - nosniff: browser tidak menebak tipe berkas di luar Content-Type.
+# - X-Frame-Options: halaman tidak bisa ditanam di iframe situs lain (clickjacking).
+# - Referrer-Policy: alamat lengkap halaman tidak ikut terkirim ke situs lain.
+(keamanan) {
+    header {
+        Strict-Transport-Security "max-age=31536000"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+}
+
 {$DOMAIN} {
+    import keamanan
     reverse_proxy backend:8000
 }
 
 # Web (Next.js) di domain terpisah dari API, sejalan dengan CORS_ORIGINS di
 # env.production.example. web:3000 lewat jaringan internal Docker.
 {$WEB_DOMAIN} {
+    import keamanan
     reverse_proxy web:3000
 }

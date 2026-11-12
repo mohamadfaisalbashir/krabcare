@@ -45,9 +45,11 @@ void main() {
   });
 
   test('formatValue & formatFraksi', () {
-    expect(formatValue(7.63), '7.6');
+    expect(formatValue(7.634), '7.63');
+    expect(formatValue(8.54), '8.54'); // dekat batas Waspada: tidak boleh jadi "8.5"
     expect(formatValue(25.0), '25');
-    expect(formatFraksi(5.9985), '6,0');
+    expect(formatFraksi(5.9985), '6,00');
+    expect(formatFraksi(5.94), '5,94'); // dekat ambang 6%: tidak boleh jadi "6,0"
   });
 
   test('fetchAllReadings: terlama dulu, satu duplikat batas halaman dibuang', () async {

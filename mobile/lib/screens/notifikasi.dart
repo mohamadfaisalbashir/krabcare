@@ -14,8 +14,14 @@ const _tabs = [
   (label: 'Kualitas Kolam', source: 'classification'),
   (label: 'Parameter', source: 'parameter'),
   (label: 'Prediksi', source: 'prediction'),
+  (label: 'Sensor', source: 'sensor'),
 ];
-const _sourceLabel = {'classification': 'Kondisi aktual', 'prediction': 'Prediksi', 'parameter': 'Parameter'};
+const _sourceLabel = {
+  'classification': 'Kondisi aktual',
+  'prediction': 'Prediksi',
+  'parameter': 'Parameter',
+  'sensor': 'Sensor error',
+};
 const _paramLabel = {'ph': 'pH', 'temperature_c': 'Suhu', 'salinity_ppt': 'Salinitas', 'ammonia': 'Amonia'};
 
 /// Kata status di pesan → label warna. "Baik/Sedang/Buruk" dari baris notifikasi lama.
@@ -42,10 +48,16 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   bool loading = true, loadingMore = false, hasMore = false;
   String? error;
   Timer? poll;
+  bool keAtas = false; // tombol "kembali ke atas" tampil setelah digulir cukup jauh
+  final _scroll = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(() {
+      final v = _scroll.offset > 600;
+      if (v != keAtas) setState(() => keAtas = v);
+    });
     api.sensorSaya().then((s) {
       if (mounted) setState(() => sensors = s);
     }, onError: (_) {});
@@ -57,6 +69,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   @override
   void dispose() {
     poll?.cancel();
+    _scroll.dispose();
     super.dispose();
   }
 
@@ -171,7 +184,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               alignment: Alignment.centerLeft,
               child: Text(
                 n > 0 ? '$n notifikasi belum dibaca' : 'Peringatan kualitas air kolam Anda',
-                style: const TextStyle(color: cInk),
+                style: TextStyle(color: cInk),
               ),
             ),
           ),
@@ -190,9 +203,17 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
         ),
       ],
     ),
+    floatingActionButton: keAtas
+        ? FloatingActionButton.small(
+            tooltip: 'Kembali ke atas',
+            onPressed: () => _scroll.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut),
+            child: const Icon(Icons.arrow_upward),
+          )
+        : null,
     body: RefreshIndicator(
       onRefresh: load,
       child: ListView(
+        controller: _scroll,
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           const _PanduanBaca(),
@@ -235,7 +256,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
               onChanged: _pilihDevice,
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Pilih device untuk melihat notifikasinya saja, atau pilih Semua device untuk melihat semuanya.',
               style: TextStyle(color: cMuted, fontSize: 12),
             ),
@@ -309,13 +330,13 @@ class _PanduanBaca extends StatelessWidget {
         children: [
           label,
           const SizedBox(width: 8),
-          Expanded(child: Text(teks, style: const TextStyle(fontSize: 13, color: cInk))),
+          Expanded(child: Text(teks, style: TextStyle(fontSize: 13, color: cInk))),
         ],
       ),
     );
     Widget judul(String t) => Padding(
       padding: const EdgeInsets.only(top: 12),
-      child: Text(t, style: const TextStyle(fontWeight: FontWeight.w700, color: cInk)),
+      child: Text(t, style: TextStyle(fontWeight: FontWeight.w700, color: cInk)),
     );
 
     return Card(
@@ -342,9 +363,9 @@ class _PanduanBaca extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text('Label di setiap notifikasi dibaca dari kiri ke kanan:', style: TextStyle(color: cInk)),
+          Text('Label di setiap notifikasi dibaca dari kiri ke kanan:', style: TextStyle(color: cInk)),
           judul('1. Kode perangkat'),
-          const Text('Sensor kolam yang mengirim data, misalnya 54D660E9BFB4.', style: TextStyle(color: cInk)),
+          Text('Sensor kolam yang mengirim data, misalnya 54D660E9BFB4.', style: TextStyle(color: cInk)),
           judul('2. Jenis notifikasi (label abu-abu)'),
           baris(_chip('Kondisi aktual'), 'hasil pengukuran sensor saat ini.'),
           baris(_chip('Parameter'), 'satu parameter (pH, suhu, salinitas, atau amonia) berubah status.'),
@@ -353,10 +374,15 @@ class _PanduanBaca extends StatelessWidget {
             'perkiraan kondisi 15–60 menit ke depan berdasarkan tren data terakhir. Belum terjadi, '
                 'jadi bisa dipakai untuk berjaga-jaga.',
           ),
+          baris(
+            _chip('Sensor error'),
+            'pembacaan sebuah sensor tidak wajar, misalnya nilainya melonjak tiba-tiba atau tidak terbaca. '
+                'Periksa alatnya, karena angka dari sensor itu belum tentu bisa dipercaya.',
+          ),
           judul('3. Yang dinilai (label berwarna)'),
           baris(_chip('Kualitas Kolam', bahaya.fg, bahaya.bg), 'penilaian gabungan pH, suhu, dan salinitas.'),
           baris(_chip('Suhu', bahaya.fg, bahaya.bg), 'nama parameter berarti hanya parameter itu.'),
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 4),
             child: Text('Warna labelnya mengikuti status.', style: TextStyle(fontSize: 13, color: cInk)),
           ),
@@ -372,14 +398,16 @@ class _PanduanBaca extends StatelessWidget {
           baris(const StatusBadge('Bahaya'), 'melewati batas toleransi kepiting. Segera periksa kolam.'),
           judul('5. Belum dibaca'),
           baris(
-            const Padding(padding: EdgeInsets.only(top: 5), child: Dot(Color(0xFFC23B22))),
+            Padding(padding: const EdgeInsets.only(top: 5), child: Dot(statusColor('Bahaya'))),
             'titik merah dan latar kebiruan berarti notifikasi belum dibaca.'),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Contoh di atas dibaca: sensor 54D660E9BFB4 memperkirakan kualitas air kolam akan masuk '
             'kondisi Bahaya dalam beberapa menit ke depan.',
             style: TextStyle(color: cMuted, fontStyle: FontStyle.italic),
           ),
+          const SizedBox(height: 8),
+          Text('Notifikasi yang lebih dari 7 hari dihapus otomatis.', style: TextStyle(color: cMuted)),
         ],
       ),
     );
@@ -455,7 +483,7 @@ class _Item extends StatelessWidget {
                       s.bg,
                     ),
                     StatusBadge(status),
-                    if (unread) const Dot(Color(0xFFC23B22)),
+                    if (unread) Dot(statusColor('Bahaya')),
                   ],
                 ),
                 const SizedBox(height: 6),
@@ -463,7 +491,7 @@ class _Item extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Text(formatWaktu(n['created_at']), style: const TextStyle(fontSize: 12, color: cInk)),
+                    Text(formatWaktu(n['created_at']), style: TextStyle(fontSize: 12, color: cInk)),
                     const Spacer(),
                     if (unread)
                       TextButton(
@@ -474,7 +502,7 @@ class _Item extends StatelessWidget {
                     IconButton(
                       tooltip: 'Hapus',
                       visualDensity: VisualDensity.compact,
-                      icon: const Icon(Icons.delete_outline, size: 20, color: cAxis),
+                      icon: Icon(Icons.delete_outline, size: 20, color: cAxis),
                       onPressed: onDelete,
                     ),
                   ],

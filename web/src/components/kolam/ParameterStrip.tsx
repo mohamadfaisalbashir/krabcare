@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import AmmoniaCell from "@/components/kolam/AmmoniaCell";
-import { AmmoniaRisk, SensorReading, StatusLabel } from "@/lib/types";
+import {
+  AmmoniaRisk,
+  SENSOR_ERROR_TEKS,
+  SensorReading,
+  SensorStatus,
+  StatusLabel,
+} from "@/lib/types";
 import {
   ParamKey,
   PARAM_KEYS,
@@ -26,19 +32,27 @@ import {
 export default function ParameterStrip({
   reading,
   ammonia,
+  sensorStatus,
 }: {
   reading: SensorReading | null;
   /** Kolom keempat: indeks risiko amonia untuk kondisi terukur (horizon 0).
    *  Dari backend, bukan dihitung ulang di browser, supaya sama persis dengan
    *  baris yang tersimpan di log historis. */
   ammonia?: AmmoniaRisk | null;
+  /** Sensor yang terindikasi error (GET /readings/sensor-status). */
+  sensorStatus?: SensorStatus;
 }) {
   return (
     // 4 kolom: amonia duduk berdampingan dengan ketiga parameter asalnya.
     // Di layar sempit menumpuk satu per baris.
     <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => (
-        <ParameterCell key={param} param={param} value={reading?.[param] ?? null} />
+        <ParameterCell
+          key={param}
+          param={param}
+          value={reading?.[param] ?? null}
+          sensorError={sensorStatus?.[param]}
+        />
       ))}
       <AmmoniaCell mode="terkini" current={ammonia ?? null} />
     </div>
@@ -53,7 +67,15 @@ const MARKER: Record<StatusLabel, string> = {
   Bahaya: "bg-status-bahaya",
 };
 
-function ParameterCell({ param, value }: { param: ParamKey; value: number | null }) {
+function ParameterCell({
+  param,
+  value,
+  sensorError,
+}: {
+  param: ParamKey;
+  value: number | null;
+  sensorError?: "lonjakan" | "kosong";
+}) {
   const { label, short, unit } = PARAM_UI[param];
   const { min, max } = RANGE[param];
 
@@ -87,7 +109,7 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
         <Link
           href={`/log-historis?param=${param}`}
           aria-label={`Log historis ${short}`}
-          className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 transition hover:bg-white/60 hover:text-brand-700 focus-visible:opacity-100 group-hover:opacity-100"
+          className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 transition hover:bg-kaca/60 hover:text-aksen-kuat focus-visible:opacity-100 group-hover:opacity-100"
         >
           <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
         </Link>
@@ -102,6 +124,18 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
         <span className="text-sm text-muted">{unit}</span>
       </p>
 
+      {/* Angka dan status di atas tetap ditampilkan apa adanya. Label ini yang
+          memberi tahu bahwa keduanya belum tentu bisa dipercaya. */}
+      {sensorError && (
+        <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs">
+          <span className="inline-flex items-center gap-1 font-semibold text-status-bahaya">
+            <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.2} />
+            Sensor error
+          </span>
+          <span className="text-muted">{SENSOR_ERROR_TEKS[sensorError]}</span>
+        </p>
+      )}
+
       {/* Track rentang. Batang = seluruh rentang toleransi, pita terang di
           dalamnya = rentang optimal, penanda = nilai sekarang. Ini yang
           menunjukkan seberapa dekat nilainya ke tepi, bukan cuma kata
@@ -111,14 +145,14 @@ function ParameterCell({ param, value }: { param: ParamKey; value: number | null
         <div className="relative h-1.5 rounded-full bg-status-waspadaBg/80">
           <span
             aria-hidden
-            className="absolute inset-y-0 rounded-full bg-[#0F7078]/25"
+            className="absolute inset-y-0 rounded-full bg-[#0F7078]/25 dark:bg-aksen/30"
             style={{ left: `${bandStart}%`, width: `${bandWidth}%` }}
           />
           {value != null && (
             <span
               // Cincin putih supaya penanda tetap terbaca di atas pita mana pun.
               className={clsx(
-                "absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white transition-[left] duration-500 ease-smooth motion-reduce:transition-none",
+                "absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface transition-[left] duration-500 ease-smooth motion-reduce:transition-none",
                 MARKER[statusOf(param, value)]
               )}
               style={{ left: `${rangePercent(param, value)}%` }}

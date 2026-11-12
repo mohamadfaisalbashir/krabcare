@@ -20,7 +20,7 @@ async def list_notifications(
     unread_only: bool = False,
     limit: int = Query(default=50, gt=0, le=200),
     offset: int = Query(default=0, ge=0),
-    source: Literal["classification", "prediction", "parameter"] | None = None,
+    source: Literal["classification", "prediction", "parameter", "sensor"] | None = None,
     device_id: int | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

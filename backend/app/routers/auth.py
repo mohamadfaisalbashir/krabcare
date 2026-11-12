@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import batas_laju
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import User
@@ -29,8 +30,12 @@ from app.services.auth_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# Dipasang di endpoint yang menerima sandi/token tebakan atau mengirim email:
+# 10 permintaan per IP per endpoint tiap 5 menit (core/rate_limit.py).
+_BATAS = [Depends(batas_laju())]
 
-@router.post("/register", response_model=UserOut, status_code=201)
+
+@router.post("/register", response_model=UserOut, status_code=201, dependencies=_BATAS)
 async def register(payload: UserRegisterIn, db: AsyncSession = Depends(get_db)) -> UserOut:
     """Buat akun baru (role default operator)."""
     try:
@@ -40,7 +45,7 @@ async def register(payload: UserRegisterIn, db: AsyncSession = Depends(get_db)) 
     return UserOut.model_validate(user)
 
 
-@router.post("/login", response_model=TokenOut)
+@router.post("/login", response_model=TokenOut, dependencies=_BATAS)
 async def login(payload: UserLoginIn, db: AsyncSession = Depends(get_db)) -> TokenOut:
     """Tukar email+password jadi JWT access token."""
     try:
@@ -54,7 +59,7 @@ async def login(payload: UserLoginIn, db: AsyncSession = Depends(get_db)) -> Tok
     return TokenOut(access_token=token)
 
 
-@router.post("/verify-email", status_code=204)
+@router.post("/verify-email", status_code=204, dependencies=_BATAS)
 async def verify_email(payload: VerifyEmailIn, db: AsyncSession = Depends(get_db)) -> None:
     """Aktifkan akun lewat token dari email pendaftaran."""
     try:
@@ -63,7 +68,7 @@ async def verify_email(payload: VerifyEmailIn, db: AsyncSession = Depends(get_db
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
 
-@router.post("/resend-verification")
+@router.post("/resend-verification", dependencies=_BATAS)
 async def resend_verification(
     payload: ResendVerificationIn, db: AsyncSession = Depends(get_db)
 ) -> dict:
@@ -127,20 +132,25 @@ async def delete_me(
     await db.commit()
 
 
-@router.post("/me/change-password", status_code=204)
+@router.post("/me/change-password", response_model=TokenOut, dependencies=_BATAS)
 async def change_password(
     payload: PasswordChangeIn,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> None:
-    """Ganti password sendiri (wajib tahu password lama)."""
+) -> TokenOut:
+    """Ganti password sendiri (wajib tahu password lama).
+
+    Balasannya token baru: token lama, termasuk di perangkat lain, langsung
+    tidak berlaku. Klien harus menyimpan token ini sebagai pengganti.
+    """
     try:
-        await auth_service.change_password(db, current_user, payload)
+        token = await auth_service.change_password(db, current_user, payload)
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    return TokenOut(access_token=token)
 
 
-@router.post("/forgot-password")
+@router.post("/forgot-password", dependencies=_BATAS)
 async def forgot_password(payload: ForgotPasswordIn, db: AsyncSession = Depends(get_db)) -> dict:
     """Kirim link reset ke email. Respons sama terdaftar atau tidak
     (anti-enumeration)."""
@@ -148,7 +158,7 @@ async def forgot_password(payload: ForgotPasswordIn, db: AsyncSession = Depends(
     return {"detail": "Kalau email terdaftar, link reset password sudah dikirim."}
 
 
-@router.post("/reset-password", status_code=204)
+@router.post("/reset-password", status_code=204, dependencies=_BATAS)
 async def reset_password(
     payload: ResetPasswordIn, db: AsyncSession = Depends(get_db)
 ) -> None:

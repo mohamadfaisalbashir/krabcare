@@ -30,6 +30,7 @@ import {
   KolamDashboard,
   LatestQuality,
   SensorReading,
+  SensorStatus,
   StatusLabel,
   categoryToLabel,
 } from "@/lib/types";
@@ -106,7 +107,13 @@ export default function DashboardPage() {
 
           let latestReading: SensorReading | null = null;
           let ammonia: AmmoniaRisk | null = null;
+          let sensorStatus: SensorStatus = {};
           if (devices[0]) {
+            try {
+              sensorStatus = await api.getSensorStatus(devices[0].id);
+            } catch {
+              sensorStatus = {};
+            }
             try {
               const rows = await api.getReadings({
                 device_id: devices[0].id,
@@ -124,7 +131,7 @@ export default function DashboardPage() {
             }
           }
 
-          return { kolam, devices, quality, latestReading, ammonia };
+          return { kolam, devices, quality, latestReading, ammonia, sensorStatus };
         })
       );
 
@@ -152,12 +159,23 @@ export default function DashboardPage() {
   const handleDetailData = useCallback(
     (
       kolamId: number,
-      data: { reading: SensorReading | null; quality: LatestQuality | null; ammonia: AmmoniaRisk | null }
+      data: {
+        reading: SensorReading | null;
+        quality: LatestQuality | null;
+        ammonia: AmmoniaRisk | null;
+        sensorStatus: SensorStatus;
+      }
     ) => {
       setItems((prev) =>
         prev.map((item) =>
           item.kolam.id === kolamId
-            ? { ...item, latestReading: data.reading, quality: data.quality, ammonia: data.ammonia }
+            ? {
+                ...item,
+                latestReading: data.reading,
+                quality: data.quality,
+                ammonia: data.ammonia,
+                sensorStatus: data.sensorStatus,
+              }
             : item
         )
       );
@@ -274,7 +292,7 @@ export default function DashboardPage() {
       >
         {/* agar tidak repaint seluruh latar tiap frame gulir sehingga kartu tidak berat saat diseret*/}
         <div className="absolute inset-0 bg-[url('/kepiting_belakang.png')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.86)_0%,rgba(255,255,255,0.80)_45%,rgba(255,255,255,0.84)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(var(--c-kaca)/0.86)_0%,rgb(var(--c-kaca)/0.80)_45%,rgb(var(--c-kaca)/0.84)_100%)]" />
         <div className="absolute -left-24 top-1/3 h-80 w-80 rounded-full bg-brand-300/25 blur-3xl" />
         <div className="absolute -right-20 top-2/3 h-72 w-72 rounded-full bg-brass-300/20 blur-3xl" />
       </div>
@@ -299,7 +317,7 @@ export default function DashboardPage() {
         {/* 4. Dasar banner meleleh ke wallpaper di baliknya. Separuh transparan, supaya wallpaper tidak tertutup tepat di tempat kartu*/}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(255,255,255,0.55)_0%,rgba(255,255,255,0.35)_22%,rgba(255,255,255,0)_55%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgb(var(--c-kaca)/0.55)_0%,rgb(var(--c-kaca)/0.35)_22%,rgb(var(--c-kaca)/0)_55%)]"
         />
 
         <div className="relative px-5 pb-32 pt-6 sm:px-8 sm:pb-36">
@@ -478,11 +496,11 @@ function TambahKolamTile({
       type="button"
       onClick={onClick}
       className={clsx(
-        "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-white/70 bg-white/30 py-8 text-sm font-semibold text-[#1C6970] backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-white/55",
+        "group flex flex-col items-center justify-center gap-2 rounded-xl2 border-2 border-dashed border-kaca/70 bg-kaca/30 dark:border-border py-8 text-sm font-semibold text-[#1C6970] dark:text-aksen backdrop-blur-xl transition-colors hover:border-brand-300 hover:bg-kaca/55",
         variant === "rail" ? `${PONDCARD_WIDTH} shrink-0` : "w-full"
       )}
     >
-      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/60 text-[#1C6970] transition-colors group-hover:bg-brand-50">
+      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-kaca/60 text-[#1C6970] dark:text-aksen transition-colors group-hover:bg-brand-50">
         <Plus className="h-5 w-5" strokeWidth={2.4} />
       </span>
       Tambah kolam

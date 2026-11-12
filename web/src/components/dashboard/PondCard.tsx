@@ -1,8 +1,9 @@
 "use client";
 
-import { Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind, Wifi, WifiOff } from "lucide-react";
 import { KolamDashboard, StatusLabel, categoryToLabel } from "@/lib/types";
 import { formatFraksi } from "@/lib/ammonia";
+import { PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
 import { isOnline } from "@/lib/tanggal";
 import clsx from "clsx";
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
@@ -20,7 +21,7 @@ const TONE: Record<StatusLabel, { tile: string; dot: string; text: string }> = {
   Bahaya: { tile: "bg-status-bahayaBg text-status-bahaya", dot: "bg-status-bahaya", text: "text-status-bahaya" },
 };
 
-const KOSONG = { tile: "bg-white/50 text-muted", dot: "bg-border", text: "text-muted" };
+const KOSONG = { tile: "bg-kaca/50 text-muted", dot: "bg-border", text: "text-muted" };
 
 /** Bagian useSortable (dnd-kit) yang dipasang ke tombol kartu. `attributes`
  *  dnd-kit sengaja tidak dipakai: ia mengganti peran tombol jadi "sortable"
@@ -53,6 +54,10 @@ export default function PondCard({
   sortable?: PondCardSortable;
 }) {
   const { kolam, quality, latestReading, ammonia } = item;
+  // Nama pendek sensor yang terindikasi error, mis. "pH, Suhu". Kosong = sehat.
+  const sensorError = PARAM_KEYS.filter((p) => item.sensorStatus[p])
+    .map((p) => PARAM_UI[p].short)
+    .join(", ");
 
   // null = belum ada klasifikasi (device belum diklaim atau belum kirim data).
   // Jangan dipaksa jadi "Waspada", kolam kosong bukan anomali.
@@ -98,10 +103,10 @@ export default function PondCard({
         // Saat diurutkan, transform dipegang dnd-kit lewat style inline, jadi
         // efek angkat hover (juga transform) dimatikan supaya tidak bentrok.
         sortable?.isDragging
-          ? "relative z-20 cursor-grabbing bg-white/80 shadow-xl"
+          ? "relative z-20 cursor-grabbing bg-kaca/80 shadow-xl"
           : selected
-            ? "bg-white/75 ring-2 ring-brand-500/60"
-            : clsx("hover:bg-white/70", !sortable && "hover:-translate-y-0.5")
+            ? "bg-kaca/75 ring-2 ring-brand-500/60"
+            : clsx("hover:bg-kaca/70", !sortable && "hover:-translate-y-0.5")
       )}
     >
       <div className="mb-3 flex items-start justify-between">
@@ -130,7 +135,7 @@ export default function PondCard({
           <ChevronDown
             className={clsx(
               "h-4 w-4 transition duration-300 ease-smooth motion-reduce:transition-none",
-              selected ? "rotate-180 text-brand-600" : "text-muted group-hover:text-brand-600"
+              selected ? "rotate-180 text-aksen" : "text-muted group-hover:text-aksen"
             )}
             strokeWidth={2.2}
           />
@@ -149,23 +154,30 @@ export default function PondCard({
         <span className="text-muted">· {updated}</span>
       </p>
 
+      {sensorError && (
+        <p className="mt-1 flex items-center gap-1 truncate text-[11px] font-semibold text-status-bahaya">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
+          Sensor error: {sensorError}
+        </p>
+      )}
+
       {/* Garis pemisah putih, bukan `border-border` yang keabuan: di atas kaca,
           garis terang terbaca sebagai tepi lempeng. */}
-      <div className="mt-3 flex items-center justify-between gap-1 border-t border-white/70 pt-3 font-mono text-xs text-muted">
+      <div className="mt-3 flex items-center justify-between gap-1 border-t border-kaca/70 dark:border-border pt-3 font-mono text-xs text-muted">
         <span className="inline-flex items-center gap-1">
-          <FlaskConical className="h-3.5 w-3.5 text-[#1C6970]" />
+          <FlaskConical className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
           {latestReading?.ph ?? "N/A"}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Thermometer className="h-3.5 w-3.5 text-[#1C6970]" />
+          <Thermometer className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
           {latestReading?.temperature_c ?? "N/A"}°
         </span>
         <span className="inline-flex items-center gap-1">
-          <Droplets className="h-3.5 w-3.5 text-[#1C6970]" />
+          <Droplets className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
           {latestReading?.salinity_ppt ?? "N/A"}
         </span>
         <span className="inline-flex items-center gap-1">
-          <Wind className="h-3.5 w-3.5 text-[#1C6970]" />
+          <Wind className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
           {ammonia?.fraction_nh3_pct != null ? `${formatFraksi(ammonia.fraction_nh3_pct)}%` : "N/A"}
         </span>
       </div>

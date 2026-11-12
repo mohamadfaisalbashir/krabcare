@@ -102,6 +102,21 @@ export interface SensorReading {
   salinity_ppt: number | null;
 }
 
+/**
+ * GET /readings/sensor-status: parameter yang sensornya terindikasi error.
+ * Parameter yang sehat tidak ada di objeknya. Aturan deteksinya di backend
+ * (services/sensor_status.py), di sini cuma ditampilkan.
+ */
+export type SensorStatus = Partial<
+  Record<"ph" | "temperature_c" | "salinity_ppt", "lonjakan" | "kosong">
+>;
+
+/** Keterangan singkat di samping label "Sensor error". */
+export const SENSOR_ERROR_TEKS: Record<"lonjakan" | "kosong", string> = {
+  lonjakan: "Nilai melonjak tidak wajar",
+  kosong: "Nilai tidak terbaca",
+};
+
 // Quality / Fuzzy (schemas/fuzzy.py)
 
 /** FuzzyClassificationOut */
@@ -178,7 +193,7 @@ export interface DeviceAmmonia {
 // Notification (schemas/notification.py)
 
 /** notifications.source, nilai CHECK di database/init/08_notifications.sql. */
-export type NotifSource = "classification" | "prediction" | "parameter";
+export type NotifSource = "classification" | "prediction" | "parameter" | "sensor";
 
 /** NotificationOut */
 export interface Notification {
@@ -212,4 +227,6 @@ export interface KolamDashboard {
   latestReading: SensorReading | null;
   /** Risiko amonia terkini (horizon 0) device pertama kolam ini, untuk PondCard. */
   ammonia: AmmoniaRisk | null;
+  /** Sensor yang terindikasi error di device pertama kolam ini. */
+  sensorStatus: SensorStatus;
 }

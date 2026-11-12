@@ -32,8 +32,10 @@ String statusOf(String param, num value) {
 /// Angka mentah tanpa ".0" di belakang: 29.0 → "29", 7.5 → "7.5" (sama dengan String(n) di JS).
 String numStr(num v) => v == v.truncate() ? v.truncate().toString() : v.toString();
 
-/// Maksimal 1 desimal tanpa nol di belakang: 7.63 → "7.6", 25.00 → "25".
-String formatValue(num v) => numStr(double.parse(v.toStringAsFixed(1)));
+/// Maksimal 2 desimal tanpa nol di belakang: 7.634 → "7.63", 25.00 → "25".
+/// Dua desimal, bukan satu: di dekat batas status, 8.54 yang ditulis "8.5"
+/// tampil berdampingan dengan label Waspada dan terbaca seperti salah hitung.
+String formatValue(num v) => numStr(double.parse(v.toStringAsFixed(2)));
 
 /// Posisi nilai di rentang toleransi, 0..1, dijepit.
 double rangeFrac(String param, num v) {
@@ -71,8 +73,8 @@ const statusToRisk = {'Aman': 'normal', 'Waspada': 'perhatian', 'Bahaya': 'berba
 
 String? riskToStatus(String? level) => riskToStatusMap[level];
 
-/// Satu desimal, koma ala Indonesia: 5.9985 → "6,0".
-String formatFraksi(num pct) => pct.toStringAsFixed(1).replaceAll('.', ',');
+/// Dua desimal, koma ala Indonesia: 5.9985 → "6,00".
+String formatFraksi(num pct) => pct.toStringAsFixed(2).replaceAll('.', ',');
 
 String trenAmonia(List<num> values) {
   final first = values.first, last = values.last;

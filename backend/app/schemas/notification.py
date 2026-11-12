@@ -22,5 +22,5 @@ class NotificationOut(BaseModel):
 class PushTokenRegisterIn(BaseModel):
     """platform dibatasi pattern supaya tidak ada nilai bebas masuk DB."""
 
-    fcm_token: str = Field(min_length=1)
+    fcm_token: str = Field(min_length=1, max_length=4096)
     platform: str = Field(pattern=r"^(android|ios|web)$")

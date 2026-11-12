@@ -9,9 +9,25 @@ from app.core.security import DataAccessScope, get_data_access_scope
 from app.core.water_thresholds import ParamKey, StatusFilter
 from app.db.session import get_db
 from app.schemas.sensor_reading import SensorReadingOut
-from app.services import reading_service
+from app.services import reading_service, sensor_status
 
 router = APIRouter(prefix="/readings", tags=["readings"])
+
+
+@router.get("/sensor-status", response_model=dict[str, str])
+async def sensor_status_device(
+    device_id: int,
+    scope: DataAccessScope = Depends(get_data_access_scope),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, str]:
+    """Parameter yang sensornya terindikasi error -> "lonjakan" | "kosong".
+
+    Objek kosong berarti semua sensor device ini sehat. Aturannya di
+    services/sensor_status.py; web dan mobile cuma menampilkan hasilnya.
+    """
+    if scope.allowed_device_ids is not None and device_id not in scope.allowed_device_ids:
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Device tidak ditemukan")
+    return sensor_status.deteksi_sensor_error(await sensor_status.pembacaan_terakhir(db, device_id))
 
 
 @router.get("", response_model=list[SensorReadingOut])

@@ -8,6 +8,7 @@ import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
 import StatusBadge from "@/components/ui/StatusBadge";
+import KeAtas from "@/components/ui/KeAtas";
 import { Notification, NotifSource, Sensor } from "@/lib/types";
 import { api, ambilSensorSaya } from "@/lib/api";
 import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/notif-store";
@@ -16,7 +17,7 @@ import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/not
  *  log-historis. Diiris di database, bukan dipotong di klien. */
 const PAGE = 20;
 
-type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi";
+type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi" | "sensor";
 
 /**
  * Filter -> nilai `source` di backend. undefined = tanpa filter.
@@ -30,6 +31,7 @@ const FILTER_SOURCE: Record<NotifFilter, NotifSource | undefined> = {
   kolam: "classification",
   parameter: "parameter",
   prediksi: "prediction",
+  sensor: "sensor",
 };
 
 const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
@@ -37,6 +39,7 @@ const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
   { id: "kolam", label: "Kualitas Kolam" },
   { id: "parameter", label: "Parameter" },
   { id: "prediksi", label: "Prediksi" },
+  { id: "sensor", label: "Sensor" },
 ];
 
 export default function NotifikasiPage() {
@@ -216,7 +219,7 @@ export default function NotifikasiPage() {
                 type="button"
                 onClick={handleReadAll}
                 disabled={unread === 0}
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-brand-600 transition-colors duration-150 hover:bg-bg disabled:opacity-60"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-aksen transition-colors duration-150 hover:bg-bg disabled:opacity-60"
               >
                 <CheckCheck className="h-3.5 w-3.5" strokeWidth={2.2} />
                 Baca semua
@@ -289,6 +292,7 @@ export default function NotifikasiPage() {
           )}
         </Card>
       </div>
+      <KeAtas />
     </>
   );
 }
@@ -347,8 +351,8 @@ function PanduanBaca() {
     <details className="group rounded-xl border border-border bg-surface px-5 py-3">
       <summary className="flex cursor-pointer select-none items-center justify-between text-sm font-semibold text-ink">
         Cara membaca notifikasi
-        <span className="text-xs font-medium text-brand-600 group-open:hidden">Tampilkan</span>
-        <span className="hidden text-xs font-medium text-brand-600 group-open:inline">Sembunyikan</span>
+        <span className="text-xs font-medium text-aksen group-open:hidden">Tampilkan</span>
+        <span className="hidden text-xs font-medium text-aksen group-open:inline">Sembunyikan</span>
       </summary>
 
       <div className="mt-3 space-y-4 text-sm leading-relaxed text-ink">
@@ -378,6 +382,11 @@ function PanduanBaca() {
               <li>
                 <ChipJenis>Prediksi</ChipJenis> perkiraan kondisi 15–60 menit ke depan berdasarkan
                 tren data terakhir. Belum terjadi, jadi bisa dipakai untuk berjaga-jaga.
+              </li>
+              <li>
+                <ChipJenis>Sensor error</ChipJenis> pembacaan sebuah sensor tidak wajar, misalnya
+                nilainya melonjak tiba-tiba atau tidak terbaca. Periksa alatnya, karena angka dari
+                sensor itu belum tentu bisa dipercaya.
               </li>
             </ul>
           </li>
@@ -414,6 +423,7 @@ function PanduanBaca() {
           Contoh di atas dibaca: sensor 54D660E9BFB4 memperkirakan kualitas air kolam akan masuk
           kondisi Bahaya dalam beberapa menit ke depan.
         </p>
+        <p className="text-muted">Notifikasi yang lebih dari 7 hari dihapus otomatis.</p>
       </div>
     </details>
   );

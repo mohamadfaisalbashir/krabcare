@@ -8,7 +8,47 @@ import '../api.dart';
 import '../logic.dart';
 import '../ui.dart';
 
-typedef KolamItem = ({Json kolam, List<Json> devices, Json? quality, Json? reading, Json? ammonia});
+/// `sensor`: parameter yang sensornya terindikasi error (api.getSensorStatus), kosong = sehat.
+typedef KolamItem = ({Json kolam, List<Json> devices, Json? quality, Json? reading, Json? ammonia, Json sensor});
+
+/// Keterangan singkat di samping label "Sensor error" (SENSOR_ERROR_TEKS di web).
+const _sensorErrorTeks = {'lonjakan': 'Nilai melonjak tidak wajar', 'kosong': 'Nilai tidak terbaca'};
+
+/// Label merah "Sensor error" + keterangannya, dipakai kartu kolam dan kolom parameter.
+class _SensorError extends StatelessWidget {
+  const _SensorError(this.teks);
+  final String teks;
+  @override
+  Widget build(BuildContext context) {
+    final c = statusColor('Bahaya');
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, size: 14, color: c),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text.rich(
+              TextSpan(
+                style: const TextStyle(fontSize: 12),
+                children: [
+                  TextSpan(
+                    text: 'Sensor error',
+                    style: TextStyle(color: c, fontWeight: FontWeight.w600),
+                  ),
+                  TextSpan(
+                    text: '  $teks',
+                    style: TextStyle(color: cMuted),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 String? _statusKualitas(Json? quality) {
   final c = quality?['classification'];
@@ -61,12 +101,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final ids = devices.map((d) => d['id']).toSet();
           final quality = qualityList.where((q) => ids.contains(q['device_id'])).firstOrNull;
           Json? reading, ammonia;
+          var sensor = <String, dynamic>{};
           if (devices.isNotEmpty) {
             final id = devices.first['id'] as int;
             reading = (await _atauNull(api.getReadings(deviceId: id, limit: 1)))?.firstOrNull;
             ammonia = (await _atauNull(api.getAmmoniaRisk(id)))?.firstOrNull?['current'];
+            sensor = await _atauNull(api.getSensorStatus(id)) ?? sensor;
           }
-          return (kolam: kolam, devices: devices, quality: quality, reading: reading, ammonia: ammonia);
+          return (
+            kolam: kolam,
+            devices: devices,
+            quality: quality,
+            reading: reading,
+            ammonia: ammonia,
+            sensor: sensor,
+          );
         }),
       );
       if (mounted) {
@@ -137,11 +186,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         const Text('Tambah kolam', style: TextStyle(fontWeight: FontWeight.w700)),
                         const SizedBox(height: 10),
                         TextField(
+                          inputFormatters: batas50,
                           controller: nama,
                           decoration: const InputDecoration(labelText: 'Nama kolam'),
                         ),
                         const SizedBox(height: 10),
                         TextField(
+                          inputFormatters: batas50,
                           controller: kode,
                           textCapitalization: TextCapitalization.characters,
                           decoration: const InputDecoration(
@@ -164,8 +215,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   )
                 : ListTile(
-                    leading: const Icon(Icons.add, color: cBrand600),
-                    title: const Text('Tambah kolam', style: TextStyle(color: cBrand600)),
+                    leading: Icon(Icons.add, color: cBrand600),
+                    title: Text('Tambah kolam', style: TextStyle(color: cBrand600)),
                     onTap: () => setState(() => formOpen = true),
                   ),
           ),
@@ -272,15 +323,20 @@ class _PondCard extends StatelessWidget {
                             Dot(statusColor(status)),
                             const SizedBox(width: 6),
                             Text(status ?? 'Belum ada data', style: TextStyle(color: statusColor(status))),
-                            if (r != null) Text('  ·  ${formatJam(r['time'])}', style: const TextStyle(color: cInk)),
+                            if (r != null) Text('  ·  ${formatJam(r['time'])}', style: TextStyle(color: cInk)),
                           ],
                         ),
+                        if (item.sensor.isNotEmpty)
+                          _SensorError([
+                            for (final p in paramKeys)
+                              if (item.sensor[p] != null) paramUi[p]!.short,
+                          ].join(', ')),
                       ],
                     ),
                   ),
                   // Ikon wifi, bukan titik: titik di kartu ini sudah dipakai status kualitas air.
                   if (item.devices.isNotEmpty) _OnlineLabel(isOnline(r?['received_at'])),
-                  const Icon(Icons.chevron_right, color: cAxis),
+                  Icon(Icons.chevron_right, color: cAxis),
                 ],
               ),
               const Divider(height: 20),
@@ -305,8 +361,12 @@ class _PondCard extends StatelessWidget {
 }
 
 class RakDetailScreen extends StatefulWidget {
-  const RakDetailScreen({super.key, required this.kolam});
+  const RakDetailScreen({super.key, required this.kolam, this.kePrediksi = false});
   final Json kolam;
+
+  /// true = begitu data termuat, gulir ke bagian Prediksi. Dipakai saat layar
+  /// ini dibuka dari push notifikasi yang diketuk (bukaNotif di main.dart).
+  final bool kePrediksi;
   @override
   State<RakDetailScreen> createState() => _RakDetailScreenState();
 }
@@ -324,12 +384,21 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   Timer? poll;
   final kode = TextEditingController(), namaBaru = TextEditingController(), ketikNama = TextEditingController();
   final hapusKey = GlobalKey(); // kotak Zona berbahaya, tujuan gulir saat Hapus Kolam ditekan
+  final prediksiKey = GlobalKey(); // bagian Prediksi, tujuan gulir saat dibuka dari push
+  Json sensor = {}; // parameter yang sensornya terindikasi error, kosong = sehat
 
   @override
   void initState() {
     super.initState();
     namaBaru.text = namaKolam;
-    loadDevice();
+    loadDevice().then((_) {
+      if (!widget.kePrediksi) return;
+      // Bagian Prediksi baru ada setelah data termuat dan layar digambar.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final c = prediksiKey.currentContext;
+        if (c != null) Scrollable.ensureVisible(c, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      });
+    });
     // Kalau pengambilan device pertama gagal (jaringan), polling mencobanya lagi.
     poll = Timer.periodic(const Duration(seconds: 60), (_) => deviceDicek ? loadData() : loadDevice());
   }
@@ -364,8 +433,14 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
         api.getPredictions(d['id']),
         api.getAmmoniaRisk(d['id']),
       ]);
+      // Label tambahan saja: kalau gagal, data utama tetap tampil tanpa label.
+      Json st = {};
+      try {
+        st = await api.getSensorStatus(d['id']);
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
+        sensor = st;
         quality = res[0].firstOrNull;
         history = res[1].reversed.toList(); // backend: terbaru dulu
         predictions = ((res[2].firstOrNull?['predictions'] ?? []) as List).cast<Json>();
@@ -398,15 +473,22 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: loadDevice,
-              child: ListView(
+              // SingleChildScrollView + Column, bukan ListView: ListView baru
+              // membangun kartu saat mendekati layar, jadi bagian Prediksi belum
+              // punya context ketika gulir dari push dijalankan. Layar ini cuma
+              // beberapa kartu, jadi membangun semuanya sekaligus tidak mahal.
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(), // supaya tarik-untuk-segarkan tetap jalan
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                children: [
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   Row(
                     children: [
                       Flexible(
                         child: Text(
                           namaKolam,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: cBrand700),
+                          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: cBrand700),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -415,8 +497,8 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                         onPressed: () => setState(() => panel = panel == 'nama' ? null : 'nama'),
                         style: OutlinedButton.styleFrom(
                           shape: const StadiumBorder(),
-                          side: const BorderSide(color: cBorder),
-                          backgroundColor: Colors.white,
+                          side: BorderSide(color: cBorder),
+                          backgroundColor: cSurface,
                           foregroundColor: cInk,
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           minimumSize: Size.zero,
@@ -430,6 +512,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   if (panel == 'nama') ...[
                     const SizedBox(height: 12),
                     TextField(
+                      inputFormatters: batas50,
                       controller: namaBaru,
                       onChanged: (_) => setState(() {}),
                       decoration: const InputDecoration(labelText: 'Nama kolam'),
@@ -476,6 +559,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   const SizedBox(height: 12),
                   _pengaturan(),
                 ],
+                ),
               ),
             ),
     );
@@ -489,6 +573,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
         const Text('Kolam ini belum terhubung ke device. Masukkan kode device (MAC ESP32 tanpa titik dua).'),
         const SizedBox(height: 10),
         TextField(
+          inputFormatters: batas50,
           controller: kode,
           textCapitalization: TextCapitalization.characters,
           decoration: const InputDecoration(labelText: 'Kode device'),
@@ -527,12 +612,12 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final p in paramKeys) _ParamCell(param: p, value: reading?[p]),
+            for (final p in paramKeys) _ParamCell(param: p, value: reading?[p], sensorError: sensor[p]),
             _AmoniaCell(current: current),
             const SizedBox(height: 12),
             Text.rich(
               TextSpan(
-                style: const TextStyle(fontSize: 13, color: cMuted, height: 1.5),
+                style: TextStyle(fontSize: 13, color: cMuted, height: 1.5),
                 children: [
                   TextSpan(
                     text: 'Rentang daerah berwarna hijau',
@@ -550,6 +635,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
       ),
       const SizedBox(height: 12),
       Section(
+        key: prediksiKey,
         title: 'Prediksi 15/30/60 menit',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,7 +685,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                           value: p,
                           label: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(paramUi[p]!.short, style: TextStyle(color: Color(paramUi[p]!.color))),
+                            child: Text(paramUi[p]!.short, style: TextStyle(color: paramColor(p))),
                           ),
                         ),
                       const ButtonSegment(
@@ -615,13 +701,13 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                     // ParamChip web: kotak warna garis + nama + (satuan).
                     Row(
                       children: [
-                        _Swatch(Color(paramUi[param]!.color)),
+                        _Swatch(paramColor(param)),
                         const SizedBox(width: 8),
                         Text(
                           paramUi[param]!.label,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: cInk),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: cInk),
                         ),
-                        Text(' (${paramUi[param]!.unit})', style: const TextStyle(color: cMuted)),
+                        Text(' (${paramUi[param]!.unit})', style: TextStyle(color: cMuted)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -630,7 +716,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                     for (final p in paramKeys) ...[
                       Row(
                         children: [
-                          _Swatch(Color(paramUi[p]!.color)),
+                          _Swatch(paramColor(p)),
                           const SizedBox(width: 6),
                           Text(paramUi[p]!.short, style: const TextStyle(fontWeight: FontWeight.w600)),
                           const Spacer(),
@@ -649,7 +735,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                       const SizedBox(height: 8),
                     ],
                   if (param == 'all')
-                    const Text(
+                    Text(
                       'Tiap parameter punya sumbu nilainya sendiri dalam satuan asli, dan ketiganya berbagi '
                       'sumbu waktu yang sama. Arti pita warnanya sama dengan grafik satu parameter.',
                       style: TextStyle(fontSize: 13, color: cMuted),
@@ -721,12 +807,13 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                   'Yang tetap aman: seluruh riwayat pengukuran, klasifikasi, dan prediksi, karena semuanya '
                   'menempel pada perangkat, bukan pada rak. '
                   '${device == null ? 'Kolam ini belum terhubung ke perangkat mana pun.' : 'Perangkat ${device!['device_code']} tidak ikut terhapus, hanya kembali menjadi belum terklaim dan bisa diklaim ulang untuk membuka datanya lagi.'}',
-                  style: const TextStyle(fontSize: 13, color: cMuted),
+                  style: TextStyle(fontSize: 13, color: cMuted),
                 ),
                 const SizedBox(height: 12),
                 Text('Ketik "$namaKolam" untuk mengonfirmasi', style: const TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 6),
                 TextField(
+                  inputFormatters: batas50,
                   controller: ketikNama,
                   onChanged: (_) => setState(() {}),
                   autocorrect: false,
@@ -786,27 +873,27 @@ class _OnlineLabel extends StatelessWidget {
 
 /// DetailPill web: ikon + teks di atas latar putih bergaris tipis.
 class _Pill extends StatelessWidget {
-  const _Pill(this.icon, this.text, {this.iconColor = cInk});
+  const _Pill(this.icon, this.text, {this.iconColor});
   final IconData icon;
   final String text;
-  final Color iconColor;
+  final Color? iconColor; // null = warna tinta tema
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: Colors.white,
+      color: cSurface,
       border: Border.all(color: cBorder),
       borderRadius: BorderRadius.circular(99),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: iconColor),
+        Icon(icon, size: 14, color: iconColor ?? cInk),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
             text,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cInk),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: cInk),
           ),
         ),
       ],
@@ -858,13 +945,13 @@ class _WarnaKondisiLegend extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.only(top: 10),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: cBorder)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Warna kondisi:',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
           ),
@@ -884,7 +971,7 @@ class _StatusPojok extends StatelessWidget {
   final String? status;
   @override
   Widget build(BuildContext context) => status == null
-      ? const Text('Belum ada data', style: TextStyle(fontSize: 13, color: cMuted))
+      ? Text('Belum ada data', style: TextStyle(fontSize: 13, color: cMuted))
       : Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -892,7 +979,7 @@ class _StatusPojok extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               status!,
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
             ),
           ],
         );
@@ -982,7 +1069,7 @@ class _Track extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(99),
-                  border: Border.all(color: Colors.white, width: 2),
+                  border: Border.all(color: cSurface, width: 2),
                 ),
               ),
             ),
@@ -993,9 +1080,10 @@ class _Track extends StatelessWidget {
 }
 
 class _ParamCell extends StatelessWidget {
-  const _ParamCell({required this.param, required this.value});
+  const _ParamCell({required this.param, required this.value, this.sensorError});
   final String param;
   final num? value;
+  final String? sensorError; // 'lonjakan' | 'kosong' | null = sensor sehat
 
   @override
   Widget build(BuildContext context) {
@@ -1024,11 +1112,14 @@ class _ParamCell extends StatelessWidget {
                 if (ui.unit != ui.short || value == null)
                   TextSpan(
                     text: ' ${ui.unit}',
-                    style: const TextStyle(color: cMuted),
+                    style: TextStyle(color: cMuted),
                   ),
               ],
             ),
           ),
+          // Angka dan status di atas tetap tampil apa adanya; label ini yang
+          // memberi tahu bahwa keduanya belum tentu bisa dipercaya.
+          if (sensorError != null) _SensorError(_sensorErrorTeks[sensorError] ?? ''),
           const SizedBox(height: 6),
           _Track(
             frac: value == null ? null : rangeFrac(param, value!),
@@ -1069,7 +1160,7 @@ class _AmoniaCell extends StatelessWidget {
                 style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: cInk),
               ),
               // "%" polos seperti AmmoniaCell.tsx, supaya selebar satuan kolom lain.
-              const TextSpan(
+              TextSpan(
                 text: ' %',
                 style: TextStyle(color: cMuted),
               ),

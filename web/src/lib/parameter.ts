@@ -29,9 +29,9 @@ export const PARAM_UI: Record<
   ParamKey,
   { label: string; short: string; unit: string; color: string }
 > = {
-  ph: { label: "Konsentrasi pH air", short: "pH", unit: "pH", color: "#0E6E5C" },
-  temperature_c: { label: "Suhu kolam", short: "Suhu", unit: "°C", color: "#C1873A" },
-  salinity_ppt: { label: "Tingkat salinitas", short: "Salinitas", unit: "ppt", color: "#1B7FAE" },
+  ph: { label: "Konsentrasi pH air", short: "pH", unit: "pH", color: "rgb(var(--c-param-ph))" },
+  temperature_c: { label: "Suhu kolam", short: "Suhu", unit: "°C", color: "rgb(var(--c-param-suhu))" },
+  salinity_ppt: { label: "Tingkat salinitas", short: "Salinitas", unit: "ppt", color: "rgb(var(--c-param-salinitas))" },
 };
 
 /**
@@ -65,11 +65,13 @@ export function statusOf(param: ParamKey, value: number): StatusLabel {
 }
 
 /**
- * Maksimal 1 desimal tanpa nol di belakang: 7.63 → "7.6", 25.00 → "25".
+ * Maksimal 2 desimal tanpa nol di belakang: 7.634 → "7.63", 25.00 → "25".
+ * Dua desimal, bukan satu: di dekat batas status, 8.54 yang ditulis "8.5"
+ * tampil berdampingan dengan label Waspada dan terbaca seperti salah hitung.
  * Hanya untuk tampilan; ekspor CSV memakai nilai mentah (toCsv() di export.ts).
  */
 export function formatValue(value: number): string {
-  return String(Number(value.toFixed(1)));
+  return String(Number(value.toFixed(2)));
 }
 
 /**

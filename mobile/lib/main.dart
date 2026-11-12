@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
 import 'logic.dart';
@@ -43,6 +44,47 @@ bool bukaTautan(Uri uri) {
   return true;
 }
 
+/// Push yang membuka app dari keadaan mati. Dibuka AuthGate sesudah sesi
+/// dipastikan ada, lalu dikosongkan (pola yang sama dengan [tautanAwal]).
+RemoteMessage? pesanAwal;
+
+/// Push yang diketuk → detail kolam yang disebut notifikasinya, langsung di
+/// bagian Prediksi. `kolam_id` dikirim backend di payload data (dispatch_push).
+Future<void> bukaNotif(RemoteMessage m) async {
+  final id = int.tryParse('${m.data['kolam_id']}');
+  if (id == null || token == null) return;
+  try {
+    final kolam = await api.getKolam(id);
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => RakDetailScreen(kolam: kolam, kePrediksi: true)),
+    );
+  } catch (_) {
+    // Kolamnya sudah dihapus atau bukan milik akun ini: tetap di layar sekarang.
+  }
+}
+
+/// Mode terang/gelap. `gelap` (ui.dart) yang dibaca semua warna; notifier ini
+/// hanya pemicu supaya MaterialApp memasang tema baru.
+final modeGelap = ValueNotifier<bool>(false);
+
+Future<void> setGelap(bool v) async {
+  gelap = v;
+  modeGelap.value = v;
+  // Widget `const` tidak ikut dibangun ulang saat induknya berganti, padahal
+  // warnanya dibaca dari getter global, bukan dari Theme. Semua elemen ditandai
+  // kotor supaya seluruh layar (termasuk yang di bawah tumpukan navigasi)
+  // langsung memakai warna baru.
+  // ponytail: menyapu seluruh pohon widget, hanya terjadi saat tema diganti.
+  // Pindah ke ThemeExtension kalau warna perlu berbeda per bagian layar.
+  void tandai(Element e) {
+    e.markNeedsBuild();
+    e.visitChildren(tandai);
+  }
+
+  WidgetsBinding.instance.rootElement?.visitChildren(tandai);
+  await (await SharedPreferences.getInstance()).setBool('tema_gelap', v);
+}
+
 /// Tautan yang datang saat app sedang berjalan. Didaftarkan sebelum runApp supaya
 /// ditangani di sini, bukan diteruskan WidgetsApp ke Navigator sebagai route bernama.
 class _Tautan with WidgetsBindingObserver {
@@ -56,10 +98,14 @@ Future<void> main() async {
   if (awal != '/') tautanAwal = awal;
   WidgetsBinding.instance.addObserver(_Tautan());
   await loadToken();
+  gelap = (await SharedPreferences.getInstance()).getBool('tema_gelap') ?? false;
+  modeGelap.value = gelap;
   onSessionExpired = logout;
   try {
     await Firebase.initializeApp();
     pushReady = true;
+    pesanAwal = await FirebaseMessaging.instance.getInitialMessage();
+    FirebaseMessaging.onMessageOpenedApp.listen(bukaNotif);
     FirebaseMessaging.onMessage.listen((m) {
       // Push di latar depan tidak ditampilkan sistem: cukup kabari & segarkan badge.
       refreshUnread();
@@ -74,15 +120,18 @@ Future<void> main() async {
     debugPrint('Firebase belum dikonfigurasi, push nonaktif: $e');
   }
   runApp(
-    MaterialApp(
-      title: 'KrabCare',
-      theme: theme,
-      navigatorKey: navigatorKey,
-      scaffoldMessengerKey: messengerKey,
-      debugShowCheckedModeBanner: false,
-      // Ukuran font sistem HP diabaikan supaya tata letak sama di semua HP.
-      builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
-      home: const AuthGate(),
+    ValueListenableBuilder(
+      valueListenable: modeGelap,
+      builder: (_, _, _) => MaterialApp(
+        title: 'KrabCare',
+        theme: buatTema(),
+        navigatorKey: navigatorKey,
+        scaffoldMessengerKey: messengerKey,
+        debugShowCheckedModeBanner: false,
+        // Ukuran font sistem HP diabaikan supaya tata letak sama di semua HP.
+        builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
+        home: const AuthGate(),
+      ),
     ),
   );
 }
@@ -177,6 +226,9 @@ class _AuthGateState extends State<AuthGate> {
     final t = tautanAwal;
     tautanAwal = null;
     if (t != null) bukaTautan(Uri.parse(t));
+    final p = pesanAwal;
+    pesanAwal = null;
+    if (p != null) bukaNotif(p); // tanpa sesi, bukaNotif diam saja
   }
 
   @override
@@ -243,7 +295,8 @@ class _ShellState extends State<Shell> {
     return Scaffold(
       // Dashboard tanpa AppBar: tanpa ini ikon status bar putih dari layar login ikut terbawa.
       body: AnnotatedRegion(
-        value: SystemUiOverlayStyle.dark,
+        // Ikon status bar: gelap di atas latar terang, terang di mode gelap.
+        value: gelap ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         child: SafeArea(bottom: false, child: pages[index]),
       ),
       bottomNavigationBar: NavigationBar(

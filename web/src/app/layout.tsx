@@ -46,7 +46,20 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id">
+    // suppressHydrationWarning: skrip di bawah menambah kelas `dark` sebelum
+    // React hidup, jadi atribut class <html> memang boleh beda dari hasil server.
+    <html lang="id" suppressHydrationWarning>
+      <head>
+        {/* Pasang mode gelap sebelum halaman digambar. Kalau menunggu React,
+            halaman sempat tampil terang lalu berkedip jadi gelap. Pilihannya
+            disimpan halaman Profil di localStorage ("tema"). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{if(localStorage.getItem("tema")==="gelap")document.documentElement.classList.add("dark")}catch(e){}',
+          }}
+        />
+      </head>
       <body
         className={`${jetbrains.variable} font-sans`}
       >

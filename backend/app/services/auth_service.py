@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.email import send_email
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import HASH_DUMMY, create_access_token, hash_password, verify_password
 from app.models import User
 from app.schemas.user import PasswordChangeIn, UserLoginIn, UserProfileUpdateIn, UserRegisterIn
 
@@ -136,11 +136,13 @@ async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
     """Cek kredensial, balas JWT. Pesan error sengaja tidak membedakan email vs password."""
     result = await db.execute(select(User).where(func.lower(User.email) == payload.email))
     user = result.scalar_one_or_none()
-    if (
-        user is None
-        or not user.is_active
-        or not await verify_password(payload.password, user.password_hash)
-    ):
+    # Sandi tetap diverifikasi walau emailnya tidak terdaftar (terhadap
+    # HASH_DUMMY). Kalau dilewati, balasan untuk email tak terdaftar jauh lebih
+    # cepat dan selisih waktunya bisa dipakai menebak email mana yang punya akun.
+    sandi_cocok = await verify_password(
+        payload.password, user.password_hash if user is not None else HASH_DUMMY
+    )
+    if user is None or not user.is_active or not sandi_cocok:
         raise AuthError("Email atau password salah")
 
     # Diperiksa sesudah password terbukti benar. Kalau dicek lebih dulu, balasan
@@ -149,7 +151,7 @@ async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
         raise EmailBelumTerverifikasi(
             "Email belum diverifikasi. Cek kotak masuk Anda untuk link aktivasi."
         )
-    return create_access_token(user.id)
+    return create_access_token(user)
 
 
 async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdateIn) -> User:
@@ -160,12 +162,18 @@ async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdat
     return user
 
 
-async def change_password(db: AsyncSession, user: User, payload: PasswordChangeIn) -> None:
-    """Ganti password; wajib lolos verifikasi password lama."""
+async def change_password(db: AsyncSession, user: User, payload: PasswordChangeIn) -> str:
+    """Ganti password; wajib lolos verifikasi password lama.
+
+    Mengembalikan token baru. Token lama (di perangkat ini maupun perangkat
+    lain) langsung tidak berlaku karena sidik sandinya berubah, jadi perangkat
+    yang mengganti sandi perlu token pengganti supaya tidak ikut terlempar.
+    """
     if not await verify_password(payload.old_password, user.password_hash):
         raise AuthError("Password lama salah")
     user.password_hash = await hash_password(payload.new_password)
     await db.commit()
+    return create_access_token(user)
 
 
 async def request_password_reset(db: AsyncSession, email: str) -> None:

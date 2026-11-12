@@ -2,40 +2,83 @@
 // web/tailwind.config.ts.
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'logic.dart';
 
-const cBg = Color(0xFFF2F6F2);
-const cInk = Color(0xFF122B26);
-const cMuted = Color(0xFF1E332D);
-const cBorder = Color(0xFFDCE5DD);
+/// true = mode gelap. Hanya diubah lewat setGelap() di main.dart, yang juga
+/// menyimpan pilihannya dan membangun ulang seluruh layar.
+///
+/// Warna di bawah ini getter, bukan const, supaya nilainya ikut `gelap`.
+/// Akibatnya widget yang memakainya tidak bisa `const`. Nilai mode terang
+/// sama persis dengan sebelumnya; nilai mode gelap sama dengan `.dark` di
+/// web/src/app/globals.css.
+bool gelap = false;
+
+Color get cBg => gelap ? const Color(0xFF0D1715) : const Color(0xFFF2F6F2);
+
+/// Latar kartu, pil, dan tooltip. Pengganti Colors.white.
+Color get cSurface => gelap ? const Color(0xFF14211E) : Colors.white;
+Color get cInk => gelap ? const Color(0xFFE4EEEA) : const Color(0xFF122B26);
+Color get cMuted => gelap ? const Color(0xFFC3D3CC) : const Color(0xFF1E332D);
+Color get cBorder => gelap ? const Color(0xFF2C3E39) : const Color(0xFFDCE5DD);
 const cBrand = Color(0xFF19A8B2);
-const cBrand50 = Color(0xFFE8F6F7);
-const cBrand600 = Color(0xFF12838C);
-const cBrand700 = Color(0xFF0F7078);
+Color get cBrand50 => gelap ? const Color(0xFF10343A) : const Color(0xFFE8F6F7);
+
+/// Warna merek untuk TEKS dan ikon. Dipisah dari warna tombol karena di mode
+/// gelap teks merek harus terang supaya terbaca di latar gelap.
+Color get cBrand600 => gelap ? const Color(0xFF7ACDD2) : const Color(0xFF12838C);
+Color get cBrand700 => gelap ? const Color(0xFF7ACDD2) : const Color(0xFF0F7078);
 const cHero = Color(0xFF0A2620);
 const cBrass = Color(0xFFC1873A);
-const cAxis = Color(0xFF5C7A72);
+Color get cAxis => gelap ? const Color(0xFF8FA9A0) : const Color(0xFF5C7A72);
 
-/// label status → (warna teks, latar, ikon)
-const statusStyle = {
+typedef GayaStatus = ({Color fg, Color bg, IconData icon});
+
+const _statusTerang = <String, GayaStatus>{
   'Aman': (fg: Color(0xFF1F9D55), bg: Color(0xFFE4F6EB), icon: Icons.check_circle_outline),
   'Waspada': (fg: Color(0xFFB9740E), bg: Color(0xFFFBF0DA), icon: Icons.warning_amber_rounded),
   'Bahaya': (fg: Color(0xFFC23B22), bg: Color(0xFFFBE7E2), icon: Icons.report_outlined),
 };
+const _statusGelap = <String, GayaStatus>{
+  'Aman': (fg: Color(0xFF4CC38A), bg: Color(0xFF12301F), icon: Icons.check_circle_outline),
+  'Waspada': (fg: Color(0xFFE0A84A), bg: Color(0xFF3A2C10), icon: Icons.warning_amber_rounded),
+  'Bahaya': (fg: Color(0xFFF0806A), bg: Color(0xFF3D1A14), icon: Icons.report_outlined),
+};
+
+/// label status → (warna teks, latar, ikon)
+Map<String, GayaStatus> get statusStyle => gelap ? _statusGelap : _statusTerang;
 
 Color statusColor(String? label) => statusStyle[label]?.fg ?? cAxis;
 
-final theme = ThemeData(
-  colorScheme: ColorScheme.fromSeed(seedColor: cBrand, primary: cBrand600, surface: Colors.white),
+const _paramGelap = {'ph': 0xFF3FBFA3, 'temperature_c': 0xFFDDAE64, 'salinity_ppt': 0xFF5AB0DD};
+
+/// Warna garis grafik satu parameter. Di mode gelap diterangkan: warna asli
+/// (logic.dart) terlalu pekat untuk latar gelap.
+Color paramColor(String param) => Color(gelap ? _paramGelap[param]! : paramUi[param]!.color);
+
+/// Semua kolom isian dibatasi 50 karakter, sama dengan MAKS_INPUT di backend
+/// (schemas/user.py) dan maxLength di web. Formatter, bukan `maxLength`:
+/// `maxLength` menambah penghitung "0/50" di bawah tiap kolom.
+final batas50 = <TextInputFormatter>[LengthLimitingTextInputFormatter(50)];
+
+ThemeData buatTema() => ThemeData(
+  colorScheme: gelap
+      ? ColorScheme.fromSeed(
+          seedColor: cBrand,
+          brightness: Brightness.dark,
+          primary: const Color(0xFF7ACDD2),
+          surface: cSurface,
+        )
+      : ColorScheme.fromSeed(seedColor: cBrand, primary: const Color(0xFF12838C), surface: Colors.white),
   scaffoldBackgroundColor: cBg,
-  appBarTheme: const AppBarTheme(backgroundColor: cBg, foregroundColor: cInk, centerTitle: false),
-  cardTheme: const CardThemeData(
-    color: Colors.white,
+  appBarTheme: AppBarTheme(backgroundColor: cBg, foregroundColor: cInk, centerTitle: false),
+  cardTheme: CardThemeData(
+    color: cSurface,
     elevation: 0,
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(Radius.circular(8)),
+      borderRadius: const BorderRadius.all(Radius.circular(8)),
       side: BorderSide(color: cBorder),
     ),
   ),
@@ -88,7 +131,7 @@ class Logo extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
     children: [
-      const CircleAvatar(
+      CircleAvatar(
         radius: 15,
         backgroundColor: cBrand,
         child: Icon(Icons.waves, size: 18, color: cBrand50),
@@ -138,7 +181,7 @@ class Section extends StatelessWidget {
           if (note != null)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text(note!, style: const TextStyle(fontSize: 13, color: cMuted)),
+              child: Text(note!, style: TextStyle(fontSize: 13, color: cMuted)),
             ),
           if (child != null) const SizedBox(height: 10),
           ?child,
@@ -191,7 +234,7 @@ class HistoryChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = range[param]!;
-    final color = Color(paramUi[param]!.color);
+    final color = paramColor(param);
     final pad = (r.max - r.min) * 0.08;
     final spots = [
       for (var i = 0; i < rows.length; i++)
@@ -245,7 +288,7 @@ class HistoryChart extends StatelessWidget {
                   meta: meta,
                   child: Text(
                     numStr(double.parse(v.toStringAsFixed(2))),
-                    style: const TextStyle(fontSize: 10, color: cInk),
+                    style: TextStyle(fontSize: 10, color: cInk),
                   ),
                 ),
               ),
@@ -264,7 +307,7 @@ class HistoryChart extends StatelessWidget {
                     child: Text(
                       '${formatTanggal(t).substring(0, 5)}\n${formatJam(t)}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 10, color: cInk),
+                      style: TextStyle(fontSize: 10, color: cInk),
                     ),
                   );
                 },
@@ -273,13 +316,13 @@ class HistoryChart extends StatelessWidget {
           ),
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
-              getTooltipColor: (_) => Colors.white,
-              tooltipBorder: const BorderSide(color: cBorder),
+              getTooltipColor: (_) => cSurface,
+              tooltipBorder: BorderSide(color: cBorder),
               getTooltipItems: (spots) => [
                 for (final s in spots)
                   LineTooltipItem(
                     '${formatWaktu(rows[s.x.toInt()]['time'])}\n',
-                    const TextStyle(fontSize: 11, color: cInk),
+                    TextStyle(fontSize: 11, color: cInk),
                     children: [
                       TextSpan(
                         text: '${formatValue(s.y)} ${paramUi[param]!.unit} · ${statusOf(param, s.y)}',
@@ -331,6 +374,7 @@ class _PasswordFieldState extends State<PasswordField> {
   bool hide = true;
   @override
   Widget build(BuildContext context) => TextFormField(
+    inputFormatters: batas50,
     controller: widget.controller,
     obscureText: hide,
     validator: widget.validator,

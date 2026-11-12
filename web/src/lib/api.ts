@@ -151,11 +151,16 @@ export const api = {
     }),
 
   /** POST /auth/me/change-password → 204 */
-  changePassword: (old_password: string, new_password: string) =>
-    request<void>("/auth/me/change-password", {
-      method: "POST",
-      body: JSON.stringify({ old_password, new_password }),
-    }),
+  changePassword: async (old_password: string, new_password: string) => {
+    const { access_token } = await request<import("./types").TokenOut>(
+      "/auth/me/change-password",
+      { method: "POST", body: JSON.stringify({ old_password, new_password }) }
+    );
+    // Backend membatalkan semua token lama begitu sandi berganti dan membalas
+    // token pengganti. Kalau tidak disimpan, request berikutnya 401 dan
+    // pengguna terlempar ke halaman login tepat setelah berhasil ganti sandi.
+    window.localStorage.setItem("access_token", access_token);
+  },
 
   /** DELETE /auth/me → 204. Permanen: kolam + notifikasi user ikut terhapus.
    *  Device dan riwayat sensornya tetap ada (FK SET NULL), statusnya kembali
@@ -323,6 +328,10 @@ export const api = {
   // Amonia (routers/quality.py)
 
   /** GET /quality/ammonia-risk → DeviceAmmoniaOut[] (terukur terkini + ramalan) */
+  /** GET /readings/sensor-status → SensorStatus (objek kosong = semua sensor sehat) */
+  getSensorStatus: (deviceId: number) =>
+    request<import("./types").SensorStatus>(`/readings/sensor-status?device_id=${deviceId}`),
+
   getAmmoniaRisk: (deviceId?: number) => {
     const qs = deviceId != null ? `?device_id=${deviceId}` : "";
     return request<import("./types").DeviceAmmonia[]>(`/quality/ammonia-risk${qs}`);

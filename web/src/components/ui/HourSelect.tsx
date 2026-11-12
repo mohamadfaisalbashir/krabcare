@@ -164,7 +164,7 @@ export default function HourSelect({
                 className={clsx(
                   "cursor-pointer px-3 py-1.5 text-sm",
                   i === sorot && "bg-brand-50",
-                  terpilih ? "font-semibold text-brand-700" : "text-ink"
+                  terpilih ? "font-semibold text-aksen-kuat" : "text-ink"
                 )}
               >
                 {format(h)}

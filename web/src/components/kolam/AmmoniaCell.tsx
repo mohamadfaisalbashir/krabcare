@@ -67,7 +67,7 @@ export default function AmmoniaCell({
           <Link
             href={`/log-historis?param=${LOG_PARAM_AMONIA}`}
             aria-label={`Log historis ${AMONIA_UI.short}`}
-            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 transition hover:bg-white/60 hover:text-brand-700 focus-visible:opacity-100 group-hover:opacity-100"
+            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted opacity-0 transition hover:bg-kaca/60 hover:text-aksen-kuat focus-visible:opacity-100 group-hover:opacity-100"
           >
             <ArrowUpRight className="h-4 w-4" strokeWidth={2.2} />
           </Link>
@@ -111,7 +111,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
           <div className="relative h-1.5 rounded-full bg-status-waspadaBg/80">
             <span
               aria-hidden
-              className="absolute inset-y-0 left-0 rounded-full bg-[#0F7078]/25"
+              className="absolute inset-y-0 left-0 rounded-full bg-[#0F7078]/25 dark:bg-aksen/30"
               style={{ width: `${lebarAman}%` }}
             />
             <span
@@ -122,7 +122,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
             {nilai != null && status && (
               <span
                 className={clsx(
-                  "absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white transition-[left] duration-500 ease-smooth motion-reduce:transition-none",
+                  "absolute top-1/2 h-3 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface transition-[left] duration-500 ease-smooth motion-reduce:transition-none",
                   WARNA[status]
                 )}
                 style={{ left: `${skalaPersen(nilai)}%` }}

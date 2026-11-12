@@ -4,17 +4,19 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.user import MAKS_INPUT
+
 
 class KolamCreateIn(BaseModel):
-    nama: str = Field(min_length=1)
+    nama: str = Field(min_length=1, max_length=MAKS_INPUT)
     #: Satu kolam = satu rak = satu device, jadi device-nya ditentukan sekalian
     #: saat kolam dibuat. Keduanya satu transaksi: kode device yang salah ikut
     #: membatalkan pembuatan kolamnya, supaya tidak ada kolam yatim.
-    device_code: str = Field(min_length=1)
+    device_code: str = Field(min_length=1, max_length=MAKS_INPUT)
 
 
 class KolamUpdateIn(BaseModel):
-    nama: str = Field(min_length=1)
+    nama: str = Field(min_length=1, max_length=MAKS_INPUT)
 
 
 class KolamUrutanIn(BaseModel):

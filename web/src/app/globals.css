@@ -3,6 +3,61 @@
 @tailwind utilities;
 
 @layer base {
+  /* Nilai warna yang berganti antara mode terang dan gelap, sebagai triplet
+     "R G B" (dibaca tailwind.config.ts lewat rgb(var(--c-x) / alpha)).
+     :root = tampilan asli, angkanya tidak diubah. */
+  :root {
+    --c-bg: 242 246 242;
+    --c-surface: 255 255 255;
+    --c-ink: 18 43 38;
+    --c-muted: 30 51 45;
+    --c-border: 220 229 221;
+    --c-kaca: 255 255 255;
+    --c-aksen: 18 131 140;
+    --c-aksen-kuat: 15 112 120;
+    --c-brand-50: 232 246 247;
+    --c-brand-100: 198 233 236;
+    --c-aman: 31 157 85;
+    --c-aman-bg: 228 246 235;
+    --c-waspada: 185 116 14;
+    --c-waspada-bg: 251 240 218;
+    --c-bahaya: 194 59 34;
+    --c-bahaya-bg: 251 231 226;
+    /* Warna garis grafik per parameter (lib/parameter.ts). */
+    --c-param-ph: 14 110 92;
+    --c-param-suhu: 193 135 58;
+    --c-param-salinitas: 27 127 174;
+    /* Sorotan tepi atas kartu kaca. */
+    --kilau: 0.65;
+  }
+
+  /* Mode gelap: palet "Muara" yang sama, digelapkan. Latar hijau-kebiruan
+     pekat, teks hijau pucat. Warna status dan garis grafik diterangkan supaya
+     tetap terbaca di latar gelap (semua teks >= 4,5:1 terhadap surface). */
+  .dark {
+    color-scheme: dark;
+    --c-bg: 13 23 21;
+    --c-surface: 20 33 30;
+    --c-ink: 228 238 234;
+    --c-muted: 195 211 204;
+    --c-border: 44 62 57;
+    --c-kaca: 20 33 30;
+    --c-aksen: 122 205 210;
+    --c-aksen-kuat: 122 205 210;
+    --c-brand-50: 16 52 58;
+    --c-brand-100: 22 67 73;
+    --c-aman: 76 195 138;
+    --c-aman-bg: 18 48 31;
+    --c-waspada: 224 168 74;
+    --c-waspada-bg: 58 44 16;
+    --c-bahaya: 240 128 106;
+    --c-bahaya-bg: 61 26 20;
+    --c-param-ph: 63 191 163;
+    --c-param-suhu: 221 174 100;
+    --c-param-salinitas: 90 176 221;
+    --kilau: 0.06;
+  }
+
   html {
     -webkit-tap-highlight-color: transparent;
   }
@@ -34,7 +89,7 @@
   .input-field {
     /* text-base di mobile wajib: input < 16px membuat Safari iOS memperbesar
        viewport tiap kali kolomnya difokus. */
-    @apply w-full rounded-lg border border-border bg-white px-3 py-2 text-base sm:text-sm
+    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-base sm:text-sm
       text-ink placeholder:text-muted/50 outline-none transition-colors;
     border-bottom-width: 2px;
     /* Alpha diturunkan (70% ke 50%, 45% ke 30%) karena `muted` sudah digelapkan
@@ -86,17 +141,23 @@
      sorotan 1px di tepi atas supaya terbaca sebagai lempeng kaca, lalu bayangan
      tipis di luar. Tailwind tidak bisa menyusunnya lewat utility. */
   .glass {
-    @apply rounded-xl2 border border-white/60 bg-white/55 backdrop-blur-xl;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    @apply rounded-xl2 border border-kaca/60 bg-kaca/55 backdrop-blur-xl;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / var(--kilau)),
       0 2px 12px rgba(18, 43, 38, 0.1);
+  }
+  /* Di mode gelap kaca dibuat lebih pekat: teks terang di atas foto yang
+     tembus 45% tidak terbaca. */
+  .dark .glass {
+    @apply bg-kaca/80;
   }
 
   /* backdrop-filter tidak ada di semua browser, dan sebagian mematikannya demi
      baterai. Tanpa cadangan ini kartu jadi putih 55% di atas foto tajam dan
      teksnya tidak terbaca. */
   @supports not (backdrop-filter: blur(1px)) {
-    .glass {
-      @apply bg-white/90;
+    .glass,
+    .dark .glass {
+      @apply bg-kaca/90;
     }
   }
 
@@ -128,7 +189,7 @@
   /* Button standar WinUI: isian putih, garis bawah sedikit lebih gelap, hover
      netral tanpa nuansa aksen. */
   .btn-ghost {
-    @apply btn-base border border-border bg-white text-ink hover:bg-bg;
+    @apply btn-base border border-border bg-surface text-ink hover:bg-bg;
     /* 35% ke 22%, alasan sama dengan .input-field di atas. */
     border-bottom-color: theme("colors.muted / 22%");
   }

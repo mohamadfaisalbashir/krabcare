@@ -1,5 +1,7 @@
 """POST endpoint gateway (Raspberry Pi). Semua endpoint di sini wajib X-API-Key."""
 
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +10,8 @@ from app.db.session import get_db
 from app.schemas.fuzzy import QualityIngestIn, QualityIngestResultOut
 from app.schemas.sensor_reading import IngestResultOut, SensorReadingBatchIn
 from app.services import ingest_service, notification_service, quality_ingest_service
+
+logger = logging.getLogger("app.routers.ingest")
 
 router = APIRouter(
     prefix="/ingest",
@@ -24,6 +28,15 @@ async def ingest_readings(
     inserted, unknown, skipped_duplicates = await ingest_service.ingest_readings(
         db, payload.readings
     )
+    # Reading sudah tersimpan. Kegagalan notifikasi tidak boleh membuat gateway
+    # menganggap kirimannya gagal lalu menumpuknya di buffer.
+    try:
+        await notification_service.dispatch_sensor_error(
+            db, sorted({r.device_code for r in payload.readings})
+        )
+    except Exception:
+        logger.exception("Gagal memproses notifikasi sensor error")
+        await db.rollback()
     return IngestResultOut(
         received=len(payload.readings),
         inserted=inserted,

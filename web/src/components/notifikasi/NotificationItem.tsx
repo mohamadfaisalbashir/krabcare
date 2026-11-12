@@ -9,6 +9,7 @@ const SOURCE_LABEL: Record<string, string> = {
   classification: "Kondisi aktual",
   prediction: "Prediksi",
   parameter: "Parameter",
+  sensor: "Sensor error",
 };
 
 const PARAM_LABELS: Record<string, string> = {
@@ -169,7 +170,7 @@ export default function NotificationItem({
           {!item.is_read && onRead && (
             <button
               onClick={() => onRead(item.id)}
-              className="py-1.5 text-xs font-semibold text-brand-600 hover:underline"
+              className="py-1.5 text-xs font-semibold text-aksen hover:underline"
             >
               Tandai dibaca
             </button>

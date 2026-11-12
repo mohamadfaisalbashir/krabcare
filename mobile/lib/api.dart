@@ -121,8 +121,16 @@ class _Api {
       await _request('POST', '/auth/register', body: {'email': email, 'password': password, 'nama': nama});
   Future<Json> getMe() async => await _request('GET', '/auth/me');
   Future<Json> updateProfile(String nama) async => await _request('PUT', '/auth/me', body: {'nama': nama});
-  Future<void> changePassword(String oldPw, String newPw) =>
-      _request('POST', '/auth/me/change-password', body: {'old_password': oldPw, 'new_password': newPw});
+  /// Backend membatalkan semua token lama begitu sandi berganti dan membalas
+  /// token pengganti. Disimpan di sini supaya request berikutnya tidak 401.
+  Future<void> changePassword(String oldPw, String newPw) async {
+    final Json res = await _request(
+      'POST',
+      '/auth/me/change-password',
+      body: {'old_password': oldPw, 'new_password': newPw},
+    );
+    await saveToken(res['access_token'] as String);
+  }
   Future<void> deleteAccount() => _request('DELETE', '/auth/me');
   Future<Json> resendVerification(String email) async =>
       await _request('POST', '/auth/resend-verification', body: {'email': email});
@@ -140,6 +148,7 @@ class _Api {
   Future<void> claimDevice(int kolamId, String code) =>
       _request('POST', '/kolam/$kolamId/devices/${Uri.encodeComponent(code)}');
   Future<List<Json>> listKolam() async => _list(await _request('GET', '/kolam'));
+  Future<Json> getKolam(int id) async => await _request('GET', '/kolam/$id');
   Future<List<Json>> getKolamDevices(int id) async => _list(await _request('GET', '/kolam/$id/devices'));
 
   /// Semua device di kolam milik user. Satu kolam yang gagal dimuat tidak mengosongkan daftar.
@@ -201,6 +210,10 @@ class _Api {
       },
     ),
   );
+  /// Parameter yang sensornya terindikasi error → 'lonjakan' | 'kosong'. Kosong
+  /// = semua sehat. Aturannya di backend (services/sensor_status.py).
+  Future<Json> getSensorStatus(int deviceId) async =>
+      await _request('GET', '/readings/sensor-status', query: {'device_id': deviceId});
   Future<List<Json>> getLatestQuality([int? deviceId]) async =>
       _list(await _request('GET', '/quality/latest', query: {'device_id': deviceId}));
   Future<List<Json>> getPredictions([int? deviceId]) async =>

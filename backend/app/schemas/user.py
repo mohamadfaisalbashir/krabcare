@@ -31,22 +31,26 @@ def _rapikan_email(nilai: object) -> object:
 #: Satu definisi untuk semua kolom email. Register, login, dan lupa-sandi harus
 #: menormalkan dengan aturan yang sama, kalau tidak login gagal untuk alamat
 #: yang baru saja berhasil didaftarkan.
+#: Batas panjang semua kolom isian teks. Sama dengan maxLength di web
+#: (components/ui/Input.tsx) dan batas50 di mobile (lib/ui.dart).
+MAKS_INPUT = 50
+
 Email = Annotated[
     str,
     BeforeValidator(_rapikan_email),
-    StringConstraints(pattern=_EMAIL_PATTERN, max_length=254),
+    StringConstraints(pattern=_EMAIL_PATTERN, max_length=MAKS_INPUT),
 ]
 
 
 class UserRegisterIn(BaseModel):
     email: Email
-    password: str = Field(min_length=8)
-    nama: str = Field(min_length=1)
+    password: str = Field(min_length=8, max_length=MAKS_INPUT)
+    nama: str = Field(min_length=1, max_length=MAKS_INPUT)
 
 
 class UserLoginIn(BaseModel):
     email: Email
-    password: str
+    password: str = Field(max_length=MAKS_INPUT)
 
 
 class TokenOut(BaseModel):
@@ -65,12 +69,12 @@ class UserOut(BaseModel):
 
 
 class UserProfileUpdateIn(BaseModel):
-    nama: str = Field(min_length=1)
+    nama: str = Field(min_length=1, max_length=MAKS_INPUT)
 
 
 class PasswordChangeIn(BaseModel):
-    old_password: str
-    new_password: str = Field(min_length=8)
+    old_password: str = Field(max_length=MAKS_INPUT)
+    new_password: str = Field(min_length=8, max_length=MAKS_INPUT)
 
 
 class ForgotPasswordIn(BaseModel):
@@ -78,7 +82,7 @@ class ForgotPasswordIn(BaseModel):
 
 
 class VerifyEmailIn(BaseModel):
-    token: str
+    token: str = Field(max_length=200)
 
 
 class ResendVerificationIn(BaseModel):
@@ -86,5 +90,5 @@ class ResendVerificationIn(BaseModel):
 
 
 class ResetPasswordIn(BaseModel):
-    token: str
-    new_password: str = Field(min_length=8)
+    token: str = Field(max_length=200)
+    new_password: str = Field(min_length=8, max_length=MAKS_INPUT)

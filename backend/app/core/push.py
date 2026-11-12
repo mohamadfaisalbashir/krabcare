@@ -23,15 +23,18 @@ def _get_firebase_app():
     return _firebase_app
 
 
-def send_push(token: str, title: str, body: str) -> bool:
-    """Kirim satu push ke satu token FCM. False = tidak terkirim (tidak pernah raise)."""
+def send_push(token: str, title: str, body: str, data: dict[str, str] | None = None) -> bool:
+    """Kirim satu push ke satu token FCM. False = tidak terkirim (tidak pernah raise).
+
+    `data` ikut terkirim sebagai payload data FCM (nilainya wajib string).
+    """
     app = _get_firebase_app()
     if app is None:
         logger.warning("FIREBASE_CREDENTIALS_PATH belum diset, push dilewati.")
         return False
     try:
         message = messaging.Message(
-            notification=messaging.Notification(title=title, body=body), token=token
+            notification=messaging.Notification(title=title, body=body), data=data, token=token
         )
         messaging.send(message, app=app)
         return True

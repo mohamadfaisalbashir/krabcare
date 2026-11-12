@@ -41,7 +41,7 @@ export default function Logo({
       {!markOnly && (
         <span className="font-display text-lg font-semibold tracking-tight text-ink">
           {/* brand-600, bukan 500: ini teks di atas latar terang. */}
-          Krab<span className="text-brand-600">Care</span>
+          Krab<span className="text-aksen">Care</span>
         </span>
       )}
     </div>

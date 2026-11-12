@@ -123,6 +123,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
+                  inputFormatters: batas50,
                   controller: nama,
                   onChanged: (_) => setState(() {}),
                   decoration: const InputDecoration(labelText: 'Nama lengkap'),
@@ -146,8 +147,32 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 PasswordField(controller: konfirmasi, label: 'Konfirmasi kata sandi baru'),
                 _msg(sandiMsg),
                 const SizedBox(height: 8),
-                FilledButton(onPressed: busy ? null : simpanSandi, child: const Text('Simpan perubahan')),
+                // Nonaktif (pudar) sampai ketiga kolom terisi, seperti "Simpan
+                // nama" yang pudar selama namanya belum berubah.
+                ListenableBuilder(
+                  listenable: Listenable.merge([lama, baru, konfirmasi]),
+                  builder: (_, _) => FilledButton(
+                    onPressed: busy || lama.text.isEmpty || baru.text.isEmpty || konfirmasi.text.isEmpty
+                        ? null
+                        : simpanSandi,
+                    child: const Text('Simpan perubahan'),
+                  ),
+                ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Mode terang/gelap, diingat per perangkat (setGelap di main.dart).
+          Section(
+            title: 'Tampilan',
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: false, label: Text('Terang'), icon: Icon(Icons.light_mode_outlined)),
+                ButtonSegment(value: true, label: Text('Gelap'), icon: Icon(Icons.dark_mode_outlined)),
+              ],
+              selected: {gelap},
+              onSelectionChanged: (s) => setGelap(s.first),
             ),
           ),
           const SizedBox(height: 12),
@@ -184,6 +209,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                   const SizedBox(height: 6),
                   TextField(
+                    inputFormatters: batas50,
                     controller: ketikEmail,
                     onChanged: (_) => setState(() {}),
                     autocorrect: false,

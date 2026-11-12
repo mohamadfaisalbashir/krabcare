@@ -282,7 +282,7 @@ function NavGroup({
           className={clsx(
             "flex min-w-0 flex-1 items-center rounded-lg text-sm font-medium",
             "transition-colors duration-150",
-            active ? "text-brand-700" : "text-ink"
+            active ? "text-aksen-kuat" : "text-ink"
           )}
         >
           <span className={clsx(ICON_BOX, "relative")}>
@@ -298,7 +298,7 @@ function NavGroup({
           <CollapsingLabel collapsed={collapsed}>{label}</CollapsingLabel>
           {!collapsed && !!badge && (
             <span
-              className="ml-auto mr-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-status-bahaya px-1.5 text-[11px] font-semibold text-white"
+              className="ml-auto mr-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-status-bahaya px-1.5 text-[11px] font-semibold text-surface"
               aria-label={`${badge} belum dibaca`}
             >
               {formatUnreadBadge(badge)}
@@ -361,7 +361,7 @@ function NavGroup({
                       "relative ml-6 flex items-center gap-2.5 rounded-lg py-2 pl-4 pr-3 text-sm",
                       "transition-colors duration-150 focus-visible:rounded-lg",
                       childActive
-                        ? "bg-brand-50 font-medium text-brand-700"
+                        ? "bg-brand-50 font-medium text-aksen-kuat"
                         : "text-ink hover:bg-border/60 hover:text-ink"
                     )}
                   >

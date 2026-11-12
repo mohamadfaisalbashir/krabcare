@@ -74,7 +74,7 @@ export default function HistoryChart({
   const hi = round1(Math.max(max + pad, ...values));
 
   return (
-    <div className={`${height} w-full`}>
+    <div className={`${height} w-full text-black dark:text-ink`}>
       {/* debounce: ResponsiveContainer memakai ResizeObserver, dan tanpa jeda
           ini seluruh grafik digambar ulang tiap frame selama sidebar
           menguncup atau membentang. */}
@@ -95,22 +95,22 @@ export default function HistoryChart({
           </defs>
 
           {/* Pita ambang digambar sebelum Area supaya berada di belakang garis. */}
-          <ReferenceArea y1={lo} y2={min} fill="#C23B22" fillOpacity={0.05} ifOverflow="hidden" />
-          <ReferenceArea y1={max} y2={hi} fill="#C23B22" fillOpacity={0.05} ifOverflow="hidden" />
+          <ReferenceArea y1={lo} y2={min} fill="rgb(var(--c-bahaya))" fillOpacity={0.05} ifOverflow="hidden" />
+          <ReferenceArea y1={max} y2={hi} fill="rgb(var(--c-bahaya))" fillOpacity={0.05} ifOverflow="hidden" />
           <ReferenceArea
             y1={optimal[0]}
             y2={optimal[1]}
-            fill="#1F9D55"
+            fill="rgb(var(--c-aman))"
             fillOpacity={0.07}
             ifOverflow="hidden"
           />
           {/* Garis toleransi: tipis dan putus-putus, ini penanda, bukan data. */}
-          <ReferenceLine y={min} stroke="#C23B22" strokeOpacity={0.3} strokeDasharray="4 4" />
-          <ReferenceLine y={max} stroke="#C23B22" strokeOpacity={0.3} strokeDasharray="4 4" />
+          <ReferenceLine y={min} stroke="rgb(var(--c-bahaya))" strokeOpacity={0.3} strokeDasharray="4 4" />
+          <ReferenceLine y={max} stroke="rgb(var(--c-bahaya))" strokeOpacity={0.3} strokeDasharray="4 4" />
 
           {/* Kisi tegak, bukan mendatar: garis tegak terbaca sebagai penanda
               waktu, sumbu yang paling sering dibaca di grafik pemantauan. */}
-          <CartesianGrid vertical horizontal={false} stroke="#DCE5DD" strokeOpacity={0.9} />
+          <CartesianGrid vertical horizontal={false} stroke="rgb(var(--c-border))" strokeOpacity={0.9} />
           {/* height={0} saat disembunyikan, bukan dilepas: XAxis harus tetap ada
               supaya recharts memetakan dataKey "time" ke sumbu kategori yang
               sama dengan panel lain. Kalau dilepas, ketiga panel bisa memakai
@@ -120,7 +120,7 @@ export default function HistoryChart({
             tickFormatter={chartTickLabel}
             interval="preserveStartEnd"
             minTickGap={64}
-            tick={hideXAxis ? false : { fontSize: 13, fill: "#000" }}
+            tick={hideXAxis ? false : { fontSize: 13, fill: "currentColor" }}
             height={hideXAxis ? 0 : undefined}
             axisLine={false}
             tickLine={false}
@@ -131,7 +131,7 @@ export default function HistoryChart({
           <YAxis
             domain={[lo, hi]}
             tickFormatter={chartValueLabel}
-            tick={{ fontSize: 13, fill: "#000" }}
+            tick={{ fontSize: 13, fill: "currentColor" }}
             axisLine={false}
             tickLine={false}
             width={52}
@@ -152,7 +152,7 @@ export default function HistoryChart({
             // dot={false}: titik yang menetap di tiap pembacaan bikin grafiknya
             // terbaca seolah ada nilai yang lebih penting.
             dot={false}
-            activeDot={{ r: 4, fill: cfg.color, stroke: "#FFFFFF", strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: cfg.color, stroke: "rgb(var(--c-surface))", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>

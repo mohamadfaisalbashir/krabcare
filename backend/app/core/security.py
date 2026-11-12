@@ -1,6 +1,8 @@
 """Autentikasi: API key untuk gateway (Raspberry Pi) & JWT untuk user (web/mobile)."""
 
 import asyncio
+import hashlib
+import hmac
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -18,9 +20,18 @@ from app.models.enums import UserRole
 from app.services import kolam_service
 
 
+def _api_key_cocok(x_api_key: str | None) -> bool:
+    """Bandingkan API key dalam waktu tetap. `!=` biasa berhenti di karakter
+    pertama yang beda, jadi lama responsnya membocorkan berapa karakter awal
+    yang sudah benar."""
+    return x_api_key is not None and hmac.compare_digest(
+        x_api_key.encode(), settings.GATEWAY_API_KEY.encode()
+    )
+
+
 async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, alias="X-API-Key")) -> None:
     """Dependency endpoint /ingest/*: wajib header X-API-Key milik gateway."""
-    if x_api_key != settings.GATEWAY_API_KEY:
+    if not _api_key_cocok(x_api_key):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="API key gateway tidak valid",
@@ -43,11 +54,30 @@ async def verify_password(password: str, password_hash: str) -> bool:
     """Cocokkan password plaintext dengan hash-nya."""
     return await asyncio.to_thread(_verify_sync, password, password_hash)
 
-def create_access_token(user_id: int) -> str:
-    """Terbitkan JWT HS256 berisi user_id (sub) + masa berlaku."""
+#: Hash bcrypt sembarang. Login untuk email yang tidak terdaftar tetap
+#: memverifikasi sandi terhadap hash ini, supaya lama responsnya sama dengan
+#: email yang terdaftar dan tidak bisa dipakai menebak email mana yang punya akun.
+HASH_DUMMY = _hash_sync("bukan-sandi-siapa-pun")
+
+
+def _sidik_sandi(password_hash: str) -> str:
+    """Sidik pendek dari hash sandi, ditanam di JWT sebagai klaim `pwd`.
+
+    Begitu sandi diganti atau direset, hash-nya berubah, sidiknya ikut berubah,
+    dan semua token lama otomatis ditolak. Di-HMAC dengan JWT_SECRET_KEY supaya
+    isi klaim tidak menyingkap apa pun tentang hash-nya.
+    """
+    return hmac.new(
+        settings.JWT_SECRET_KEY.encode(), password_hash.encode(), hashlib.sha256
+    ).hexdigest()[:16]
+
+
+def create_access_token(user: User) -> str:
+    """Terbitkan JWT HS256 berisi user_id (sub), sidik sandi (pwd), dan masa berlaku."""
     now = datetime.now(timezone.utc)
     payload = {
-        "sub": str(user_id),
+        "sub": str(user.id),
+        "pwd": _sidik_sandi(user.password_hash),
         "iat": now,
         "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     }
@@ -66,6 +96,9 @@ async def _resolve_user_from_token(token: str, db: AsyncSession) -> User | None:
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if user is None or not user.is_active:
+        return None
+    # Token terbitan sebelum sandi diganti (atau sebelum klaim ini ada) ditolak.
+    if not hmac.compare_digest(str(payload.get("pwd", "")), _sidik_sandi(user.password_hash)):
         return None
     return user
 
@@ -113,7 +146,7 @@ async def get_data_access_scope(
 ) -> DataAccessScope:
     """Dependency endpoint baca data (readings, quality): terima X-API-Key
     gateway atau Bearer JWT user. 401 kalau keduanya tidak valid."""
-    if x_api_key is not None and x_api_key == settings.GATEWAY_API_KEY:
+    if _api_key_cocok(x_api_key):
         return DataAccessScope(user=None, allowed_device_ids=None)
 
     if credentials is not None:

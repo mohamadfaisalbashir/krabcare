@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -24,6 +24,7 @@ import { api, ambilSensorSaya } from "@/lib/api";
 import clsx from "clsx";
 import { formatWaktu } from "@/lib/tanggal";
 import HourSelect from "@/components/ui/HourSelect";
+import KeAtas from "@/components/ui/KeAtas";
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Semua",
@@ -85,7 +86,7 @@ function FilterPill({
       className={clsx(
         "whitespace-nowrap rounded-full border px-2 py-1.5 text-center text-[11px] font-semibold transition sm:px-3.5 sm:text-xs",
         active
-          ? "border-brand-500 bg-brand-50 text-brand-700"
+          ? "border-brand-500 bg-brand-50 text-aksen-kuat"
           : "border-border text-muted hover:bg-bg"
       )}
     >
@@ -164,14 +165,6 @@ function LogHistorisView() {
   const [error, setError] = useState<string | null>(null);
   // Header rentang waktu dikuncupkan jadi satu baris judul; filternya tetap berlaku.
   const [ringkas, setRingkas] = useState(false);
-  // Tombol "kembali ke atas" muncul setelah halaman digulir cukup jauh.
-  const [keAtas, setKeAtas] = useState(false);
-
-  useEffect(() => {
-    const cek = () => setKeAtas(window.scrollY > 600);
-    window.addEventListener("scroll", cek, { passive: true });
-    return () => window.removeEventListener("scroll", cek);
-  }, []);
 
   // Daftar sensor diambil sekali, untuk kartu Device dan panel unduh.
   useEffect(() => {
@@ -488,25 +481,32 @@ function LogHistorisView() {
               ))}
             </div>
           </div>
-        </div>
 
-        {/* Pemilih parameter khusus layar sempit. Di atas lg submenu sidebar
-            sudah mengerjakan hal yang sama; di bawah lg sidebar tidak dirender
-            dan bar bawah tidak punya submenu, jadi tanpa ini parameter terkunci
-            di pH. Grid 4 kolom rata supaya keempat pil sejajar. */}
-        <div className="grid grid-cols-4 gap-2 px-4 py-3 lg:hidden">
-          {[
-            ...PARAM_KEYS.map((p) => ({ value: p as LogParam, label: PARAM_UI[p].short })),
-            { value: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
-          ].map(({ value, label }) => (
-            <FilterPill
-              key={value}
-              active={param === value}
-              onClick={() => handleParamChange(value)}
-            >
-              {label}
-            </FilterPill>
-          ))}
+          {/* Pemilih parameter khusus layar sempit, ikut lengket dan ikut
+              menguncup bersama rentang waktu di atasnya. Di atas lg submenu
+              sidebar (yang juga lengket) sudah mengerjakan hal yang sama; di
+              bawah lg sidebar tidak dirender dan bar bawah tidak punya submenu,
+              jadi tanpa ini parameter terkunci di pH. Grid 4 kolom rata supaya
+              keempat pil sejajar. */}
+          <div
+            className={clsx(
+              "grid grid-cols-4 gap-2 border-t border-border px-4 py-3 lg:hidden",
+              ringkas && "hidden"
+            )}
+          >
+            {[
+              ...PARAM_KEYS.map((p) => ({ value: p as LogParam, label: PARAM_UI[p].short })),
+              { value: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
+            ].map(({ value, label }) => (
+              <FilterPill
+                key={value}
+                active={param === value}
+                onClick={() => handleParamChange(value)}
+              >
+                {label}
+              </FilterPill>
+            ))}
+          </div>
         </div>
 
         {/* Daftar reading, satu parameter saja. Badge-nya memakai ambang yang
@@ -519,9 +519,8 @@ function LogHistorisView() {
             memang belum ada apa pun untuk ditampilkan. */}
         <div
           className={clsx(
-            // lg:border-t-0: di layar lebar pemilih parameter tersembunyi dan
-            // garis bawah header lengket sudah memisahkan.
-            "divide-y divide-border border-t border-border lg:border-t-0 transition-opacity duration-200 motion-reduce:transition-none",
+            // Tanpa border-t: garis bawah header lengket sudah memisahkan.
+            "divide-y divide-border transition-opacity duration-200 motion-reduce:transition-none",
             loading && "opacity-50"
           )}
         >
@@ -562,7 +561,7 @@ function LogHistorisView() {
                         `muted` membuatnya terbaca paling akhir. Warna merek,
                         bukan warna status, supaya tidak tertukar dengan badge
                         di kolom sebelahnya. */}
-                    <p className="text-xs font-semibold text-brand-700">
+                    <p className="text-xs font-semibold text-aksen-kuat">
                       {formatWaktu(r.target_time)}
                     </p>
                   </div>
@@ -593,7 +592,7 @@ function LogHistorisView() {
                       {param === "ph" || value == null ? "" : ` ${meta.unit}`}
                     </span>
                   </p>
-                  <p className="text-xs font-semibold text-brand-700">
+                  <p className="text-xs font-semibold text-aksen-kuat">
                     {formatWaktu(r.time)}
                   </p>
                 </div>
@@ -620,24 +619,7 @@ function LogHistorisView() {
         </div>
       </Card>
 
-      {/* Di atas MobileNav (4rem + safe area) di layar sempit. */}
-      {keAtas && (
-        <button
-          type="button"
-          onClick={() =>
-            window.scrollTo({
-              top: 0,
-              behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                ? "auto"
-                : "smooth",
-            })
-          }
-          aria-label="Kembali ke atas"
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-brand-600 text-white shadow-lg hover:bg-brand-700 lg:bottom-8 lg:right-8"
-        >
-          <ArrowUp className="h-5 w-5" strokeWidth={2.2} />
-        </button>
-      )}
+      <KeAtas />
     </div>
   );
 }
