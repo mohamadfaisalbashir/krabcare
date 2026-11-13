@@ -97,16 +97,18 @@ function FilterPill({
 
 export default function LogHistorisPage() {
   return (
-    <>
-      {/* Topbar di luar Suspense supaya fallback tidak berkedip tanpa header. */}
-      <Topbar
-        title="Log historis"
-        subtitle="Riwayat data sensor per parameter"
-      />
-      <Suspense fallback={<LogRowsSkeleton />}>
-        <LogHistorisView />
-      </Suspense>
-    </>
+    // Judul memuat parameter aktif (dari URL), jadi Topbar ada di dalam view.
+    // Fallback tetap membawa Topbar supaya header tidak berkedip hilang.
+    <Suspense
+      fallback={
+        <>
+          <Topbar title="Log Historis" />
+          <LogRowsSkeleton />
+        </>
+      }
+    >
+      <LogHistorisView />
+    </Suspense>
   );
 }
 
@@ -291,12 +293,9 @@ function LogHistorisView() {
   const kosong = isAmonia ? ammoniaRows.length === 0 : rows.length === 0;
 
   return (
+    <>
+    <Topbar title={`Log Historis ${meta.short}`} />
     <div className="flex-1 space-y-5 p-5 sm:p-8">
-      {/* Judul parameter aktif di paling atas, mis. "Log Historis pH".
-          h2: Topbar sudah memegang h1 halaman ini. */}
-      <h2 className="font-display text-lg font-semibold text-ink">
-        Log Historis {meta.short}
-      </h2>
       {/* Satu pilihan device untuk seluruh halaman: daftar log di bawah dan
           panel unduh sama-sama mengikutinya. */}
       <Card className="p-4">
@@ -626,6 +625,7 @@ function LogHistorisView() {
 
       <KeAtas />
     </div>
+    </>
   );
 }
 

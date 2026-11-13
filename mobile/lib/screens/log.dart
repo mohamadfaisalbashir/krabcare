@@ -172,7 +172,7 @@ class _LogScreenState extends State<LogScreen> {
     String tgl(DateTime? d) => d == null ? 'Pilih' : tanggal(d);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log historis'),
+        title: Text('Log Historis ${isAmonia ? 'Amonia' : paramUi[param]!.short}'),
         actions: [
           IconButton(
             tooltip: 'Unduh data',
