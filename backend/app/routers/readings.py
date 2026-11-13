@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import DataAccessScope, get_data_access_scope
 from app.core.water_thresholds import ParamKey, StatusFilter
 from app.db.session import get_db
+from app.schemas.common import IdQuery, IdQueryReq
 from app.schemas.sensor_reading import SensorReadingOut
 from app.services import reading_service, sensor_status
 
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/readings", tags=["readings"])
 
 @router.get("/sensor-status", response_model=dict[str, str])
 async def sensor_status_device(
-    device_id: int,
+    device_id: IdQueryReq,
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
@@ -32,7 +33,7 @@ async def sensor_status_device(
 
 @router.get("", response_model=list[SensorReadingOut])
 async def list_readings(
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     device_code: str | None = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_admin
 from app.db.session import get_db
 from app.models import User
+from app.schemas.common import IdPath
 from app.schemas.device import (
     DeviceAdminOut,
     DeviceClaimIn,
@@ -62,7 +63,7 @@ async def create_device(
 
 @router.post("/{device_id}/claim", response_model=DeviceOut)
 async def claim_device_to_kolam(
-    device_id: int,
+    device_id: IdPath,
     payload: DeviceClaimIn,
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
@@ -81,7 +82,7 @@ async def claim_device_to_kolam(
 
 @router.post("/{device_id}/unclaim", response_model=DeviceOut)
 async def unclaim_device(
-    device_id: int,
+    device_id: IdPath,
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> DeviceOut:
@@ -95,7 +96,7 @@ async def unclaim_device(
 
 @router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_device(
-    device_id: int,
+    device_id: IdPath,
     _admin: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ) -> None:

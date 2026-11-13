@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Download } from "lucide-react";
+import { ChevronDown, ChevronUp, Download } from "lucide-react";
+import clsx from "clsx";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -56,6 +57,9 @@ async function ambilAmonia(start: string, end: string, deviceId?: number) {
 }
 
 export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
+  // Panel dikuncup secara default: unduh data mentah jarang dipakai, jadi
+  // tertutup supaya tidak memenuhi halaman. true = tertutup.
+  const [ringkas, setRingkas] = useState(true);
   // 7 hari terakhir menurut kalender Jakarta, termasuk hari ini.
   const [from, setFrom] = useState(() => tanggalWib(-6));
   const [to, setTo] = useState(() => tanggalWib());
@@ -146,9 +150,26 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
   return (
     <Card className="p-4">
-      <div className="mb-3">
+      {/* Baris judul + tombol kuncup, pola sama dengan "Rentang Waktu". */}
+      <div className={clsx("flex items-center justify-between", !ringkas && "mb-3")}>
         <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
-        <p className="mt-1 text-xs text-muted">
+        <button
+          type="button"
+          onClick={() => setRingkas((v) => !v)}
+          aria-expanded={!ringkas}
+          aria-label={ringkas ? "Buka unduh data mentah" : "Tutup unduh data mentah"}
+          className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
+        >
+          {ringkas ? (
+            <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
+          ) : (
+            <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
+          )}
+        </button>
+      </div>
+
+      <div className={clsx("mb-3", ringkas && "hidden")}>
+        <p className="text-xs text-muted">
           Berisi nilai apa adanya pada rentang tanggal yang dipilih, diurutkan
           sesuai pilihan Urutan. Ikut disertakan waktu data itu sampai di server,
           untuk mengukur berapa lama pengirimannya dari alat.
@@ -166,7 +187,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
 
       {/* flex-wrap wajib: ketiga field punya lebar tetap yang bersama tombolnya
           masih lebih lebar dari layar 640px kalau dipaksa satu baris. */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className={clsx("flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end", ringkas && "hidden")}>
         <div className="sm:w-40">
           <Input
             label="Dari"
@@ -262,12 +283,12 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
         </Button>
       </div>
 
-      {error && (
+      {!ringkas && error && (
         <p className="mt-3 rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">
           {error}
         </p>
       )}
-      {note && <p className="mt-3 text-xs leading-relaxed text-muted">{note}</p>}
+      {!ringkas && note && <p className="mt-3 text-xs leading-relaxed text-muted">{note}</p>}
     </Card>
   );
 }

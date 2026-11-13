@@ -6,24 +6,30 @@
 # - nosniff: browser tidak menebak tipe berkas di luar Content-Type.
 # - X-Frame-Options: halaman tidak bisa ditanam di iframe situs lain (clickjacking).
 # - Referrer-Policy: alamat lengkap halaman tidak ikut terkirim ke situs lain.
+# - CSP: batasi dari mana skrip/gambar/koneksi boleh dimuat, membatasi dampak
+#   XSS (token disimpan di localStorage). 'unsafe-inline' pada script-src masih
+#   wajib karena Next.js standalone menyuntik skrip inline untuk hydration dan
+#   ada skrip tema inline di app/layout.tsx; nonce butuh middleware yang belum
+#   ada. connect-src mengizinkan domain API supaya fetch dari web tidak diblokir.
 (keamanan) {
-    header {
-        Strict-Transport-Security "max-age=31536000"
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "DENY"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://{$DOMAIN}"
+		-Server
+	}
 }
 
 {$DOMAIN} {
-    import keamanan
-    reverse_proxy backend:8000
+	import keamanan
+	reverse_proxy backend:8000
 }
 
 # Web (Next.js) di domain terpisah dari API, sejalan dengan CORS_ORIGINS di
 # env.production.example. web:3000 lewat jaringan internal Docker.
 {$WEB_DOMAIN} {
-    import keamanan
-    reverse_proxy web:3000
+	import keamanan
+	reverse_proxy web:3000
 }

@@ -90,9 +90,15 @@ export async function fetchAllReadings(
   return { rows: rows.reverse(), truncated: true };
 }
 
-/** Bungkus sel yang mengandung pemisah, kutip, atau newline (nama kolam itu teks bebas). */
+/**
+ * Bungkus sel yang mengandung pemisah, kutip, atau newline (nama kolam itu teks
+ * bebas). Sel yang diawali = + - @ (atau tab/CR) diberi prefix petik tunggal
+ * lebih dulu: tanpa itu Excel/Sheets memperlakukannya sebagai formula saat CSV
+ * dibuka (formula injection, mis. nama kolam "=HYPERLINK(...)").
+ */
 function cell(s: string): string {
-  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  const aman = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /[",\n;]/.test(aman) ? `"${aman.replace(/"/g, '""')}"` : aman;
 }
 
 /**

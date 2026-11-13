@@ -86,9 +86,11 @@ class QualityIngestIn(BaseModel):
     """Batch ingest dari edge (raspi/edge_pipeline.py): klasifikasi, prediksi,
     dan risiko amonia. Boleh diisi sebagian."""
 
-    classifications: list[FuzzyClassificationIn] = Field(default_factory=list)
-    predictions: list[FuzzyPredictionIn] = Field(default_factory=list)
-    ammonia_risks: list[AmmoniaRiskIn] = Field(default_factory=list)
+    # max_length menahan payload raksasa (DoS); 5000 jauh di atas kebutuhan
+    # normal edge per push.
+    classifications: list[FuzzyClassificationIn] = Field(default_factory=list, max_length=5000)
+    predictions: list[FuzzyPredictionIn] = Field(default_factory=list, max_length=5000)
+    ammonia_risks: list[AmmoniaRiskIn] = Field(default_factory=list, max_length=5000)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "QualityIngestIn":

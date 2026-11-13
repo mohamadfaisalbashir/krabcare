@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import DataAccessScope, get_data_access_scope
 from app.db.session import get_db
 from app.schemas.ammonia import AmmoniaRiskLogOut, AmmoniaRiskOut, DeviceAmmoniaOut
+from app.schemas.common import IdQuery
 from app.schemas.fuzzy import (
     DevicePredictionsOut,
     FuzzyClassificationOut,
@@ -21,7 +22,7 @@ router = APIRouter(prefix="/quality", tags=["quality"])
 
 @router.get("/latest", response_model=list[LatestQualityOut])
 async def latest_quality(
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[LatestQualityOut]:
@@ -48,7 +49,7 @@ async def latest_quality(
 
 @router.get("/predictions", response_model=list[DevicePredictionsOut])
 async def list_prediction_horizons(
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[DevicePredictionsOut]:
@@ -68,7 +69,7 @@ async def list_prediction_horizons(
 
 @router.get("/ammonia-risk", response_model=list[DeviceAmmoniaOut])
 async def latest_ammonia_risk(
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> list[DeviceAmmoniaOut]:
@@ -98,7 +99,7 @@ async def latest_ammonia_risk(
 
 @router.get("/ammonia-risk/history", response_model=list[AmmoniaRiskLogOut])
 async def ammonia_risk_history(
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
     risk_level: str | None = Query(default=None, pattern="^(normal|perhatian|berbahaya)$"),

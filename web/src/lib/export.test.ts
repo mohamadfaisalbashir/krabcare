@@ -111,6 +111,13 @@ test("toCsv: nama kolam bertanda koma dibungkus kutip", () => {
   assert.ok(csv.includes('"Kolam A, Rak ""1"""'));
 });
 
+test("toCsv: nama kolam berawalan = dinetralkan (anti formula injection)", () => {
+  const csv = toCsv([baris(0)], ["ph"], { 1: "=HYPERLINK(1)" }, TANPA_AMONIA);
+  const sel = csv.split("\n")[1].split(",")[4]; // kolom "kolam"
+  assert.equal(sel, "'=HYPERLINK(1)");
+  assert.ok(!sel.startsWith("="));
+});
+
 test("toCsv: amonia terpasang ke baris sensor berwaktu sama", () => {
   const csv = toCsv([baris(0)], ["ph"], {}, amoniaUntuk(0, 3.7, "perhatian"));
   const sel = csv.split("\n")[1].split(",");

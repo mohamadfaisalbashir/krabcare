@@ -176,7 +176,13 @@ export default function Sidebar({ className }: { className?: string }) {
             <Menu className="h-[18px] w-[18px]" strokeWidth={2.2} />
           </button>
           <CollapsingLabel collapsed={collapsed}>
-            <Logo />
+            <Link
+              href="/dashboard"
+              aria-label="Ke dashboard"
+              className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-aksen"
+            >
+              <Logo />
+            </Link>
           </CollapsingLabel>
         </div>
 

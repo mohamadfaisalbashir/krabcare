@@ -18,7 +18,10 @@ class SensorReadingIn(BaseModel):
 class SensorReadingBatchIn(BaseModel):
     """Payload ingest dari gateway, satu push bisa berisi banyak level sekaligus."""
 
-    readings: list[SensorReadingIn] = Field(min_length=1)
+    # Batas atas menahan payload raksasa (DoS): satu push gateway normal cuma
+    # beberapa device x beberapa level, jauh di bawah 5000. Lebih dari itu
+    # ditolak 422 sebelum diproses.
+    readings: list[SensorReadingIn] = Field(min_length=1, max_length=5000)
 
 
 class SkippedDuplicateOut(BaseModel):

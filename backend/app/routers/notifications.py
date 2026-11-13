@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import Device, User
+from app.schemas.common import IdPath, IdQuery
 from app.schemas.notification import NotificationOut, PushTokenRegisterIn
 from app.services import notification_service
 
@@ -21,7 +22,7 @@ async def list_notifications(
     limit: int = Query(default=50, gt=0, le=200),
     offset: int = Query(default=0, ge=0),
     source: Literal["classification", "prediction", "parameter", "sensor"] | None = None,
-    device_id: int | None = None,
+    device_id: IdQuery = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[NotificationOut]:
@@ -65,7 +66,7 @@ async def mark_all_notifications_read(
 
 @router.post("/{notification_id}/read", status_code=204)
 async def mark_notification_read(
-    notification_id: int,
+    notification_id: IdPath,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
@@ -77,7 +78,7 @@ async def mark_notification_read(
 
 @router.delete("/{notification_id}", status_code=204)
 async def delete_notification(
-    notification_id: int,
+    notification_id: IdPath,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:

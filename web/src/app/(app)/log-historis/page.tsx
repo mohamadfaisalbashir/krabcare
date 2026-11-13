@@ -292,6 +292,11 @@ function LogHistorisView() {
 
   return (
     <div className="flex-1 space-y-5 p-5 sm:p-8">
+      {/* Judul parameter aktif di paling atas, mis. "Log Historis pH".
+          h2: Topbar sudah memegang h1 halaman ini. */}
+      <h2 className="font-display text-lg font-semibold text-ink">
+        Log Historis {meta.short}
+      </h2>
       {/* Satu pilihan device untuk seluruh halaman: daftar log di bawah dan
           panel unduh sama-sama mengikutinya. */}
       <Card className="p-4">

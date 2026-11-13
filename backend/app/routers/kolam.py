@@ -3,9 +3,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.rate_limit import batas_laju
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models import User
+from app.schemas.common import IdPath
 from app.schemas.device import DeviceOut
 from app.schemas.kolam import KolamCreateIn, KolamOut, KolamUpdateIn, KolamUrutanIn
 from app.services import kolam_service
@@ -57,7 +59,7 @@ async def set_urutan_kolam(
 
 @router.get("/{kolam_id}", response_model=KolamOut)
 async def get_kolam(
-    kolam_id: int,
+    kolam_id: IdPath,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> KolamOut:
@@ -70,7 +72,7 @@ async def get_kolam(
 
 @router.get("/{kolam_id}/devices", response_model=list[DeviceOut])
 async def list_kolam_devices(
-    kolam_id: int,
+    kolam_id: IdPath,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[DeviceOut]:
@@ -84,7 +86,7 @@ async def list_kolam_devices(
 
 @router.put("/{kolam_id}", response_model=KolamOut)
 async def update_kolam(
-    kolam_id: int,
+    kolam_id: IdPath,
     payload: KolamUpdateIn,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -99,7 +101,7 @@ async def update_kolam(
 
 @router.delete("/{kolam_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_kolam(
-    kolam_id: int,
+    kolam_id: IdPath,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
@@ -115,9 +117,17 @@ async def delete_kolam(
     await kolam_service.delete_kolam(db, kolam)
 
 
-@router.post("/{kolam_id}/devices/{device_code}", status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/{kolam_id}/devices/{device_code}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    # device_code (MAC) ada di path, jadi ember laju harus dinamai tetap, bukan
+    # per-path: tanpa `nama`, tiap tebakan MAC jadi kunci berbeda dan batas tak
+    # pernah tercapai. 20 percobaan per IP per 5 menit menahan penyapuan ruang
+    # MAC Espressif untuk merebut device yang belum diklaim.
+    dependencies=[Depends(batas_laju(maks=20, jendela_detik=300, nama="klaim-device"))],
+)
 async def claim_device(
-    kolam_id: int,
+    kolam_id: IdPath,
     device_code: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),

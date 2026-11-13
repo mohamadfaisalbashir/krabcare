@@ -33,18 +33,24 @@ def izinkan(kunci: tuple[str, str], maks: int, jendela_detik: float, sekarang: f
     return True
 
 
-def batas_laju(maks: int = 10, jendela_detik: float = 300):
+def batas_laju(maks: int = 10, jendela_detik: float = 300, nama: str | None = None):
     """Dependency FastAPI: paling banyak `maks` permintaan per IP per endpoint
     dalam `jendela_detik`. Lewat dari itu dibalas 429.
 
     IP diambil dari request.client. Di production uvicorn dijalankan dengan
     --forwarded-allow-ips supaya yang terbaca IP pengunjung dari
     X-Forwarded-For, bukan IP container Caddy.
+
+    `nama` mengunci ember laju ke satu nama tetap, bukan ke `request.url.path`.
+    Wajib dipakai bila path memuat bagian yang berubah tiap request (mis.
+    device_code di /kolam/{id}/devices/{device_code}); tanpa itu tiap tebakan
+    jadi kunci berbeda dan batas tidak pernah tercapai. Default None = per-path,
+    cocok untuk endpoint auth yang path-nya tetap.
     """
 
     async def periksa(request: Request) -> None:
         ip = request.client.host if request.client else "?"
-        if not izinkan((ip, request.url.path), maks, jendela_detik):
+        if not izinkan((ip, nama or request.url.path), maks, jendela_detik):
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail="Terlalu banyak percobaan. Coba lagi beberapa menit lagi.",

@@ -52,11 +52,13 @@ export default function RootLayout({
       <head>
         {/* Pasang mode gelap sebelum halaman digambar. Kalau menunggu React,
             halaman sempat tampil terang lalu berkedip jadi gelap. Pilihannya
-            disimpan halaman Profil di localStorage ("tema"). */}
+            disimpan halaman Profil di localStorage ("tema").
+            Default GELAP: kelas dipasang kecuali pengguna pernah memilih
+            "terang". Pengunjung baru (localStorage kosong) langsung gelap. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              'try{if(localStorage.getItem("tema")==="gelap")document.documentElement.classList.add("dark")}catch(e){}',
+              'try{if(localStorage.getItem("tema")!=="terang")document.documentElement.classList.add("dark")}catch(e){}',
           }}
         />
       </head>
