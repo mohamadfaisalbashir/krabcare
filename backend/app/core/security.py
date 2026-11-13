@@ -6,10 +6,10 @@ import hmac
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 import jwt
 from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,14 +37,22 @@ async def verify_gateway_api_key(x_api_key: str | None = Header(default=None, al
             detail="API key gateway tidak valid",
         )
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def _sandi_bytes(password: str) -> bytes:
+    """bcrypt hanya memakai 72 byte pertama. passlib dulu memotongnya diam-diam,
+    sedangkan bcrypt >= 5 melempar ValueError. Dipotong di sini supaya hash lama
+    dari sandi panjang (50 karakter multibyte bisa lewat 72 byte) tetap cocok."""
+    return password.encode()[:72]
 
 # bcrypt 12 rounds memakan ~250-400 ms CPU per operasi dan itu memang tujuannya
 def _hash_sync(password: str) -> str:
-    return _pwd_context.hash(password)
+    return bcrypt.hashpw(_sandi_bytes(password), bcrypt.gensalt()).decode()
 
 def _verify_sync(password: str, password_hash: str) -> bool:
-    return _pwd_context.verify(password, password_hash)
+    try:
+        return bcrypt.checkpw(_sandi_bytes(password), password_hash.encode())
+    except ValueError:
+        # Hash di DB bukan format bcrypt yang sah: perlakukan sebagai sandi salah.
+        return False
 
 async def hash_password(password: str) -> str:
     """Hash bcrypt untuk disimpan di kolom users.password_hash."""

@@ -1,5 +1,5 @@
 // Tema, widget bersama, dan grafik riwayat. Warna dari palet "Muara"
-// web/tailwind.config.ts.
+// web/src/app/globals.css.
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

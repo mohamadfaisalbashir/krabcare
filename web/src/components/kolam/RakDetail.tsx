@@ -547,7 +547,7 @@ function ParamSwitch({
             onClick={() => onChange(p)}
             style={{ width: `${pct}%` }}
             className={clsx(
-              "relative z-10 min-w-[5.5rem] whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-200",
+              "relative z-10 min-w-22 whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold transition-colors duration-200",
               active ? "" : "text-muted hover:text-ink"
             )}
           >
@@ -575,7 +575,7 @@ function DetailSkeleton() {
   return (
     <>
       <Section {...SECTION.terkini}>
-        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+        <div className="grid grid-cols-1 antar:border-t antar:border-ink/15 sm:grid-cols-2 sm:antar:border-l sm:antar:border-t-0 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
               <Skeleton className="h-4 w-28" />
@@ -588,7 +588,7 @@ function DetailSkeleton() {
       </Section>
 
       <Section {...SECTION.prediksi}>
-        <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+        <div className="grid grid-cols-1 antar:border-t antar:border-ink/15 sm:grid-cols-2 sm:antar:border-l sm:antar:border-t-0 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="px-1 py-4 sm:px-5 sm:py-3">
               <Skeleton className="h-4 w-28" />

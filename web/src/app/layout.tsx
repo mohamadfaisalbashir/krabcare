@@ -38,7 +38,7 @@ export const viewport: Viewport = {
   // navigasi bawah duduk tepat di bawah gesture bar.
   viewportFit: "cover",
   // Warna address bar browser mobile, disamakan dengan brand-500 (#19A8B2)
-  // di tailwind.config.ts.
+  // di globals.css.
   themeColor: "#19A8B2",
 };
 

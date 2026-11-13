@@ -547,7 +547,7 @@ function SummaryPill({
   tone: "aman" | "waspada" | "bahaya";
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/25 backdrop-blur-sm">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-inset ring-white/25 backdrop-blur-xs">
       <span className={`h-1.5 w-1.5 rounded-full ${DOT[tone]}`} />
       {value} {label}
     </span>

@@ -45,7 +45,7 @@ export default function ParameterStrip({
   return (
     // 4 kolom: amonia duduk berdampingan dengan ketiga parameter asalnya.
     // Di layar sempit menumpuk satu per baris.
-    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+    <div className="grid grid-cols-1 antar:border-t antar:border-ink/15 sm:grid-cols-2 sm:antar:border-l sm:antar:border-t-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => (
         <ParameterCell
           key={param}
@@ -145,7 +145,7 @@ function ParameterCell({
         <div className="relative h-1.5 rounded-full bg-status-waspadaBg/80">
           <span
             aria-hidden
-            className="absolute inset-y-0 rounded-full bg-[#0F7078]/25 dark:bg-aksen/30"
+            className="absolute inset-y-0 rounded-full bg-brand-700/25 dark:bg-aksen/30"
             style={{ left: `${bandStart}%`, width: `${bandWidth}%` }}
           />
           {value != null && (

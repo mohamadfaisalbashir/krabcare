@@ -1,11 +1,194 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Kelas `dark` di <html>, dipasang skrip kecil di app/layout.tsx dari pilihan
+   pengguna di halaman Profil. */
+@custom-variant dark (&:is(.dark *));
+
+/* `antar:` menyasar setiap anak kecuali yang pertama, untuk garis pemisah:
+   antar:border-t antar:border-border. Ini cara kerja divide-y/divide-x di
+   Tailwind 3 (garis milik elemen SESUDAHNYA). divide-* di Tailwind 4 menaruh
+   garis di elemen sebelumnya, sehingga isi sel dan garisnya bergeser 1px. */
+@custom-variant antar (& > :not([hidden]) ~ :not([hidden]));
+
+/* Token desain. Sampai Tailwind 3 ini isi tailwind.config.ts. */
+@theme {
+  /* Palet "Muara": warna air payau, lumpur mangrove, dan cangkang kepiting.
+     Warna yang berganti antara mode terang dan gelap menunjuk triplet --c-*
+     di bawah (:root dan .dark). Hex di komentar adalah nilai mode terang. */
+  --color-bg: rgb(var(--c-bg)); /* #F2F6F2 */
+  --color-surface: rgb(var(--c-surface)); /* #FFFFFF */
+  --color-ink: rgb(var(--c-ink)); /* #122B26 */
+  /* Lembar kaca di atas foto dashboard: putih di mode terang, gelap di mode
+     gelap. Dipakai menggantikan bg-white/NN, border-white/NN, dan
+     ring-white/NN pada panel kaca. */
+  --color-kaca: rgb(var(--c-kaca));
+
+  /* Warna merek untuk TEKS dan ikon (tautan, judul aktif). Dipisah dari
+     brand-600/700 karena di mode gelap keduanya tidak bisa sama: tombol
+     bg-brand-600 berteks putih harus tetap gelap, sedangkan teks merek di atas
+     latar gelap harus terang. aksen = brand-600, aksen-kuat = brand-700 di
+     mode terang. */
+  --color-aksen: rgb(var(--c-aksen));
+  --color-aksen-kuat: rgb(var(--c-aksen-kuat));
+
+  /* Namanya "muted" tapi warnanya bukan abu-abu lagi. #5C7A72 yang lama cuma
+     4,69:1 di atas putih, dan sebagian besar pemakaiannya duduk di atas kartu
+     `.glass` (putih 55% di atas foto) sehingga kontras efektifnya turun lagi.
+     #1E332D = 13,4:1, tetap sehelai lebih terang dari `ink` (15,0:1) supaya
+     angka & judul tetap yang paling pekat.
+
+     Hirarki dibawa ukuran dan tebal huruf, bukan kepudaran. Jangan
+     dikembalikan jadi abu-abu. Tiga pemakaian non-teks di bawah sudah
+     diturunkan alpha-nya supaya tampilannya tidak ikut menggelap. */
+  --color-muted: rgb(var(--c-muted)); /* #1E332D */
+  --color-border: rgb(var(--c-border)); /* #DCE5DD */
+
+  /* Warna dominan aplikasi: #19A8B2 (brand-500).
+
+     Step 600/700 lebih gelap karena teks putih di atas #19A8B2 cuma 2.88:1,
+     gagal WCAG AA (4.5:1) dan ambang 3:1 untuk komponen UI. #19A8B2 dipakai
+     untuk isian dan aksen (pil nav, logo, ikon); tombol, wordmark, dan outline
+     fokus memakai 600/700:
+       putih di 600 = 4.52:1, putih di 700 = 5.82:1, 700 di 50 = 5.25:1
+     50 dan 100 dipakai sebagai latar tipis, jadi ikut berganti di mode gelap. */
+  --color-brand-50: rgb(var(--c-brand-50)); /* #E8F6F7 */
+  --color-brand-100: rgb(var(--c-brand-100)); /* #C6E9EC */
+  --color-brand-300: #7acdd2;
+  --color-brand-500: #19a8b2;
+  --color-brand-600: #12838c;
+  --color-brand-700: #0f7078;
+  --color-brand-900: #0a3c41;
+
+  /* Panel kiri halaman login tetap hijau "Muara" lama supaya menyatu dengan
+     foto tambak. Dipisah dari `brand` supaya tidak ikut berubah kalau warna
+     merek digeser. */
+  --color-hero-deep: #0a2620;
+  --color-hero-soft: #c4e3d9;
+
+  --color-brass-100: #f4e3c4;
+  --color-brass-300: #ddae64;
+  --color-brass-500: #c1873a;
+  --color-brass-700: #8e611f;
+
+  --color-status-aman: rgb(var(--c-aman)); /* #1F9D55 */
+  --color-status-amanBg: rgb(var(--c-aman-bg)); /* #E4F6EB */
+  --color-status-waspada: rgb(var(--c-waspada)); /* #B9740E */
+  --color-status-waspadaBg: rgb(var(--c-waspada-bg)); /* #FBF0DA */
+  --color-status-bahaya: rgb(var(--c-bahaya)); /* #C23B22 */
+  --color-status-bahayaBg: rgb(var(--c-bahaya-bg)); /* #FBE7E2 */
+
+  /* Satu keluarga huruf untuk seluruh UI, judul maupun isi, mengikuti WinUI 3.
+     Font bawaan sistem, bukan Google Font, jadi tidak ada yang diunduh: Segoe
+     UI Variable di Windows, system-ui untuk OS lain. */
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+
+  /* Tinggi baris Tailwind 3, dalam rem. Bawaan Tailwind 4 berupa rasio tanpa
+     satuan, yang diwariskan sebagai rasio: anak berukuran khusus (lencana
+     text-[11px] di dalam text-sm) jadi 15,7px, bukan 20px, dan semua yang di
+     bawahnya bergeser sepersekian piksel. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  /* WinUI menaruh kedalaman pada garis 1px, bukan bayangan yang menyebar.
+     Bayangan tipis ini cuma memisahkan kartu dari panel. */
+  --shadow-card: 0 1px 2px rgba(18, 43, 38, 0.05);
+  /* Satu tingkat di atas `card`, untuk elemen yang melayang di atas sesuatu:
+     kartu rak di atas foto banner, kartu grafik di halaman detail. */
+  --shadow-float: 0 2px 12px rgba(18, 43, 38, 0.1);
+  --shadow-floatHover: 0 6px 20px rgba(18, 43, 38, 0.14);
+
+  /* Satu kurva untuk semua gerakan yang mengubah tata letak: lebar sidebar,
+     label, submenu, indikator segmented control. Kurva yang berbeda-beda
+     membuat buka/tutup sidebar terbaca patah-patah. */
+  --ease-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* `both` supaya elemen ber-delay tidak terlihat penuh dulu sebelum
+     gilirannya tiba. */
+  --animate-rise: rise 420ms cubic-bezier(0.32, 0.72, 0, 1) both;
+
+  /* Dua radius standar WinUI 3. `lg` menimpa bawaan Tailwind (0.5rem) supaya
+     semua pemakaian rounded-lg ikut jadi 4px tanpa menyentuh TSX. */
+  --radius-lg: 0.25rem;
+  --radius-xl2: 0.5rem;
+
+  @keyframes rise {
+    0% {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* `inline`: --font-jetbrains dipasang next/font di <body> (app/layout.tsx),
+   sedangkan token @theme biasa dihitung di :root, tempat variabel itu belum
+   ada. Dengan inline, font-mono memakai var(--font-jetbrains) langsung di
+   elemennya. Nilai sensor tetap monospace supaya angkanya sejajar antar baris. */
+@theme inline {
+  --font-mono: var(--font-jetbrains), monospace;
+}
 
 @layer base {
+  /* Tiga bawaan Tailwind 3 yang berubah di Tailwind 4, dikembalikan supaya
+     tampilan dan rasa kliknya sama: warna garis bawaan (v4: currentColor),
+     kursor tangan di atas tombol (v4: panah biasa), dan padding bawaan browser
+     pada <option> (v4 me-nol-kan padding semua elemen). */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  option {
+    padding: 0 2px 1px;
+  }
+  /* Tailwind 4 juga merapatkan bagian dalam input tanggal (padding 1px atas
+     bawah dibuang), jadi kolom tanggal di Log Historis memendek 2px dan baris
+     di bawahnya naik. revert-layer membuang aturan itu, kembali ke bawaan
+     browser seperti di Tailwind 3. */
+  ::-webkit-datetime-edit {
+    display: revert-layer;
+    padding-block: revert-layer;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert-layer;
+  }
+  ::-webkit-datetime-edit-year-field,
+  ::-webkit-datetime-edit-month-field,
+  ::-webkit-datetime-edit-day-field,
+  ::-webkit-datetime-edit-hour-field,
+  ::-webkit-datetime-edit-minute-field,
+  ::-webkit-datetime-edit-second-field,
+  ::-webkit-datetime-edit-millisecond-field,
+  ::-webkit-datetime-edit-meridiem-field {
+    padding-block: revert-layer;
+  }
+  ::-webkit-date-and-time-value {
+    min-height: revert-layer;
+    text-align: revert-layer;
+  }
+  ::-webkit-calendar-picker-indicator {
+    line-height: revert-layer;
+  }
+
   /* Nilai warna yang berganti antara mode terang dan gelap, sebagai triplet
-     "R G B" (dibaca tailwind.config.ts lewat rgb(var(--c-x) / alpha)).
-     :root = tampilan asli, angkanya tidak diubah. */
+     "R G B" (dibaca @theme di atas lewat rgb(var(--c-x)), dan HistoryChart
+     langsung). :root = tampilan asli, angkanya tidak diubah. */
   :root {
     --c-bg: 242 246 242;
     --c-surface: 255 255 255;
@@ -70,36 +253,11 @@
   :focus-visible {
     /* brand-600, bukan 500: outline fokus perlu 3:1 terhadap latar
        (WCAG 1.4.11) dan brand-500 cuma 2.88:1 di atas putih. */
-    outline: 2px solid theme("colors.brand.600");
+    outline: 2px solid var(--color-brand-600);
     outline-offset: 2px;
     border-radius: 4px;
   }
-}
 
-@layer components {
-  /* Radius 8px & bayangan tipis dari token (rounded-xl2, shadow-card).
-     Yang memisahkan kartu dari panel adalah garis 1px-nya, bukan bayangannya,
-     seperti cara WinUI 3 menyusun kedalaman. */
-  .card {
-    @apply bg-surface border border-border rounded-xl2 shadow-card;
-  }
-
-  /* TextBox WinUI 3: garis bawah lebih tebal dan gelap dari tiga sisi lain,
-     lalu jadi warna aksen saat kolomnya difokus. */
-  .input-field {
-    /* text-base di mobile wajib: input < 16px membuat Safari iOS memperbesar
-       viewport tiap kali kolomnya difokus. */
-    @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-base sm:text-sm
-      text-ink placeholder:text-muted/50 outline-none transition-colors;
-    border-bottom-width: 2px;
-    /* Alpha diturunkan (70% ke 50%, 45% ke 30%) karena `muted` sudah digelapkan
-       jadi hampir hitam. Dengan persentase lama, placeholder terbaca seperti
-       nilai yang sudah diketik. */
-    border-bottom-color: theme("colors.muted / 30%");
-  }
-  .input-field:focus {
-    border-bottom-color: theme("colors.brand.600");
-  }
   /* Edge/Chromium menyisipkan tombol "intip sandi" sendiri di dalam input,
      jadi ada dua ikon mata dan yang bawaan menutupi tombol React kita. Yang
      dimatikan yang bawaan, karena tombol kita juga ada di Firefox/Safari. */
@@ -111,94 +269,121 @@
     visibility: hidden;
     pointer-events: none;
   }
-  /* Outline :focus-visible global jangan dimatikan untuk input: garis bawah
-     saja bukan penanda fokus keyboard yang memadai. */
+}
 
-  /* Baris yang bisa digeser mendatar, scrollbarnya disembunyikan. Geserannya
-     lewat seret atau wheel (components/dashboard/Rail.tsx).
+/* Kelas komponen. Ditulis sebagai @utility karena di Tailwind 4 hanya itu
+   yang bisa dipakai lagi lewat @apply (btn-base di bawah). */
 
-     Penggantinya sebagai tanda "masih ada kartu di sebelah sana" ada dua dan
-     keduanya wajib: gradien tepi yang dikelola Rail.tsx, dan kartu berikutnya
-     yang mengintip karena PONDCARD_WIDTH lebih sempit dari layar tersempit.
+/* Radius 8px & bayangan tipis dari token (rounded-xl2, shadow-card).
+   Yang memisahkan kartu dari panel adalah garis 1px-nya, bukan bayangannya,
+   seperti cara WinUI 3 menyusun kedalaman. */
+@utility card {
+  @apply bg-surface border border-border rounded-xl2 shadow-card;
+}
 
-     Tetap overflow-x-auto supaya keyboard dan sentuhan masih bisa menggeser.
-     Tidak bisa ditulis dengan utility Tailwind. */
-  .rail {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+/* TextBox WinUI 3: garis bawah lebih tebal dan gelap dari tiga sisi lain,
+   lalu jadi warna aksen saat kolomnya difokus.
+
+   Outline :focus-visible global jangan dimatikan untuk input: garis bawah
+   saja bukan penanda fokus keyboard yang memadai. */
+@utility input-field {
+  /* text-base di mobile wajib: input < 16px membuat Safari iOS memperbesar
+     viewport tiap kali kolomnya difokus. */
+  @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-base sm:text-sm
+    text-ink placeholder:text-muted/50 outline-hidden transition-colors;
+  border-bottom-width: 2px;
+  /* Alpha diturunkan (70% ke 50%, 45% ke 30%) karena `muted` sudah digelapkan
+     jadi hampir hitam. Dengan persentase lama, placeholder terbaca seperti
+     nilai yang sudah diketik. */
+  border-bottom-color: --alpha(var(--color-muted) / 30%);
+  &:focus {
+    border-bottom-color: var(--color-brand-600);
   }
-  .rail::-webkit-scrollbar {
+}
+
+/* Baris yang bisa digeser mendatar, scrollbarnya disembunyikan. Geserannya
+   lewat seret atau wheel (components/dashboard/Rail.tsx).
+
+   Penggantinya sebagai tanda "masih ada kartu di sebelah sana" ada dua dan
+   keduanya wajib: gradien tepi yang dikelola Rail.tsx, dan kartu berikutnya
+   yang mengintip karena PONDCARD_WIDTH lebih sempit dari layar tersempit.
+
+   Tetap overflow-x-auto supaya keyboard dan sentuhan masih bisa menggeser.
+   Tidak bisa ditulis dengan utility Tailwind. */
+@utility rail {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
     display: none;
   }
+}
 
-  /* Kaca (Acrylic WinUI 3), hanya untuk /dashboard yang punya lapisan foto di
-     belakangnya. Di halaman tanpa latar bergambar ia cuma terlihat seperti
-     kartu putih yang lebih pucat.
+/* Kaca (Acrylic WinUI 3), hanya untuk /dashboard yang punya lapisan foto di
+   belakangnya. Di halaman tanpa latar bergambar ia cuma terlihat seperti
+   kartu putih yang lebih pucat.
 
-     Radius tetap xl2 (8px), bukan sudut besar ala poster glassmorphism.
+   Radius tetap xl2 (8px), bukan sudut besar ala poster glassmorphism.
 
-     box-shadow ditulis manual karena dua lapis dan yang pertama `inset`:
-     sorotan 1px di tepi atas supaya terbaca sebagai lempeng kaca, lalu bayangan
-     tipis di luar. Tailwind tidak bisa menyusunnya lewat utility. */
-  .glass {
-    @apply rounded-xl2 border border-kaca/60 bg-kaca/55 backdrop-blur-xl;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / var(--kilau)),
-      0 2px 12px rgba(18, 43, 38, 0.1);
-  }
+   box-shadow ditulis manual karena dua lapis dan yang pertama `inset`:
+   sorotan 1px di tepi atas supaya terbaca sebagai lempeng kaca, lalu bayangan
+   tipis di luar. Tailwind tidak bisa menyusunnya lewat utility. */
+@utility glass {
+  @apply rounded-xl2 border border-kaca/60 bg-kaca/55 backdrop-blur-xl;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / var(--kilau)),
+    0 2px 12px rgba(18, 43, 38, 0.1);
   /* Di mode gelap kaca dibuat lebih pekat: teks terang di atas foto yang
      tembus 45% tidak terbaca. */
-  .dark .glass {
+  .dark & {
     @apply bg-kaca/80;
   }
-
   /* backdrop-filter tidak ada di semua browser, dan sebagian mematikannya demi
      baterai. Tanpa cadangan ini kartu jadi putih 55% di atas foto tajam dan
      teksnya tidak terbaca. */
   @supports not (backdrop-filter: blur(1px)) {
-    .glass,
-    .dark .glass {
+    &,
+    .dark & {
       @apply bg-kaca/90;
     }
   }
+}
 
-  .label-field {
-    @apply block text-sm font-medium text-ink mb-1.5;
-  }
+@utility label-field {
+  @apply block text-sm font-medium text-ink mb-1.5;
+}
 
-  /* 38px di semua ukuran layar, bukan 32px ala WinUI: tap-to-click touchpad
-     menggeser kursor beberapa piksel antara mousedown dan mouseup, dan kalau
-     mouseup mendarat di luar elemen, browser tidak menerbitkan `click`.
+/* 38px di semua ukuran layar, bukan 32px ala WinUI: tap-to-click touchpad
+   menggeser kursor beberapa piksel antara mousedown dan mouseup, dan kalau
+   mouseup mendarat di luar elemen, browser tidak menerbitkan `click`.
 
-     active: wajib. html { -webkit-tap-highlight-color: transparent } di atas
-     menghapus umpan balik bawaan, jadi tanpa ini tekanan yang tertelan
-     terlihat sama dengan tombol mati. */
-  .btn-base {
-    @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-lg
-      px-4 text-sm font-semibold transition-colors
-      active:scale-[0.985] motion-reduce:active:scale-100
-      disabled:opacity-50 disabled:pointer-events-none;
-  }
+   active: wajib. html { -webkit-tap-highlight-color: transparent } di atas
+   menghapus umpan balik bawaan, jadi tanpa ini tekanan yang tertelan
+   terlihat sama dengan tombol mati. */
+@utility btn-base {
+  @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-lg
+    px-4 text-sm font-semibold transition-colors
+    active:scale-[0.985] motion-reduce:active:scale-100
+    disabled:opacity-50 disabled:pointer-events-none;
+}
 
-  /* AccentButton. bg-brand-600, bukan 500: teks putih di atas brand-500 cuma
-     2.88:1. Sorotan tipis di tepi atas, cara WinUI memberi kesan timbul. */
-  .btn-primary {
-    @apply btn-base bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-900;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.17);
-  }
+/* AccentButton. bg-brand-600, bukan 500: teks putih di atas brand-500 cuma
+   2.88:1. Sorotan tipis di tepi atas, cara WinUI memberi kesan timbul. */
+@utility btn-primary {
+  @apply btn-base bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.17);
+}
 
-  /* Button standar WinUI: isian putih, garis bawah sedikit lebih gelap, hover
-     netral tanpa nuansa aksen. */
-  .btn-ghost {
-    @apply btn-base border border-border bg-surface text-ink hover:bg-bg;
-    /* 35% ke 22%, alasan sama dengan .input-field di atas. */
-    border-bottom-color: theme("colors.muted / 22%");
-  }
+/* Button standar WinUI: isian putih, garis bawah sedikit lebih gelap, hover
+   netral tanpa nuansa aksen. */
+@utility btn-ghost {
+  @apply btn-base border border-border bg-surface text-ink hover:bg-bg;
+  /* 35% ke 22%, alasan sama dengan input-field di atas. */
+  border-bottom-color: --alpha(var(--color-muted) / 22%);
+}
 
-  /* Dipakai tombol "Hapus rak" dan tombol konfirmasi di Zona Berbahaya. Satu
-     kelas supaya gaya keduanya tidak lepas sinkron. */
-  .btn-danger {
-    @apply btn-base border border-status-bahaya/30 bg-status-bahayaBg
-      text-status-bahaya hover:bg-status-bahaya/10;
-    border-bottom-color: theme("colors.status.bahaya / 45%");
-  }
+/* Dipakai tombol "Hapus rak" dan tombol konfirmasi di Zona Berbahaya. Satu
+   kelas supaya gaya keduanya tidak lepas sinkron. */
+@utility btn-danger {
+  @apply btn-base border border-status-bahaya/30 bg-status-bahayaBg
+    text-status-bahaya hover:bg-status-bahaya/10;
+  border-bottom-color: --alpha(var(--color-status-bahaya) / 45%);
 }

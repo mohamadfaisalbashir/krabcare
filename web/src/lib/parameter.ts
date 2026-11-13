@@ -45,6 +45,24 @@ export function chartValueLabel(value: number): string {
   return String(Number(value.toFixed(2)));
 }
 
+/** Tick sumbu Y grafik, rumus Recharts 2 (getTickValuesFixedDomain, 5 tick):
+ *  kelipatan langkah "bulat" dari batas bawah, lalu batas atas, tanpa tick yang
+ *  jaraknya ke batas atas kurang dari satu langkah.
+ *
+ *  Recharts 3 menyisipkan tick itu (pH jadi 9.2, 8.55, 7.8, ...), sehingga dua
+ *  label teratas berdempetan. Dihitung sendiri supaya sumbunya tidak berubah
+ *  tiap ganti versi pustaka. */
+export function yTicks(lo: number, hi: number): number[] {
+  const kasar = (hi - lo) / 4;
+  const pangkat = 10 ** (Math.floor(Math.log10(kasar)) + 1);
+  const skala = pangkat === 10 ? 0.1 : 0.05;
+  // toFixed: 0.75 / 0.05 = 15.000000000000002 dan ceil-nya jadi 16.
+  const langkah = Math.ceil(+(kasar / pangkat / skala).toFixed(9)) * skala * pangkat;
+  const ticks: number[] = [];
+  for (let i = 0; lo + i * langkah < hi - 0.99 * langkah; i++) ticks.push(lo + i * langkah);
+  return [...ticks, hi];
+}
+
 /** Sumbu X kedua grafik: rentang 100 pembacaan ≈ 25 jam, jadi jam saja berulang. */
 export function chartTickLabel(iso: string): string {
   return new Date(iso).toLocaleString("id-ID", {

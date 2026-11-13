@@ -1,6 +1,6 @@
 "use client";
 
-import type { TooltipProps } from "recharts";
+import type { TooltipContentProps } from "recharts";
 import { ParamKey, PARAM_UI, formatValue, statusOf } from "@/lib/parameter";
 import { formatWaktu } from "@/lib/tanggal";
 
@@ -14,11 +14,11 @@ export default function ChartTooltip({
   active,
   payload,
   label,
-}: TooltipProps<number, string>) {
+}: TooltipContentProps) {
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="card min-w-[13rem] px-3 py-2.5 shadow-float">
+    <div className="card min-w-52 px-3 py-2.5 shadow-float">
       <p className="mb-2 text-sm font-semibold text-muted">
         {typeof label === "string"
           ? formatWaktu(label)

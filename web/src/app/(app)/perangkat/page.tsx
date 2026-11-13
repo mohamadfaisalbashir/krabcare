@@ -411,7 +411,7 @@ export default function PerangkatPage() {
                 terhubung ke kolam.
               </p>
             ) : (
-              <div className="divide-y divide-border">
+              <div className="antar:border-t antar:border-border">
                 {belumDiklaim.map((d) => (
                   <DeviceRow
                     key={d.id}
@@ -446,7 +446,7 @@ export default function PerangkatPage() {
                 Belum ada device yang diklaim ke kolam mana pun.
               </p>
             ) : (
-              <div className="divide-y divide-border">
+              <div className="antar:border-t antar:border-border">
                 {sudahDiklaim.map((d) => (
                   <DeviceRow
                     key={d.id}

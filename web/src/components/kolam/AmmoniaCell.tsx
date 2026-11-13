@@ -111,7 +111,7 @@ function renderTerkini(risk: AmmoniaRisk | null): {
           <div className="relative h-1.5 rounded-full bg-status-waspadaBg/80">
             <span
               aria-hidden
-              className="absolute inset-y-0 left-0 rounded-full bg-[#0F7078]/25 dark:bg-aksen/30"
+              className="absolute inset-y-0 left-0 rounded-full bg-brand-700/25 dark:bg-aksen/30"
               style={{ width: `${lebarAman}%` }}
             />
             <span

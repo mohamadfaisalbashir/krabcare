@@ -51,7 +51,7 @@ export default function PredictionPanel({
   return (
     // Jumlah kolom mengikuti ParameterStrip di atasnya, supaya kolom ke-n di
     // sini sejajar dengan kolom ke-n di sana.
-    <div className="grid grid-cols-1 divide-y divide-ink/15 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+    <div className="grid grid-cols-1 antar:border-t antar:border-ink/15 sm:grid-cols-2 sm:antar:border-l sm:antar:border-t-0 lg:grid-cols-4">
       {PARAM_KEYS.map((param) => {
         const cfg = PARAM_UI[param];
 

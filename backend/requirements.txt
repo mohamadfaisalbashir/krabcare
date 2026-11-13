@@ -1,22 +1,21 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-pydantic==2.10.4
-pydantic-settings==2.7.1
+fastapi==0.162.5
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.16.3
 
 # Database (async runtime + sync driver untuk Alembic)
-sqlalchemy==2.0.36
-greenlet==3.1.1
-asyncpg==0.30.0
-psycopg2-binary==2.9.10
-alembic==1.14.0
+sqlalchemy==2.0.57
+greenlet==3.5.6
+asyncpg==0.32.0
+psycopg2-binary==2.9.13
+alembic==1.20.1
 
 # Auth (JWT + password hashing)
-pyjwt==2.10.1
-passlib[bcrypt]==1.7.4
-bcrypt==4.0.1  # pin: passlib 1.7.4 tidak kompatibel dengan bcrypt>=4.1 (breaking change deteksi backend)
+pyjwt==2.15.1
+bcrypt==5.0.0
 
 # Push notification (Firebase Cloud Messaging)
-firebase-admin==7.5.0
+firebase-admin==7.8.0
 
 # Utility
-python-dotenv==1.0.1
+python-dotenv==1.2.4

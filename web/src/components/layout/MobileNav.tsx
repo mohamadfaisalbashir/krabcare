@@ -60,7 +60,7 @@ export default function MobileNav() {
               <Icon className="h-5 w-5" strokeWidth={2.2} />
               {href === "/notifikasi" && !!unread && (
                 <span
-                  className="absolute -right-2.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-status-bahaya px-1 text-[9px] font-semibold text-surface"
+                  className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-status-bahaya px-1 text-[9px] font-semibold text-surface"
                   aria-label={`${unread} belum dibaca`}
                 >
                   {formatUnreadBadge(unread)}

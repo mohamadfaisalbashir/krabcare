@@ -1,7 +1,7 @@
 # KrabCare: Frontend Web
 
 Frontend web untuk Sistem Monitoring Kualitas Air pada Budidaya Kepiting Sistem
-Vertikal (dokumen `CD_GAB` Bab 3.3.5). Next.js 14 (App Router), TypeScript, dan
+Vertikal (dokumen `CD_GAB` Bab 3.3.5). Next.js 16 (App Router), TypeScript, dan
 Tailwind CSS, sesuai tumpukan teknologi di proposal.
 
 Backend ada di monorepo yang sama: `../backend/` (FastAPI).
@@ -13,7 +13,7 @@ web/
 ├─ src/
 │  ├─ app/
 │  │  ├─ layout.tsx                 # Root layout, metadata, favicon
-│  │  ├─ globals.css                # Design token & style dasar (Tailwind)
+│  │  ├─ globals.css                # Design token (warna, font, animasi) & style dasar
 │  │  ├─ page.tsx                   # Redirect "/" ke "/login"
 │  │  ├─ login/page.tsx             # Gambar 3.27: Halaman Login
 │  │  ├─ daftar/page.tsx            # Pendaftaran akun
@@ -41,7 +41,6 @@ web/
 │     ├─ ammonia.ts   # Penyajian indeks risiko amonia
 │     ├─ export.ts    # Ekspor CSV & XLSX
 │     └─ tanggal.ts   # Format tanggal dd-mm-yyyy
-├─ tailwind.config.ts # Design token (warna, font, animasi)
 └─ package.json
 ```
 
@@ -67,7 +66,7 @@ saja; halaman memanggil lewat `api.*` dan tidak menyimpan path sendiri.
 ## Catatan desain
 
 - **Palet "Muara"** merepresentasikan air payau, lumpur mangrove, dan cangkang
-  kepiting. Token warnanya di `tailwind.config.ts`.
+  kepiting. Token warnanya di blok `@theme` `src/app/globals.css`.
 - Status kualitas air memakai tiga warna yang sama di seluruh halaman: Aman
   (hijau), Waspada (amber), Bahaya (merah bata), sesuai FR-08 dokumen CD GAB.
   Warnanya selalu didampingi label teks.

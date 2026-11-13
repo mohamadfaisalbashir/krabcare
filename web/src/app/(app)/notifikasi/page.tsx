@@ -276,7 +276,7 @@ export default function NotifikasiPage() {
               {adaFilter ? "Tidak ada notifikasi untuk filter ini." : "Belum ada notifikasi."}
             </p>
           ) : (
-            <div className="divide-y divide-border">
+            <div className="antar:border-t antar:border-border">
               {notifications.map((n) => (
                 <NotificationItem key={n.id} item={n} onRead={handleRead} onDelete={handleDelete} />
               ))}
@@ -313,7 +313,7 @@ function Chip({
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-xs font-medium transition ${
         active
-          ? "bg-brand-600 text-white shadow-sm"
+          ? "bg-brand-600 text-white shadow-xs"
           : "border border-border bg-surface text-muted hover:bg-bg hover:text-ink"
       }`}
     >
@@ -432,7 +432,7 @@ function PanduanBaca() {
 /** Tiruan NotificationItem: ikon bulat + dua baris teks, divider yang sama. */
 function NotifikasiSkeleton() {
   return (
-    <div className="divide-y divide-border">
+    <div className="antar:border-t antar:border-border">
       {[0, 1, 2, 3, 4].map((i) => (
         <div key={i} className="flex gap-4 px-5 py-4">
           <Skeleton className="h-10 w-10 shrink-0 rounded-full" />

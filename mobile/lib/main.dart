@@ -113,6 +113,11 @@ Future<void> main() async {
         SnackBar(content: Text([m.notification?.title, m.notification?.body].whereType<String>().join('\n'))),
       );
     });
+    // firebase_messaging 17 menandai onTokenRefresh/getToken/deleteToken usang.
+    // Penggantinya (register/onRegistered) memberi FID, bukan token FCM, dan
+    // backend mengirim lewat messaging.Message(token=...) ke kolom
+    // push_tokens.fcm_token. Jangan diganti sebelum backend ikut pindah ke FID.
+    // ignore: deprecated_member_use
     FirebaseMessaging.instance.onTokenRefresh.listen((t) {
       if (token != null) api.registerPushToken(t).ignore();
     });
@@ -148,6 +153,7 @@ Future<void> registerPush() async {
   if (!pushReady) return;
   try {
     await FirebaseMessaging.instance.requestPermission();
+    // ignore: deprecated_member_use
     final t = await FirebaseMessaging.instance.getToken();
     // Muncul di `flutter run` / `adb logcat`: tempel ke Firebase Console →
     // Messaging → "Send test message" untuk menguji push tanpa lewat backend.
@@ -175,6 +181,7 @@ Future<void> logout() async {
   navigatorKey.currentState?.pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
   if (pushReady) {
     try {
+      // ignore: deprecated_member_use
       await FirebaseMessaging.instance.deleteToken();
     } catch (_) {}
   }

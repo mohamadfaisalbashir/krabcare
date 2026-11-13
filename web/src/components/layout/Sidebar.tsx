@@ -158,7 +158,7 @@ export default function Sidebar({ className }: { className?: string }) {
         // Hanya lebar yang beranimasi. Padding tetap, supaya ikon diam di
         // tempat sementara panelnya melebar.
         "transition-[width] duration-300 ease-smooth motion-reduce:transition-none",
-        collapsed ? "w-[3.75rem]" : "w-64",
+        collapsed ? "w-15" : "w-64",
         className
       )}
     >
@@ -179,7 +179,7 @@ export default function Sidebar({ className }: { className?: string }) {
             <Link
               href="/dashboard"
               aria-label="Ke dashboard"
-              className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-aksen"
+              className="rounded-lg outline-hidden focus-visible:ring-2 focus-visible:ring-aksen"
             >
               <Logo />
             </Link>
@@ -304,7 +304,7 @@ function NavGroup({
           <CollapsingLabel collapsed={collapsed}>{label}</CollapsingLabel>
           {!collapsed && !!badge && (
             <span
-              className="ml-auto mr-2 flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-status-bahaya px-1.5 text-[11px] font-semibold text-surface"
+              className="ml-auto mr-2 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-status-bahaya px-1.5 text-[11px] font-semibold text-surface"
               aria-label={`${badge} belum dibaca`}
             >
               {formatUnreadBadge(badge)}

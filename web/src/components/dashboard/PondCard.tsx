@@ -11,7 +11,7 @@ import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 /** Lebar kartu saat mode rail. Jangan selebar layar: di 375px sisa ~100px
  *  kartu berikutnya adalah satu-satunya petunjuk barisnya bisa digeser.
  *  Mode grid memakai lebar kolomnya sendiri. */
-export const PONDCARD_WIDTH = "w-[17rem]";
+export const PONDCARD_WIDTH = "w-68";
 
 /** Ubin ikon + titik status. Keduanya ikut warna status, tapi label teksnya
  *  tetap ada supaya maknanya tidak bergantung pada warna saja. */

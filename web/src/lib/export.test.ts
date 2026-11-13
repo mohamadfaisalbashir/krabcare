@@ -16,7 +16,17 @@ import {
   jamDindingWib,
 } from "./export.ts";
 import { formatTanggal, formatWaktu, formatWaktuDetik } from "./tanggal.ts";
+import { yTicks } from "./parameter.ts";
 import type { SensorReading } from "./types.ts";
+
+// Domain bawaan ketiga parameter (RANGE + bantalan 8%). Nilainya tick yang
+// digambar Recharts 2 sebelum pindah ke Recharts 3.
+test("yTicks: sama dengan sumbu Y Recharts 2", () => {
+  const bulat = (a: number[]) => a.map((v) => Number(v.toFixed(2)));
+  assert.deepEqual(bulat(yTicks(6.3, 9.2)), [6.3, 7.05, 7.8, 9.2]);
+  assert.deepEqual(bulat(yTicks(18.8, 36.2)), [18.8, 23.8, 28.8, 36.2]);
+  assert.deepEqual(bulat(yTicks(2.2, 42.8)), [2.2, 17.2, 42.8]);
+});
 
 const CHUNK = 1000;
 

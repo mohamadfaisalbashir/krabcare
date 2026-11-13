@@ -272,8 +272,8 @@ function Fade({ side, show }: { side: "left" | "right"; show: boolean }) {
       className={clsx(
         "pointer-events-none absolute inset-y-0 w-12 transition-opacity duration-200",
         side === "left"
-          ? "left-0 bg-gradient-to-r from-surface to-transparent"
-          : "right-0 bg-gradient-to-l from-surface to-transparent",
+          ? "left-0 bg-linear-to-r from-surface to-transparent"
+          : "right-0 bg-linear-to-l from-surface to-transparent",
         show ? "opacity-100" : "opacity-0"
       )}
     />

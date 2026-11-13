@@ -18,6 +18,7 @@ import {
   RANGE,
   chartTickLabel,
   chartValueLabel,
+  yTicks,
 } from "@/lib/parameter";
 import ChartTooltip from "./ChartTooltip";
 
@@ -130,6 +131,7 @@ export default function HistoryChart({
               float walau kedua ujungnya sudah bulat. */}
           <YAxis
             domain={[lo, hi]}
+            ticks={yTicks(lo, hi)}
             tickFormatter={chartValueLabel}
             tick={{ fontSize: 13, fill: "currentColor" }}
             axisLine={false}
@@ -137,7 +139,7 @@ export default function HistoryChart({
             width={52}
           />
           <Tooltip
-            content={<ChartTooltip />}
+            content={ChartTooltip}
             cursor={{ stroke: cfg.color, strokeOpacity: 0.35, strokeWidth: 1.5 }}
           />
           {/* connectNulls: satu pembacaan null tidak boleh memecah garis jadi titik */}

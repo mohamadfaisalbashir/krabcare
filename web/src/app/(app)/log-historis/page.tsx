@@ -525,7 +525,7 @@ function LogHistorisView() {
         <div
           className={clsx(
             // Tanpa border-t: garis bawah header lengket sudah memisahkan.
-            "divide-y divide-border transition-opacity duration-200 motion-reduce:transition-none",
+            "antar:border-t antar:border-border transition-opacity duration-200 motion-reduce:transition-none",
             loading && "opacity-50"
           )}
         >
@@ -633,7 +633,7 @@ function LogHistorisView() {
  *  juga sebagai fallback Suspense, jadi sama sebelum dan sesudah hydrate. */
 function LogRowsSkeleton() {
   return (
-    <div className="divide-y divide-border">
+    <div className="antar:border-t antar:border-border">
       {[0, 1, 2, 3, 4, 5].map((i) => (
         <div key={i} className="flex items-center justify-between gap-4 px-5 py-4">
           <div>

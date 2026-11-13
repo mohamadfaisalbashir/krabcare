@@ -91,7 +91,7 @@ export default function LoginPage() {
             tempat teks berada paling pekat dan fotonya tetap terlihat di kanan. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-hero-deep/90 via-hero-deep/75 to-hero-deep/55"
+          className="pointer-events-none absolute inset-0 bg-linear-to-r from-hero-deep/90 via-hero-deep/75 to-hero-deep/55"
         />
         <Logo className="relative [&_span]:text-white [&_span_span]:text-brass-300" />
         <div className="relative max-w-md">
