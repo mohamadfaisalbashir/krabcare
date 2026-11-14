@@ -368,28 +368,28 @@ function LogHistorisView() {
               kolom rata, bukan flex-wrap, supaya kedua pil sama lebar. Judul
               "Rentang Waktu" di atasnya sama dengan judul bagian di aplikasi mobile. */}
           <div className={clsx("p-4", !ringkas && "pb-0")}>
-            <div className={clsx("flex items-center justify-between", !ringkas && "mb-2")}>
-              <p className="text-sm font-semibold text-ink">
+            {/* Kuncup: header tinggal baris judul ini, tetap menempel. Seluruh
+                baris jadi tombol, bukan hanya panahnya. */}
+            <button
+              type="button"
+              onClick={() => setRingkas((v) => !v)}
+              aria-expanded={!ringkas}
+              className={clsx("flex w-full items-center justify-between text-left", !ringkas && "mb-2")}
+            >
+              <span className="text-sm font-semibold text-ink">
                 Rentang Waktu{" "}
                 <span className="text-xs font-normal text-muted">
                   (lihat data per hari atau per jam)
                 </span>
-              </p>
-              {/* Kuncup: header tinggal baris judul ini, tetap menempel. */}
-              <button
-                type="button"
-                onClick={() => setRingkas((v) => !v)}
-                aria-expanded={!ringkas}
-                aria-label={ringkas ? "Buka rentang waktu" : "Tutup rentang waktu"}
-                className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
-              >
+              </span>
+              <span className="-my-1.5 -mr-1.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-bg">
                 {ringkas ? (
                   <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
                 ) : (
                   <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
                 )}
-              </button>
-            </div>
+              </span>
+            </button>
             <div className={clsx("grid grid-cols-2 gap-2", ringkas && "hidden")}>
               {RANGE_MODES.map((m) => (
                 <FilterPill
@@ -404,9 +404,12 @@ function LogHistorisView() {
             {/* Interval: satu data per device tiap 15/30/60 menit, supaya rentang
                 panjang tidak tenggelam dalam ribuan baris. */}
             <div className={clsx("mt-3", ringkas && "hidden")}>
-              <p className="mb-2 text-xs font-semibold text-muted">
+              {/* Gaya sama dengan judul "Rentang Waktu" di atas. */}
+              <p className="mb-2 text-sm font-semibold text-ink">
                 Interval{" "}
-                <span className="font-normal">(jarak waktu antar data yang ditampilkan)</span>
+                <span className="text-xs font-normal text-muted">
+                  (jarak waktu antar data yang ditampilkan)
+                </span>
               </p>
               <div className="grid grid-cols-4 gap-2">
                 {INTERVALS.map((iv) => (

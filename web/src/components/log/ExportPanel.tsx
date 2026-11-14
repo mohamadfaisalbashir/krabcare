@@ -151,22 +151,22 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
   return (
     <Card className="p-4">
       {/* Baris judul + tombol kuncup, pola sama dengan "Rentang Waktu". */}
-      <div className={clsx("flex items-center justify-between", !ringkas && "mb-3")}>
-        <h3 className="font-display text-base font-semibold text-ink">Unduh data mentah</h3>
-        <button
-          type="button"
-          onClick={() => setRingkas((v) => !v)}
-          aria-expanded={!ringkas}
-          aria-label={ringkas ? "Buka unduh data mentah" : "Tutup unduh data mentah"}
-          className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
-        >
+      {/* Seluruh baris judul jadi tombol, bukan hanya panahnya. */}
+      <button
+        type="button"
+        onClick={() => setRingkas((v) => !v)}
+        aria-expanded={!ringkas}
+        className={clsx("flex w-full items-center justify-between text-left", !ringkas && "mb-3")}
+      >
+        <span className="font-display text-base font-semibold text-ink">Unduh data mentah</span>
+        <span className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg">
           {ringkas ? (
             <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
           ) : (
             <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
           )}
-        </button>
-      </div>
+        </span>
+      </button>
 
       <div className={clsx("mb-3", ringkas && "hidden")}>
         <p className="text-xs text-muted">

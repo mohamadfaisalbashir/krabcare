@@ -153,12 +153,42 @@ class Logo extends StatelessWidget {
   );
 }
 
+/// Judul bagian dengan keterangan kecil dalam kurung, seperti "Rentang Waktu" dan
+/// "Interval" di log-historis/page.tsx: judul tebal 15, kurung 12 abu tidak tebal.
+Widget judulBerkurung(String judul, String? kurung) => Text.rich(
+  TextSpan(
+    text: judul,
+    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+    children: [
+      if (kurung != null)
+        TextSpan(
+          text: ' ($kurung)',
+          style: TextStyle(fontWeight: FontWeight.w400, fontSize: 12, color: cMuted),
+        ),
+    ],
+  ),
+);
+
 /// Kartu bagian berjudul, pengganti `<Card>` + judul di web.
 class Section extends StatelessWidget {
-  const Section({super.key, required this.title, required this.child, this.trailing, this.note});
+  const Section({
+    super.key,
+    required this.title,
+    required this.child,
+    this.trailing,
+    this.note,
+    this.onTap,
+    this.kurung,
+  });
   final String title;
+
+  /// Keterangan kecil dalam kurung di samping judul, lihat [judulBerkurung].
+  final String? kurung;
   final Widget? child; // null = kartu tinggal baris judul (mis. header yang dikuncupkan)
   final Widget? trailing;
+
+  /// Diisi untuk bagian lipat: seluruh baris judul bisa diketuk, bukan hanya panahnya.
+  final VoidCallback? onTap;
 
   /// Catatan pendek di bawah judul, padanan prop `note` Section di RakDetail.tsx.
   final String? note;
@@ -170,13 +200,14 @@ class Section extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              ),
-              ?trailing,
-            ],
+          InkWell(
+            onTap: onTap,
+            child: Row(
+              children: [
+                Expanded(child: judulBerkurung(title, kurung)),
+                ?trailing,
+              ],
+            ),
           ),
           if (note != null)
             Padding(

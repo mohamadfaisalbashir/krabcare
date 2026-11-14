@@ -152,6 +152,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
           // Terlipat sampai dibuka, pola sama dengan "Rentang waktu" di log.dart.
           Section(
             title: 'Ubah kata sandi',
+            onTap: () => setState(() => bukaSandi = !bukaSandi),
             trailing: IconButton(
               tooltip: bukaSandi ? 'Tutup ubah kata sandi' : 'Buka ubah kata sandi',
               visualDensity: VisualDensity.compact,
@@ -184,12 +185,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     ],
                   ),
           ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => confirmLogout(context),
-            icon: const Icon(Icons.logout),
-            label: const Text('Keluar akun'),
-          ),
           // Backend menolak hapus akun admin (403), jadi tidak ditampilkan.
           // Pola sama dengan hapus kolam di detail kolam (_pengaturan di dashboard.dart).
           if (!isAdmin) ...[
@@ -201,15 +196,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 children: [
                   Align(
                     alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
+                    child: FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
                       onPressed: () => setState(() {
                         bukaHapus = !bukaHapus;
                         ketikEmail.clear();
                         hapusMsg = null;
                       }),
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      label: const Text('Hapus akun'),
+                      child: const Text('Hapus akun'),
                     ),
                   ),
                   if (bukaHapus) ...[
@@ -275,6 +269,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
               ),
             ),
           ],
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: () => confirmLogout(context),
+            icon: const Icon(Icons.logout),
+            label: const Text('Keluar akun'),
+          ),
         ],
       ),
     );

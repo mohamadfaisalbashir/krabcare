@@ -230,27 +230,27 @@ export default function ProfilPage() {
 
         {/* Terlipat secara default, pola sama dengan "Unduh data mentah". */}
         <Card>
-          <div className={clsx("flex items-center justify-between", bukaSandi && "mb-4")}>
-            <div className="flex items-center gap-2.5">
+          {/* Seluruh baris judul jadi tombol, bukan hanya panahnya. */}
+          <button
+            type="button"
+            onClick={() => setBukaSandi((v) => !v)}
+            aria-expanded={bukaSandi}
+            className={clsx("flex w-full items-center justify-between text-left", bukaSandi && "mb-4")}
+          >
+            <span className="flex items-center gap-2.5">
               <ShieldCheck className="h-5 w-5 text-brand-500" />
-              <h3 className="font-display text-base font-semibold text-ink">
+              <span className="font-display text-base font-semibold text-ink">
                 Ubah kata sandi
-              </h3>
-            </div>
-            <button
-              type="button"
-              onClick={() => setBukaSandi((v) => !v)}
-              aria-expanded={bukaSandi}
-              aria-label={bukaSandi ? "Tutup ubah kata sandi" : "Buka ubah kata sandi"}
-              className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
-            >
+              </span>
+            </span>
+            <span className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg">
               {bukaSandi ? (
                 <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
               ) : (
                 <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
               )}
-            </button>
-          </div>
+            </span>
+          </button>
 
           {bukaSandi && (
             <form onSubmit={handleChangePassword} className="space-y-4">
@@ -292,13 +292,6 @@ export default function ProfilPage() {
           )}
         </Card>
 
-        <button
-          onClick={confirmLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
-        >
-          <LogOut className="h-4 w-4" /> Keluar akun
-        </button>
-
         {/* Pola sama dengan hapus kolam di detail kolam: tombol merah membuka
             kotak Zona berbahaya. Gaya kotaknya disalin dari DangerZone.tsx,
             bukan memakai komponennya, karena komponen itu terikat ke
@@ -324,7 +317,7 @@ export default function ProfilPage() {
               aria-expanded={bukaHapus}
               className="btn-danger"
             >
-              <Trash2 className="h-4 w-4" /> Hapus akun
+              Hapus akun
             </button>
 
             {bukaHapus && (
@@ -373,6 +366,13 @@ export default function ProfilPage() {
             )}
           </Card>
         )}
+
+        <button
+          onClick={confirmLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
+        >
+          <LogOut className="h-4 w-4" /> Keluar akun
+        </button>
       </div>
     </>
   );

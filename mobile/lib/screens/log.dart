@@ -330,8 +330,10 @@ class _LogScreenState extends State<LogScreen> {
   );
 
   Widget _rentangWaktu(String Function(DateTime?) tgl) => Section(
-    title: 'Rentang waktu (lihat data per hari atau per jam)',
+    title: 'Rentang waktu',
+    kurung: 'lihat data per hari atau per jam',
     // Kuncup: header tinggal baris judul ini, tetap menempel; filternya tetap berlaku.
+    onTap: () => setState(() => ringkas = !ringkas),
     trailing: IconButton(
       tooltip: ringkas ? 'Buka rentang waktu' : 'Tutup rentang waktu',
       visualDensity: VisualDensity.compact,
@@ -396,7 +398,7 @@ class _LogScreenState extends State<LogScreen> {
                   ],
                 ),
               const SizedBox(height: 10),
-              Text('Interval (jarak waktu antar data yang ditampilkan)', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+              judulBerkurung('Interval', 'jarak waktu antar data yang ditampilkan'),
               const SizedBox(height: 6),
               SegmentedButton<int>(
                 showSelectedIcon: false,
