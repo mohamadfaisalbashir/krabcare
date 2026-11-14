@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCheck, Trash2 } from "lucide-react";
+import { CheckCheck, ChevronDown, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -351,8 +351,10 @@ function PanduanBaca() {
     <details className="group rounded-xl border border-border bg-surface px-5 py-3">
       <summary className="flex cursor-pointer select-none items-center justify-between text-sm font-semibold text-ink">
         Cara membaca notifikasi
-        <span className="text-xs font-medium text-aksen group-open:hidden">Tampilkan</span>
-        <span className="hidden text-xs font-medium text-aksen group-open:inline">Sembunyikan</span>
+        {/* Panah sama dengan header lipat di Log Historis; diputar saat terbuka. */}
+        <span className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg">
+          <ChevronDown className="h-4 w-4 group-open:rotate-180" strokeWidth={2.2} />
+        </span>
       </summary>
 
       <div className="mt-3 space-y-4 text-sm leading-relaxed text-ink">
