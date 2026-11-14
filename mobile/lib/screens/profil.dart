@@ -26,7 +26,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   final lama = TextEditingController(), baru = TextEditingController(), konfirmasi = TextEditingController();
   final ketikEmail = TextEditingController();
   bool busy = false;
-  bool bukaSandi = false, bukaHapus = false;
+  bool bukaNama = false, bukaSandi = false, bukaHapus = false;
   Msg? namaMsg, sandiMsg, hapusMsg;
 
   Future<void> simpanNama() async {
@@ -119,20 +119,30 @@ class _ProfilScreenState extends State<ProfilScreen> {
           const SizedBox(height: 12),
           Section(
             title: 'Ubah nama',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                TextField(
-                  inputFormatters: batas50,
-                  controller: nama,
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(labelText: 'Nama lengkap'),
-                ),
-                _msg(namaMsg),
-                const SizedBox(height: 8),
-                FilledButton(onPressed: busy || sama ? null : simpanNama, child: const Text('Simpan nama')),
-              ],
+            // Terlipat sampai dibuka, pola sama dengan "Ubah kata sandi" di bawah.
+            onTap: () => setState(() => bukaNama = !bukaNama),
+            trailing: IconButton(
+              tooltip: bukaNama ? 'Tutup ubah nama' : 'Buka ubah nama',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(bukaNama ? Icons.expand_less : Icons.expand_more),
+              onPressed: () => setState(() => bukaNama = !bukaNama),
             ),
+            child: !bukaNama
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextField(
+                        inputFormatters: batas50,
+                        controller: nama,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(labelText: 'Nama lengkap'),
+                      ),
+                      _msg(namaMsg),
+                      const SizedBox(height: 8),
+                      FilledButton(onPressed: busy || sama ? null : simpanNama, child: const Text('Simpan nama')),
+                    ],
+                  ),
           ),
           const SizedBox(height: 12),
           // Mode terang/gelap, diingat per perangkat (setGelap di main.dart).

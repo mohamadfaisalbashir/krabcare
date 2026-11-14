@@ -28,7 +28,8 @@ export default function ProfilPage() {
   const user = useUser();
   const [nama, setNama] = useState("");
   const [savingNama, setSavingNama] = useState(false);
-  // Ubah kata sandi jarang dipakai, jadi terlipat sampai dibuka.
+  // Ubah nama dan kata sandi jarang dipakai, jadi terlipat sampai dibuka.
+  const [bukaNama, setBukaNama] = useState(false);
   const [bukaSandi, setBukaSandi] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -183,24 +184,39 @@ export default function ProfilPage() {
 
         {/* Ubah nama profil (PUT /auth/me) */}
         <Card>
-          <div className="mb-4 flex items-center gap-2.5">
-            <Pencil className="h-5 w-5 text-brand-500" />
-            <h3 className="font-display text-base font-semibold text-ink">
-              Ubah nama
-            </h3>
-          </div>
-          <form onSubmit={handleSaveNama} className="space-y-4">
-            <Input
-              label="Nama lengkap"
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
-              required
-            />
-            <FormMessage message={namaMessage} />
-            <Button type="submit" disabled={savingNama || nama === user?.nama}>
-              {savingNama ? "Menyimpan..." : "Simpan nama"}
-            </Button>
-          </form>
+          {/* Terlipat secara default, pola sama dengan "Ubah kata sandi". */}
+          <button
+            type="button"
+            onClick={() => setBukaNama((v) => !v)}
+            aria-expanded={bukaNama}
+            className={clsx("flex w-full items-center justify-between text-left", bukaNama && "mb-4")}
+          >
+            <span className="flex items-center gap-2.5">
+              <Pencil className="h-5 w-5 text-brand-500" />
+              <span className="font-display text-base font-semibold text-ink">Ubah nama</span>
+            </span>
+            <span className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg">
+              {bukaNama ? (
+                <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
+              ) : (
+                <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
+              )}
+            </span>
+          </button>
+          {bukaNama && (
+            <form onSubmit={handleSaveNama} className="space-y-4">
+              <Input
+                label="Nama lengkap"
+                value={nama}
+                onChange={(e) => setNama(e.target.value)}
+                required
+              />
+              <FormMessage message={namaMessage} />
+              <Button type="submit" disabled={savingNama || nama === user?.nama}>
+                {savingNama ? "Menyimpan..." : "Simpan nama"}
+              </Button>
+            </form>
+          )}
         </Card>
 
         {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
