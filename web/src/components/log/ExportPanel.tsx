@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Download } from "lucide-react";
 import clsx from "clsx";
 import Card from "@/components/ui/Card";
-import Input from "@/components/ui/Input";
+import TanggalInput from "@/components/ui/TanggalInput";
 import Button from "@/components/ui/Button";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
 import { AMONIA_UI } from "@/lib/ammonia";
@@ -189,22 +189,12 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
           masih lebih lebar dari layar 640px kalau dipaksa satu baris. */}
       <div className={clsx("flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end", ringkas && "hidden")}>
         <div className="sm:w-40">
-          <Input
-            label="Dari"
-            type="date"
-            value={from}
-            max={to}
-            onChange={(e) => setFrom(e.target.value)}
-          />
+          <span className="label-field">Dari</span>
+          <TanggalInput label="Dari" value={from} max={to} onChange={setFrom} wajib />
         </div>
         <div className="sm:w-40">
-          <Input
-            label="Sampai"
-            type="date"
-            value={to}
-            min={from}
-            onChange={(e) => setTo(e.target.value)}
-          />
+          <span className="label-field">Sampai</span>
+          <TanggalInput label="Sampai" value={to} min={from} onChange={setTo} wajib />
         </div>
 
         <div className="sm:w-44">

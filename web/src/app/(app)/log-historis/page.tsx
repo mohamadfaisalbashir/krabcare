@@ -24,7 +24,16 @@ import { api, ambilSensorSaya } from "@/lib/api";
 import clsx from "clsx";
 import { formatWaktu } from "@/lib/tanggal";
 import HourSelect from "@/components/ui/HourSelect";
+import TanggalInput from "@/components/ui/TanggalInput";
 import KeAtas from "@/components/ui/KeAtas";
+
+/** Keterangan singkat di bawah judul, per parameter. */
+const DESKRIPSI: Record<LogParam, string> = {
+  ph: "Pembacaan sensor pH air kolam",
+  temperature_c: "Pembacaan sensor suhu air kolam",
+  salinity_ppt: "Pembacaan sensor salinitas air kolam",
+  [LOG_PARAM_AMONIA]: "Hasil hitung risiko amonia (NH₃) dari data sensor",
+};
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Semua",
@@ -102,7 +111,7 @@ export default function LogHistorisPage() {
     <Suspense
       fallback={
         <>
-          <Topbar title="Log Historis" />
+          <Topbar title="Log Historis" subtitle={DESKRIPSI.ph} />
           <LogRowsSkeleton />
         </>
       }
@@ -294,7 +303,7 @@ function LogHistorisView() {
 
   return (
     <>
-    <Topbar title={`Log Historis ${meta.short}`} />
+    <Topbar title={`Log Historis ${meta.short}`} subtitle={DESKRIPSI[param]} />
     <div className="flex-1 space-y-5 p-5 sm:p-8">
       {/* Satu pilihan device untuk seluruh halaman: daftar log di bawah dan
           panel unduh sama-sama mengikutinya. */}
@@ -360,7 +369,12 @@ function LogHistorisView() {
               "Rentang Waktu" di atasnya sama dengan judul bagian di aplikasi mobile. */}
           <div className={clsx("p-4", !ringkas && "pb-0")}>
             <div className={clsx("flex items-center justify-between", !ringkas && "mb-2")}>
-              <p className="text-sm font-semibold text-ink">Rentang Waktu</p>
+              <p className="text-sm font-semibold text-ink">
+                Rentang Waktu{" "}
+                <span className="text-xs font-normal text-muted">
+                  (lihat data per hari atau per jam)
+                </span>
+              </p>
               {/* Kuncup: header tinggal baris judul ini, tetap menempel. */}
               <button
                 type="button"
@@ -390,7 +404,10 @@ function LogHistorisView() {
             {/* Interval: satu data per device tiap 15/30/60 menit, supaya rentang
                 panjang tidak tenggelam dalam ribuan baris. */}
             <div className={clsx("mt-3", ringkas && "hidden")}>
-              <p className="mb-2 text-xs font-semibold text-muted">Interval</p>
+              <p className="mb-2 text-xs font-semibold text-muted">
+                Interval{" "}
+                <span className="font-normal">(jarak waktu antar data yang ditampilkan)</span>
+              </p>
               <div className="grid grid-cols-4 gap-2">
                 {INTERVALS.map((iv) => (
                   <FilterPill
@@ -422,33 +439,30 @@ function LogHistorisView() {
                   mobile supaya Safari iOS tidak memperbesar viewport. */}
               {rangeMode === "hari" && (
                 <>
-                  <input
-                    type="date"
+                  <TanggalInput
                     value={dari}
                     max={sampai || undefined}
-                    onChange={(e) => setDari(e.target.value)}
-                    className="input-field w-auto py-1.5"
-                    aria-label="Tanggal mulai"
+                    onChange={setDari}
+                    className="w-auto py-1.5"
+                    label="Tanggal mulai"
                   />
                   <span className="text-xs text-muted">s/d</span>
-                  <input
-                    type="date"
+                  <TanggalInput
                     value={sampai}
                     min={dari || undefined}
-                    onChange={(e) => setSampai(e.target.value)}
-                    className="input-field w-auto py-1.5"
-                    aria-label="Tanggal akhir"
+                    onChange={setSampai}
+                    className="w-auto py-1.5"
+                    label="Tanggal akhir"
                   />
                 </>
               )}
               {rangeMode === "jam" && (
                 <>
-                  <input
-                    type="date"
+                  <TanggalInput
                     value={dari}
-                    onChange={(e) => setDari(e.target.value)}
-                    className="input-field w-auto py-1.5"
-                    aria-label="Tanggal"
+                    onChange={setDari}
+                    className="w-auto py-1.5"
+                    label="Tanggal"
                   />
                   {/* Dua HourSelect, jam bulat saja (HOUR_OPTIONS). Jam selesai boleh
                       lebih kecil atau sama dengan jam mulai: itu berarti jendela

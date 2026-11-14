@@ -15,7 +15,7 @@ import {
   dayRangeToIso,
   jamDindingWib,
 } from "./export.ts";
-import { formatTanggal, formatWaktu, formatWaktuDetik } from "./tanggal.ts";
+import { formatTanggal, formatWaktu, formatWaktuDetik, selBulan, isoKeTampil } from "./tanggal.ts";
 import { yTicks } from "./parameter.ts";
 import type { SensorReading } from "./types.ts";
 
@@ -249,4 +249,17 @@ test("dayRangeToIso: hari penuh WIB, bukan hari browser", () => {
 
 test("sel XLSX memakai jam dinding WIB (library membaca komponen UTC)", () => {
   assert.equal(jamDindingWib("2026-09-09T07:32:07Z").toISOString(), "2026-09-09T14:32:07.000Z");
+});
+
+test("kalender pemilih tanggal: Senin di depan, kabisat", () => {
+  // 1 November 2026 hari Minggu: 6 sel kosong (Sen..Sab) sebelum tanggal 1.
+  const nov = selBulan(2026, 10);
+  assert.equal(nov.indexOf("2026-11-01"), 6);
+  assert.equal(nov.at(-1), "2026-11-30");
+  // 1 Juni 2026 hari Senin: tanpa sel kosong.
+  assert.equal(selBulan(2026, 5)[0], "2026-06-01");
+  assert.equal(selBulan(2028, 1).at(-1), "2028-02-29");
+  assert.equal(selBulan(2027, 1).at(-1), "2027-02-28");
+  assert.equal(isoKeTampil("2026-11-04"), "04-11-2026");
+  assert.equal(isoKeTampil(""), "");
 });

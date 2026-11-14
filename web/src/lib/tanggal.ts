@@ -45,6 +45,34 @@ export function isOnline(receivedAt: string | null | undefined, now = Date.now()
   return !!receivedAt && now - new Date(receivedAt).getTime() <= ONLINE_MAKS_MENIT * 60_000;
 }
 
+export const NAMA_BULAN = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+/** Senin di depan, seperti kalender Indonesia. */
+export const NAMA_HARI = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+
+/** "2026-11-14" -> "14-11-2026". String kosong tetap kosong. */
+export function isoKeTampil(ymd: string): string {
+  return ymd ? ymd.split("-").reverse().join("-") : "";
+}
+
+/**
+ * Sel kalender satu bulan (`bulan` 0-11), Senin di depan. `null` = sel kosong
+ * sebelum tanggal 1. Isinya "yyyy-mm-dd" supaya bisa dibandingkan dengan
+ * min/max lewat perbandingan string biasa. Dihitung dengan Date.UTC supaya
+ * tidak terpengaruh zona waktu browser.
+ */
+export function selBulan(tahun: number, bulan: number): Array<string | null> {
+  const awal = (new Date(Date.UTC(tahun, bulan, 1)).getUTCDay() + 6) % 7; // Senin = 0
+  const jumlah = new Date(Date.UTC(tahun, bulan + 1, 0)).getUTCDate();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return [
+    ...Array<null>(awal).fill(null),
+    ...Array.from({ length: jumlah }, (_, i) => `${tahun}-${p(bulan + 1)}-${p(i + 1)}`),
+  ];
+}
+
 /** yyyy-mm-dd hari ini di Jakarta (± `geserHari`), untuk nilai `<input type="date">`. */
 export function tanggalWib(geserHari = 0): string {
   return new Date(Date.now() + WIB_MS + geserHari * 86_400_000).toISOString().slice(0, 10);

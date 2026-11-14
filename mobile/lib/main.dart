@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
@@ -133,6 +134,10 @@ Future<void> main() async {
         navigatorKey: navigatorKey,
         scaffoldMessengerKey: messengerKey,
         debugShowCheckedModeBanner: false,
+        // Bahasa Indonesia untuk teks bawaan Material (kalender, tombol dialog).
+        locale: const Locale('id'),
+        supportedLocales: const [Locale('id')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
         // Ukuran font sistem HP diabaikan supaya tata letak sama di semua HP.
         builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
         home: const AuthGate(),

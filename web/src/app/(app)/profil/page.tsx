@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LogOut, ShieldCheck, Pencil, SunMoon, Trash2 } from "lucide-react";
+import clsx from "clsx";
+import {
+  AlertOctagon,
+  ChevronDown,
+  ChevronUp,
+  LogOut,
+  Pencil,
+  ShieldCheck,
+  SunMoon,
+  Trash2,
+} from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
@@ -18,6 +28,8 @@ export default function ProfilPage() {
   const user = useUser();
   const [nama, setNama] = useState("");
   const [savingNama, setSavingNama] = useState(false);
+  // Ubah kata sandi jarang dipakai, jadi terlipat sampai dibuka.
+  const [bukaSandi, setBukaSandi] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -25,8 +37,7 @@ export default function ProfilPage() {
   const [ketikanHapus, setKetikanHapus] = useState("");
   const [menghapusAkun, setMenghapusAkun] = useState(false);
   const [hapusMessage, setHapusMessage] = useState<Message>(null);
-  // Dua state terpisah karena kedua form ada di kolom berbeda; satu state
-  // bersama akan memunculkan pesan di seberang form yang disubmit.
+  // Satu state pesan per form, supaya pesan muncul di form yang disubmit.
   const [namaMessage, setNamaMessage] = useState<Message>(null);
   const [passwordMessage, setPasswordMessage] = useState<Message>(null);
   const [loading, setLoading] = useState(false);
@@ -112,7 +123,7 @@ export default function ProfilPage() {
       !window.confirm(
         "Hapus akun ini secara permanen?\n\n" +
           "Seluruh kolam dan notifikasi Anda ikut terhapus. Device yang " +
-          "terpasang tidak terhapus, hanya kembali jadi belum diklaim." + 
+          "terpasang tidak terhapus, hanya kembali jadi belum diklaim." +
           "\n\n" +
           "Tindakan ini tidak bisa dibatalkan."
       )
@@ -140,211 +151,228 @@ export default function ProfilPage() {
     <>
       <Topbar title="Profil" subtitle="Kelola informasi akun Anda" />
 
-      <div className="flex-1 p-5 sm:p-8">
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-          {/* Kolom kiri: identitas, ubah nama, keluar akun */}
-          <div className="space-y-6">
-            <Card>
-              {user ? (
-                <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 font-display text-xl font-semibold text-white">
-                    {user.nama.charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h3 className="font-display text-lg font-semibold text-ink">
-                      {user.nama}
-                    </h3>
-                    <p className="text-sm text-muted">{user.email}</p>
-                    <p className="mt-1 text-xs font-medium capitalize text-muted">
-                      {user.role}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
-                  <div>
-                    <Skeleton className="h-6 w-40" />
-                    <Skeleton className="mt-2 h-4 w-52" />
-                    <Skeleton className="mt-2 h-3 w-20" />
-                  </div>
-                </div>
-              )}
-            </Card>
-
-            {/* Ubah nama profil (PUT /auth/me) */}
-            <Card>
-              <div className="mb-4 flex items-center gap-2.5">
-                <Pencil className="h-5 w-5 text-brand-500" />
-                <h3 className="font-display text-base font-semibold text-ink">
-                  Ubah nama
+      {/* Satu kolom di semua lebar layar: kartu menumpuk ke bawah. */}
+      <div className="flex-1 space-y-6 p-5 sm:p-8">
+        <Card>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 font-display text-xl font-semibold text-white">
+                {user.nama.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold text-ink">
+                  {user.nama}
                 </h3>
+                <p className="text-sm text-muted">{user.email}</p>
+                <p className="mt-1 text-xs font-medium capitalize text-muted">
+                  {user.role}
+                </p>
               </div>
-              <form onSubmit={handleSaveNama} className="space-y-4">
-                <Input
-                  label="Nama lengkap"
-                  value={nama}
-                  onChange={(e) => setNama(e.target.value)}
-                  required
-                />
-                <FormMessage message={namaMessage} />
-                <Button type="submit" disabled={savingNama || nama === user?.nama}>
-                  {savingNama ? "Menyimpan..." : "Simpan nama"}
-                </Button>
-              </form>
-            </Card>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-14 w-14 shrink-0 rounded-full" />
+              <div>
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="mt-2 h-4 w-52" />
+                <Skeleton className="mt-2 h-3 w-20" />
+              </div>
+            </div>
+          )}
+        </Card>
 
-            {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
-                (globals.css); pilihannya diingat per browser. */}
-            <Card>
-              <div className="mb-4 flex items-center gap-2.5">
-                <SunMoon className="h-5 w-5 text-brand-500" />
-                <h3 className="font-display text-base font-semibold text-ink">Tampilan</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
-                {[
-                  { gelap: false, label: "Terang" },
-                  { gelap: true, label: "Gelap" },
-                ].map((opsi) => (
-                  <button
-                    key={opsi.label}
-                    type="button"
-                    onClick={() => pilihTema(opsi.gelap)}
-                    aria-pressed={temaGelap === opsi.gelap}
-                    className={temaGelap === opsi.gelap ? "btn-primary" : "btn-ghost"}
-                  >
-                    {opsi.label}
-                  </button>
-                ))}
-              </div>
-            </Card>
+        {/* Ubah nama profil (PUT /auth/me) */}
+        <Card>
+          <div className="mb-4 flex items-center gap-2.5">
+            <Pencil className="h-5 w-5 text-brand-500" />
+            <h3 className="font-display text-base font-semibold text-ink">
+              Ubah nama
+            </h3>
+          </div>
+          <form onSubmit={handleSaveNama} className="space-y-4">
+            <Input
+              label="Nama lengkap"
+              value={nama}
+              onChange={(e) => setNama(e.target.value)}
+              required
+            />
+            <FormMessage message={namaMessage} />
+            <Button type="submit" disabled={savingNama || nama === user?.nama}>
+              {savingNama ? "Menyimpan..." : "Simpan nama"}
+            </Button>
+          </form>
+        </Card>
 
+        {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
+            (globals.css); pilihannya diingat per browser. */}
+        <Card>
+          <div className="mb-4 flex items-center gap-2.5">
+            <SunMoon className="h-5 w-5 text-brand-500" />
+            <h3 className="font-display text-base font-semibold text-ink">Tampilan</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
+            {[
+              { gelap: false, label: "Terang" },
+              { gelap: true, label: "Gelap" },
+            ].map((opsi) => (
+              <button
+                key={opsi.label}
+                type="button"
+                onClick={() => pilihTema(opsi.gelap)}
+                aria-pressed={temaGelap === opsi.gelap}
+                className={temaGelap === opsi.gelap ? "btn-primary" : "btn-ghost"}
+              >
+                {opsi.label}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        {/* Terlipat secara default, pola sama dengan "Unduh data mentah". */}
+        <Card>
+          <div className={clsx("flex items-center justify-between", bukaSandi && "mb-4")}>
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="h-5 w-5 text-brand-500" />
+              <h3 className="font-display text-base font-semibold text-ink">
+                Ubah kata sandi
+              </h3>
+            </div>
             <button
-              onClick={confirmLogout}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
+              type="button"
+              onClick={() => setBukaSandi((v) => !v)}
+              aria-expanded={bukaSandi}
+              aria-label={bukaSandi ? "Tutup ubah kata sandi" : "Buka ubah kata sandi"}
+              className="-my-1.5 -mr-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-bg"
             >
-              <LogOut className="h-4 w-4" /> Keluar akun
+              {bukaSandi ? (
+                <ChevronUp className="h-4 w-4" strokeWidth={2.2} />
+              ) : (
+                <ChevronDown className="h-4 w-4" strokeWidth={2.2} />
+              )}
             </button>
           </div>
 
-          {/* Kolom kanan: ganti kata sandi */}
-          <div className="space-y-6">
-            <Card>
-              <div className="mb-4 flex items-center gap-2.5">
-                <ShieldCheck className="h-5 w-5 text-brand-500" />
-                <h3 className="font-display text-base font-semibold text-ink">
-                  Ubah kata sandi
-                </h3>
-              </div>
+          {bukaSandi && (
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <Input
+                label="Kata sandi lama"
+                type="password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                required
+              />
+              <Input
+                label="Kata sandi baru"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={8}
+              />
+              <Input
+                label="Konfirmasi kata sandi baru"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+              />
 
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <Input
-                  label="Kata sandi lama"
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  required
-                />
-                <Input
-                  label="Kata sandi baru"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                />
-                <Input
-                  label="Konfirmasi kata sandi baru"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                />
+              <FormMessage message={passwordMessage} />
 
-                <FormMessage message={passwordMessage} />
+              {/* Pudar sampai ketiga kolom terisi, sama seperti "Simpan nama"
+                  yang pudar selama namanya belum berubah. */}
+              <Button
+                type="submit"
+                disabled={loading || !oldPassword || !newPassword || !confirmPassword}
+              >
+                {loading ? "Menyimpan..." : "Simpan perubahan"}
+              </Button>
+            </form>
+          )}
+        </Card>
 
-                {/* Pudar sampai ketiga kolom terisi, sama seperti "Simpan nama"
-                    yang pudar selama namanya belum berubah. */}
-                <Button
-                  type="submit"
-                  disabled={loading || !oldPassword || !newPassword || !confirmPassword}
-                >
-                  {loading ? "Menyimpan..." : "Simpan perubahan"}
-                </Button>
-              </form>
-            </Card>
+        <button
+          onClick={confirmLogout}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg px-4 py-3 text-sm font-semibold text-status-bahaya transition hover:bg-status-bahaya/10"
+        >
+          <LogOut className="h-4 w-4" /> Keluar akun
+        </button>
 
-            {/* Kartunya netral, merahnya cuma di tombol, sebobot tombol "Keluar
-                akun" di atas. Kalau seluruh kartu merah, tindakan paling jarang
-                dipakai di halaman ini jadi yang paling menyita perhatian.
+        {/* Pola sama dengan hapus kolam di detail kolam: tombol merah membuka
+            kotak Zona berbahaya. Gaya kotaknya disalin dari DangerZone.tsx,
+            bukan memakai komponennya, karena komponen itu terikat ke
+            api.deleteKolam.
 
-                Tidak dirender untuk admin: backend menolaknya dengan 403
-                (routers/auth.py), jadi tombolnya pasti gagal. */}
-            {user && user.role !== "admin" && (
-              <Card>
-                <div className="mb-2 flex items-center gap-2.5">
-                  <Trash2 className="h-5 w-5 text-muted" />
-                  <h3 className="font-display text-base font-semibold text-ink">
-                    Hapus akun
+            Tidak dirender untuk admin: backend menolaknya dengan 403
+            (routers/auth.py), jadi tombolnya pasti gagal. */}
+        {user && user.role !== "admin" && (
+          <Card>
+            <div className="mb-4 flex items-center gap-2.5">
+              <Trash2 className="h-5 w-5 text-brand-500" />
+              <h3 className="font-display text-base font-semibold text-ink">
+                Hapus akun
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setBukaHapus((v) => !v);
+                setKetikanHapus("");
+                setHapusMessage(null);
+              }}
+              aria-expanded={bukaHapus}
+              className="btn-danger"
+            >
+              <Trash2 className="h-4 w-4" /> Hapus akun
+            </button>
+
+            {bukaHapus && (
+              <div className="mt-4 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg/60 p-5 sm:max-w-2xl">
+                <div className="mb-3 flex items-center gap-2.5">
+                  <AlertOctagon className="h-5 w-5 text-status-bahaya" />
+                  <h3 className="font-display text-base font-semibold text-status-bahaya">
+                    Zona berbahaya
                   </h3>
                 </div>
+                <p className="text-sm font-semibold text-ink">
+                  Menghapus akun ini bersifat permanen dan tidak dapat dibatalkan.
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  Seluruh kolam dan notifikasi Anda ikut terhapus. Device yang
+                  terhubung tidak ikut terhapus, hanya kembali menjadi belum
+                  terklaim beserta riwayat sensornya, sehingga admin bisa
+                  memasangnya ke akun lain.
+                </p>
 
-                {/* Terlipat sampai diminta. Isinya tindakan permanen, dan satu
-                    ketukan sudah cukup jadi pemisah niat. */}
-                {!bukaHapus ? (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <div className="sm:w-96">
+                    <Input
+                      label={`Ketik "${user.email}" untuk mengonfirmasi`}
+                      value={ketikanHapus}
+                      onChange={(e) => setKetikanHapus(e.target.value)}
+                      placeholder={user.email}
+                      autoComplete="off"
+                    />
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setBukaHapus(true)}
+                    onClick={handleHapusAkun}
+                    disabled={menghapusAkun || ketikanHapus.trim() !== user.email}
                     className="btn-danger"
                   >
-                    Hapus akun
+                    {menghapusAkun ? "Menghapus..." : "Hapus akun saya"}
                   </button>
-                ) : (
-                  <>
-                    <p className="mb-4 text-sm leading-relaxed text-muted">
-                      Menghapus akun ini beserta seluruh kolam dan notifikasinya,
-                      permanen. Device yang terpasang tidak ikut terhapus. Ia kembali
-                      jadi belum diklaim beserta riwayat sensornya, dan bisa dipasang
-                      admin ke akun lain.
-                    </p>
-                    <div className="space-y-4 sm:max-w-md">
-                      <Input
-                        label={`Ketik "${user.email}" untuk mengonfirmasi`}
-                        value={ketikanHapus}
-                        onChange={(e) => setKetikanHapus(e.target.value)}
-                        placeholder={user.email}
-                        autoComplete="off"
-                      />
-                      <FormMessage message={hapusMessage} />
-                      <div className="flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={handleHapusAkun}
-                          disabled={menghapusAkun || ketikanHapus.trim() !== user.email}
-                          className="btn-danger"
-                        >
-                          {menghapusAkun ? "Menghapus..." : "Hapus akun saya"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setBukaHapus(false);
-                            setKetikanHapus("");
-                            setHapusMessage(null);
-                          }}
-                          className="btn-ghost"
-                        >
-                          Batal
-                        </button>
-                      </div>
-                    </div>
-                  </>
+                </div>
+                {hapusMessage && (
+                  <div className="mt-3">
+                    <FormMessage message={hapusMessage} />
+                  </div>
                 )}
-              </Card>
+              </div>
             )}
-          </div>
-        </div>
+          </Card>
+        )}
       </div>
     </>
   );

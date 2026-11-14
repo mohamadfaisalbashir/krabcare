@@ -26,7 +26,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   final lama = TextEditingController(), baru = TextEditingController(), konfirmasi = TextEditingController();
   final ketikEmail = TextEditingController();
   bool busy = false;
-  Key _tileKey = UniqueKey();
+  bool bukaSandi = false, bukaHapus = false;
   Msg? namaMsg, sandiMsg, hapusMsg;
 
   Future<void> simpanNama() async {
@@ -135,33 +135,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ),
           ),
           const SizedBox(height: 12),
-          Section(
-            title: 'Ubah kata sandi',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                PasswordField(controller: lama, label: 'Kata sandi lama'),
-                const SizedBox(height: 10),
-                PasswordField(controller: baru, label: 'Kata sandi baru'),
-                const SizedBox(height: 10),
-                PasswordField(controller: konfirmasi, label: 'Konfirmasi kata sandi baru'),
-                _msg(sandiMsg),
-                const SizedBox(height: 8),
-                // Nonaktif (pudar) sampai ketiga kolom terisi, seperti "Simpan
-                // nama" yang pudar selama namanya belum berubah.
-                ListenableBuilder(
-                  listenable: Listenable.merge([lama, baru, konfirmasi]),
-                  builder: (_, _) => FilledButton(
-                    onPressed: busy || lama.text.isEmpty || baru.text.isEmpty || konfirmasi.text.isEmpty
-                        ? null
-                        : simpanSandi,
-                    child: const Text('Simpan perubahan'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
           // Mode terang/gelap, diingat per perangkat (setGelap di main.dart).
           Section(
             title: 'Tampilan',
@@ -176,60 +149,128 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ),
           ),
           const SizedBox(height: 12),
+          // Terlipat sampai dibuka, pola sama dengan "Rentang waktu" di log.dart.
+          Section(
+            title: 'Ubah kata sandi',
+            trailing: IconButton(
+              tooltip: bukaSandi ? 'Tutup ubah kata sandi' : 'Buka ubah kata sandi',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(bukaSandi ? Icons.expand_less : Icons.expand_more),
+              onPressed: () => setState(() => bukaSandi = !bukaSandi),
+            ),
+            child: !bukaSandi
+                ? null
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      PasswordField(controller: lama, label: 'Kata sandi lama'),
+                      const SizedBox(height: 10),
+                      PasswordField(controller: baru, label: 'Kata sandi baru'),
+                      const SizedBox(height: 10),
+                      PasswordField(controller: konfirmasi, label: 'Konfirmasi kata sandi baru'),
+                      _msg(sandiMsg),
+                      const SizedBox(height: 8),
+                      // Nonaktif (pudar) sampai ketiga kolom terisi, seperti "Simpan
+                      // nama" yang pudar selama namanya belum berubah.
+                      ListenableBuilder(
+                        listenable: Listenable.merge([lama, baru, konfirmasi]),
+                        builder: (_, _) => FilledButton(
+                          onPressed: busy || lama.text.isEmpty || baru.text.isEmpty || konfirmasi.text.isEmpty
+                              ? null
+                              : simpanSandi,
+                          child: const Text('Simpan perubahan'),
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: () => confirmLogout(context),
             icon: const Icon(Icons.logout),
             label: const Text('Keluar akun'),
           ),
           // Backend menolak hapus akun admin (403), jadi tidak ditampilkan.
+          // Pola sama dengan hapus kolam di detail kolam (_pengaturan di dashboard.dart).
           if (!isAdmin) ...[
             const SizedBox(height: 12),
-            Card(
-              child: ExpansionTile(
-                key: _tileKey,
-                shape: const Border(),
-                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-                leading: Icon(Icons.report_outlined, color: statusColor('Bahaya')),
-                title: Text(
-                  'Hapus akun',
-                  style: TextStyle(color: statusColor('Bahaya'), fontWeight: FontWeight.w700),
-                ),
-                childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            Section(
+              title: 'Hapus akun',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Menghapus akun ini beserta seluruh kolam dan notifikasinya, permanen. Device yang terpasang '
-                    'tidak ikut terhapus. Ia kembali jadi belum diklaim beserta riwayat sensornya, dan bisa '
-                    'dipasang admin ke akun lain.',
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
+                      onPressed: () => setState(() {
+                        bukaHapus = !bukaHapus;
+                        ketikEmail.clear();
+                        hapusMsg = null;
+                      }),
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Hapus akun'),
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  // Label di atas kolom (seperti web), bukan labelText: email panjang terpotong "…".
-                  Text(
-                    'Ketik "${user['email']}" untuk mengonfirmasi',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 6),
-                  TextField(
-                    inputFormatters: batas50,
-                    controller: ketikEmail,
-                    onChanged: (_) => setState(() {}),
-                    autocorrect: false,
-                    decoration: InputDecoration(hintText: '${user['email']}'),
-                  ),
-                  _msg(hapusMsg),
-                  const SizedBox(height: 8),
-                  FilledButton(
-                    style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
-                    onPressed: busy || ketikEmail.text.trim() != user['email'] ? null : hapusAkun,
-                    child: Text(busy ? 'Menghapus...' : 'Hapus akun saya'),
-                  ),
-                  TextButton(
-                    onPressed: () => setState(() {
-                      ketikEmail.clear();
-                      hapusMsg = null;
-                      _tileKey = UniqueKey();
-                    }),
-                    child: const Text('Batal'),
-                  ),
+                  if (bukaHapus) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: statusStyle['Bahaya']!.bg.withValues(alpha: .6),
+                        border: Border.all(color: statusColor('Bahaya').withValues(alpha: .3)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.report_outlined, color: statusColor('Bahaya')),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Zona berbahaya',
+                                style: TextStyle(color: statusColor('Bahaya'), fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'Menghapus akun ini bersifat permanen dan tidak dapat dibatalkan.',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Seluruh kolam dan notifikasi Anda ikut terhapus. Device yang terhubung tidak ikut '
+                            'terhapus, hanya kembali menjadi belum terklaim beserta riwayat sensornya, sehingga '
+                            'admin bisa memasangnya ke akun lain.',
+                            style: TextStyle(fontSize: 13, color: cMuted),
+                          ),
+                          const SizedBox(height: 12),
+                          // Label di atas kolom (seperti web), bukan labelText: email panjang terpotong "…".
+                          Text(
+                            'Ketik "${user['email']}" untuk mengonfirmasi',
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            inputFormatters: batas50,
+                            controller: ketikEmail,
+                            onChanged: (_) => setState(() {}),
+                            autocorrect: false,
+                            decoration: InputDecoration(hintText: '${user['email']}'),
+                          ),
+                          _msg(hapusMsg),
+                          const SizedBox(height: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
+                            onPressed: busy || ketikEmail.text.trim() != user['email'] ? null : hapusAkun,
+                            child: Text(busy ? 'Menghapus...' : 'Hapus akun saya'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

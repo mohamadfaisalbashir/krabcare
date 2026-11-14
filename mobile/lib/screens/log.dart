@@ -17,6 +17,14 @@ const _amonia = 'amonia';
 /// Interval tampil/unduh dalam menit; 0 = semua data apa adanya.
 const _intervals = {0: 'Semua', 15: '15 mnt', 30: '30 mnt', 60: '60 mnt'};
 
+/// Keterangan singkat di bawah judul, sama dengan DESKRIPSI di log-historis/page.tsx.
+const _deskripsi = {
+  'ph': 'Pembacaan sensor pH air kolam',
+  'temperature_c': 'Pembacaan sensor suhu air kolam',
+  'salinity_ppt': 'Pembacaan sensor salinitas air kolam',
+  _amonia: 'Hasil hitung risiko amonia (NH₃) dari data sensor',
+};
+
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
   @override
@@ -172,7 +180,13 @@ class _LogScreenState extends State<LogScreen> {
     String tgl(DateTime? d) => d == null ? 'Pilih' : tanggal(d);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Log Historis ${isAmonia ? 'Amonia' : paramUi[param]!.short}'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Log Historis ${isAmonia ? 'Amonia' : paramUi[param]!.short}'),
+            Text(_deskripsi[param] ?? '', style: TextStyle(fontSize: 12, color: cMuted)),
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Unduh data',
@@ -316,7 +330,7 @@ class _LogScreenState extends State<LogScreen> {
   );
 
   Widget _rentangWaktu(String Function(DateTime?) tgl) => Section(
-    title: 'Rentang waktu',
+    title: 'Rentang waktu (lihat data per hari atau per jam)',
     // Kuncup: header tinggal baris judul ini, tetap menempel; filternya tetap berlaku.
     trailing: IconButton(
       tooltip: ringkas ? 'Buka rentang waktu' : 'Tutup rentang waktu',
@@ -382,7 +396,7 @@ class _LogScreenState extends State<LogScreen> {
                   ],
                 ),
               const SizedBox(height: 10),
-              Text('Interval', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('Interval (jarak waktu antar data yang ditampilkan)', style: TextStyle(color: cMuted, fontSize: 12, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               SegmentedButton<int>(
                 showSelectedIcon: false,
