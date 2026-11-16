@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { CheckCheck, ChevronDown, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
@@ -307,8 +307,10 @@ export default function NotifikasiPage() {
   );
 }
 
-/** Pemilih jenis notifikasi. Indikatornya satu span yang bergeser, pola sama
- *  dengan ParamSwitch di RakDetail.tsx (Log), jadi tingginya tetap saat pindah. */
+/** Pemilih jenis notifikasi, indikatornya satu span yang bergeser seperti
+ *  ParamSwitch di RakDetail.tsx. Bedanya, label di sini tidak sama panjang
+ *  ("Kualitas Kolam"), jadi posisi dan lebar indikator diukur dari tombol yang
+ *  aktif, bukan dibagi rata. */
 function FilterSwitch({
   value,
   onChange,
@@ -316,18 +318,46 @@ function FilterSwitch({
   value: NotifFilter;
   onChange: (f: NotifFilter) => void;
 }) {
-  const index = FILTER_BUTTONS.findIndex((b) => b.id === value);
-  const n = FILTER_BUTTONS.length;
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [posisi, setPosisi] = useState<{ left: number; width: number } | null>(null);
+  // Animasi baru dinyalakan sesudah posisi awal tergambar, supaya indikator
+  // tidak meluncur dari kiri saat halaman dibuka.
+  const [animasi, setAnimasi] = useState(false);
+  useEffect(() => {
+    if (!posisi || animasi) return;
+    const id = requestAnimationFrame(() => setAnimasi(true));
+    return () => cancelAnimationFrame(id);
+  }, [posisi, animasi]);
+
+  useLayoutEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const ukur = () => {
+      const btn = track.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (btn) setPosisi({ left: btn.offsetLeft, width: btn.offsetWidth });
+    };
+    ukur();
+    // Lebar tombol berubah saat layar diputar atau font selesai dimuat.
+    const ro = new ResizeObserver(ukur);
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [value]);
+
   return (
     <div
+      ref={trackRef}
       role="tablist"
       aria-label="Jenis notifikasi"
       className="relative flex w-full rounded-lg bg-kaca/50 p-1 ring-1 ring-inset ring-kaca/70 sm:w-auto"
     >
       <span
         aria-hidden
-        className="absolute bottom-1 left-1 top-1 rounded-md bg-surface shadow-card transition-transform duration-300 ease-smooth motion-reduce:transition-none dark:bg-brand-100"
-        style={{ width: `calc((100% - 0.5rem) / ${n})`, transform: `translateX(${index * 100}%)` }}
+        className={clsx(
+          "absolute bottom-1 left-0 top-1 rounded-md bg-surface shadow-card dark:bg-brand-100",
+          animasi && "transition-[transform,width] duration-300 ease-smooth motion-reduce:transition-none",
+          !posisi && "opacity-0"
+        )}
+        style={posisi ? { width: posisi.width, transform: `translateX(${posisi.left}px)` } : undefined}
       />
       {FILTER_BUTTONS.map((btn) => {
         const active = btn.id === value;
@@ -338,9 +368,10 @@ function FilterSwitch({
             role="tab"
             aria-selected={active}
             onClick={() => onChange(btn.id)}
-            style={{ width: `${100 / n}%` }}
             className={clsx(
-              "relative z-10 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold transition-colors duration-200 sm:min-w-22 sm:px-3",
+              // flex-auto: tiap tombol selebar labelnya ditambah bagian sisa
+              // ruang yang sama, teks tetap di tengah tombolnya.
+              "relative z-10 flex-auto whitespace-nowrap rounded-md px-2.5 py-1.5 text-center text-xs font-semibold transition-colors duration-200 sm:px-3",
               active ? "text-aksen-kuat" : "text-muted hover:text-ink"
             )}
           >
