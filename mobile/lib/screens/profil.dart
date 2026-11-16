@@ -28,6 +28,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   bool busy = false;
   bool bukaNama = false, bukaSandi = false, bukaHapus = false;
   Msg? namaMsg, sandiMsg, hapusMsg;
+  final hapusKey = GlobalKey(); // kotak Zona berbahaya, tujuan gulir saat Hapus akun ditekan
 
   Future<void> simpanNama() async {
     setState(() {
@@ -209,17 +210,35 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     alignment: Alignment.centerLeft,
                     child: FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: statusColor('Bahaya')),
-                      onPressed: () => setState(() {
-                        bukaHapus = !bukaHapus;
-                        ketikEmail.clear();
-                        hapusMsg = null;
-                      }),
+                      onPressed: () {
+                        setState(() {
+                          bukaHapus = !bukaHapus;
+                          ketikEmail.clear();
+                          hapusMsg = null;
+                        });
+                        if (!bukaHapus) return;
+                        // Sama dengan Hapus Kolam di dashboard.dart: kotaknya baru ada
+                        // setelah rebuild, jadi gulir di frame berikutnya.
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final c = hapusKey.currentContext;
+                          if (c == null) return;
+                          Scrollable.ensureVisible(
+                            c,
+                            alignment: .5,
+                            duration: MediaQuery.of(context).disableAnimations
+                                ? Duration.zero
+                                : const Duration(milliseconds: 300),
+                            curve: Curves.easeOut,
+                          );
+                        });
+                      },
                       child: const Text('Hapus akun'),
                     ),
                   ),
                   if (bukaHapus) ...[
                     const SizedBox(height: 12),
                     Container(
+                      key: hapusKey,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: statusStyle['Bahaya']!.bg.withValues(alpha: .6),

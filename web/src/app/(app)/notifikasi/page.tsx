@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import { CheckCheck, ChevronDown, Trash2 } from "lucide-react";
 import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
@@ -50,6 +51,10 @@ export default function NotifikasiPage() {
   const [device, setDevice] = useState<number | "semua">("semua");
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Skeleton cuma untuk muatan pertama. Saat ganti filter daftar lama tetap
+  // tampil (diredupkan) sampai yang baru datang, supaya halaman tidak naik turun.
+  const sudahMuat = useRef(false);
+  const [berganti, setBerganti] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [deletingAll, setDeletingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,10 +84,14 @@ export default function NotifikasiPage() {
     let batal = false;
 
     function loadPertama(silent = false) {
-      if (!silent) setLoading(true);
+      if (!silent) {
+        if (sudahMuat.current) setBerganti(true);
+        else setLoading(true);
+      }
       return muatHalaman(0)
         .then((page) => {
           if (batal) return;
+          sudahMuat.current = true;
           setNotifications(page);
           setHasMore(page.length === PAGE);
         })
@@ -91,7 +100,9 @@ export default function NotifikasiPage() {
           setError(err instanceof Error ? err.message : "Gagal memuat notifikasi.");
         })
         .finally(() => {
-          if (!batal) setLoading(false);
+          if (batal) return;
+          setLoading(false);
+          setBerganti(false);
         });
     }
 
@@ -205,15 +216,9 @@ export default function NotifikasiPage() {
 
         {/* Filter bar & aksi hapus semua */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {FILTER_BUTTONS.map((btn) => (
-              <Chip key={btn.id} active={filter === btn.id} onClick={() => setFilter(btn.id)}>
-                {btn.label}
-              </Chip>
-            ))}
-          </div>
+          <FilterSwitch value={filter} onChange={setFilter} />
 
-          {!loading && notifications.length > 0 && (
+          {notifications.length > 0 && (
             <div className="flex items-center gap-1">
               <button
                 type="button"
@@ -268,7 +273,12 @@ export default function NotifikasiPage() {
           </div>
         )}
 
-        <Card className="p-0">
+        <Card
+          className={clsx(
+            "p-0 transition-opacity duration-200",
+            berganti && "pointer-events-none opacity-60"
+          )}
+        >
           {loading ? (
             <NotifikasiSkeleton />
           ) : notifications.length === 0 ? (
@@ -297,28 +307,48 @@ export default function NotifikasiPage() {
   );
 }
 
-/** Tombol filter bulat, dipakai baris jenis dan baris device. */
-function Chip({
-  active,
-  onClick,
-  children,
+/** Pemilih jenis notifikasi. Indikatornya satu span yang bergeser, pola sama
+ *  dengan ParamSwitch di RakDetail.tsx (Log), jadi tingginya tetap saat pindah. */
+function FilterSwitch({
+  value,
+  onChange,
 }: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  value: NotifFilter;
+  onChange: (f: NotifFilter) => void;
 }) {
+  const index = FILTER_BUTTONS.findIndex((b) => b.id === value);
+  const n = FILTER_BUTTONS.length;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-        active
-          ? "bg-brand-600 text-white shadow-xs"
-          : "border border-border bg-surface text-muted hover:bg-bg hover:text-ink"
-      }`}
+    <div
+      role="tablist"
+      aria-label="Jenis notifikasi"
+      className="relative flex w-full rounded-lg bg-kaca/50 p-1 ring-1 ring-inset ring-kaca/70 sm:w-auto"
     >
-      {children}
-    </button>
+      <span
+        aria-hidden
+        className="absolute bottom-1 left-1 top-1 rounded-md bg-surface shadow-card transition-transform duration-300 ease-smooth motion-reduce:transition-none dark:bg-brand-100"
+        style={{ width: `calc((100% - 0.5rem) / ${n})`, transform: `translateX(${index * 100}%)` }}
+      />
+      {FILTER_BUTTONS.map((btn) => {
+        const active = btn.id === value;
+        return (
+          <button
+            key={btn.id}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(btn.id)}
+            style={{ width: `${100 / n}%` }}
+            className={clsx(
+              "relative z-10 whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold transition-colors duration-200 sm:min-w-22 sm:px-3",
+              active ? "text-aksen-kuat" : "text-muted hover:text-ink"
+            )}
+          >
+            {btn.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

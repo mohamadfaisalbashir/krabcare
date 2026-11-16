@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import {
   AlertOctagon,
@@ -39,6 +39,17 @@ export default function ProfilPage() {
   const [ketikanHapus, setKetikanHapus] = useState("");
   const [menghapusAkun, setMenghapusAkun] = useState(false);
   const [hapusMessage, setHapusMessage] = useState<Message>(null);
+  const hapusRef = useRef<HTMLDivElement>(null);
+
+  // Sama dengan hapus kolam (RakDetail.tsx): Zona berbahaya ada paling bawah,
+  // jadi gulir ke sana begitu dibuka.
+  useEffect(() => {
+    if (!bukaHapus) return;
+    hapusRef.current?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "center",
+    });
+  }, [bukaHapus]);
   // Satu state pesan per form, supaya pesan muncul di form yang disubmit.
   const [namaMessage, setNamaMessage] = useState<Message>(null);
   const [passwordMessage, setPasswordMessage] = useState<Message>(null);
@@ -339,7 +350,10 @@ export default function ProfilPage() {
             </button>
 
             {bukaHapus && (
-              <div className="mt-4 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg/60 p-5 sm:max-w-2xl">
+              <div
+                ref={hapusRef}
+                className="mt-4 rounded-lg border border-status-bahaya/30 bg-status-bahayaBg/60 p-5 sm:max-w-2xl"
+              >
                 <div className="mb-3 flex items-center gap-2.5">
                   <AlertOctagon className="h-5 w-5 text-status-bahaya" />
                   <h3 className="font-display text-base font-semibold text-status-bahaya">

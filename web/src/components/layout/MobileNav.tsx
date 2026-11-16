@@ -28,34 +28,39 @@ export default function MobileNav() {
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
   const unread = useUnreadCount();
+  const index = navItems.findIndex(({ href }) => isNavActive(pathname, href));
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigasi utama"
     >
-      {navItems.map(({ href, label, icon: Icon }) => {
-        const active = isNavActive(pathname, href);
+      {/* Satu latar + bar atas yang bergeser antar tab, pola sama dengan
+          ParamSwitch di RakDetail.tsx. Latar per tab berganti seketika dan
+          terlihat patah saat pindah halaman. */}
+      <span
+        aria-hidden
+        className={clsx(
+          "absolute inset-y-0 left-0 bg-brand-50 transition-transform duration-300 ease-smooth motion-reduce:transition-none",
+          index < 0 && "opacity-0"
+        )}
+        style={{ width: `${100 / navItems.length}%`, transform: `translateX(${Math.max(0, index) * 100}%)` }}
+      >
+        <span className="absolute left-1/2 top-0 h-1 w-8 -translate-x-1/2 rounded-full bg-brand-500" />
+      </span>
+      {navItems.map(({ href, label, icon: Icon }, i) => {
+        const active = i === index;
         return (
           <Link
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
             className={clsx(
-              "relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
-              "transition-colors duration-100",
-              active ? "bg-brand-50 text-aksen-kuat" : "text-muted"
+              // basis-0 + min-w-0: lebar tiap tab sama persis, tidak ikut panjang label.
+              "relative flex min-w-0 flex-1 basis-0 flex-col items-center gap-1 py-2.5 text-[11px] font-medium",
+              "transition-colors duration-300",
+              active ? "text-aksen-kuat" : "text-muted"
             )}
           >
-            {/* Bar bawah horizontal, jadi aksennya di sisi atas tab dan tumbuh
-                melebar (scale-x), bukan di kiri seperti sidebar. */}
-            <span
-              aria-hidden
-              className={clsx(
-                "absolute left-1/2 top-0 h-1 w-8 -translate-x-1/2 rounded-full bg-brand-500",
-                "transition duration-200 ease-out motion-reduce:transition-none",
-                active ? "scale-x-100 opacity-100" : "scale-x-0 opacity-0"
-              )}
-            />
             <span className="relative">
               <Icon className="h-5 w-5" strokeWidth={2.2} />
               {href === "/notifikasi" && !!unread && (
