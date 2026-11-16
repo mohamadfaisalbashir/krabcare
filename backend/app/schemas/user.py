@@ -1,9 +1,10 @@
 """Schema auth & profil user."""
 
+import re
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, BeforeValidator, Field, StringConstraints
+from pydantic import AfterValidator, BaseModel, BeforeValidator, Field, StringConstraints
 
 from app.models.enums import UserRole
 
@@ -42,9 +43,25 @@ Email = Annotated[
 ]
 
 
+def _cek_sandi(nilai: str) -> str:
+    if not any(c.isupper() for c in nilai) or not re.search(r"[^A-Za-z0-9\s]", nilai):
+        raise ValueError("Kata sandi harus berisi huruf besar dan simbol.")
+    return nilai
+
+
+#: Aturan kata sandi baru (daftar, ubah, reset). Login tidak memakainya supaya
+#: akun lama dengan sandi lemah tetap bisa masuk. Sama dengan _cekSandi di
+#: mobile/lib/screens/auth.dart.
+Sandi = Annotated[
+    str,
+    StringConstraints(min_length=8, max_length=MAKS_INPUT),
+    AfterValidator(_cek_sandi),
+]
+
+
 class UserRegisterIn(BaseModel):
     email: Email
-    password: str = Field(min_length=8, max_length=MAKS_INPUT)
+    password: Sandi
     nama: str = Field(min_length=1, max_length=MAKS_INPUT)
 
 
@@ -74,7 +91,7 @@ class UserProfileUpdateIn(BaseModel):
 
 class PasswordChangeIn(BaseModel):
     old_password: str = Field(max_length=MAKS_INPUT)
-    new_password: str = Field(min_length=8, max_length=MAKS_INPUT)
+    new_password: Sandi
 
 
 class ForgotPasswordIn(BaseModel):
@@ -91,4 +108,4 @@ class ResendVerificationIn(BaseModel):
 
 class ResetPasswordIn(BaseModel):
     token: str = Field(max_length=200)
-    new_password: str = Field(min_length=8, max_length=MAKS_INPUT)
+    new_password: Sandi

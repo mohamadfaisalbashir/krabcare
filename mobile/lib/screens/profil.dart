@@ -145,20 +145,6 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
           ),
           const SizedBox(height: 12),
-          // Mode terang/gelap, diingat per perangkat (setGelap di main.dart).
-          Section(
-            title: 'Tampilan',
-            child: SegmentedButton<bool>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: false, label: Text('Terang'), icon: Icon(Icons.light_mode_outlined)),
-                ButtonSegment(value: true, label: Text('Gelap'), icon: Icon(Icons.dark_mode_outlined)),
-              ],
-              selected: {gelap},
-              onSelectionChanged: (s) => setGelap(s.first),
-            ),
-          ),
-          const SizedBox(height: 12),
           // Terlipat sampai dibuka, pola sama dengan "Rentang waktu" di log.dart.
           Section(
             title: 'Ubah kata sandi',
@@ -194,6 +180,20 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       ),
                     ],
                   ),
+          ),
+          const SizedBox(height: 12),
+          // Mode terang/gelap, diingat per perangkat (setGelap di main.dart).
+          Section(
+            title: 'Tampilan',
+            child: SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(value: false, label: Text('Terang'), icon: Icon(Icons.light_mode_outlined)),
+                ButtonSegment(value: true, label: Text('Gelap'), icon: Icon(Icons.dark_mode_outlined)),
+              ],
+              selected: {gelap},
+              onSelectionChanged: (s) => setGelap(s.first),
+            ),
           ),
           // Backend menolak hapus akun admin (403), jadi tidak ditampilkan.
           // Pola sama dengan hapus kolam di detail kolam (_pengaturan di dashboard.dart).

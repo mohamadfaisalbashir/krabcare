@@ -219,31 +219,6 @@ export default function ProfilPage() {
           )}
         </Card>
 
-        {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
-            (globals.css); pilihannya diingat per browser. */}
-        <Card>
-          <div className="mb-4 flex items-center gap-2.5">
-            <SunMoon className="h-5 w-5 text-brand-500" />
-            <h3 className="font-display text-base font-semibold text-ink">Tampilan</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
-            {[
-              { gelap: false, label: "Terang" },
-              { gelap: true, label: "Gelap" },
-            ].map((opsi) => (
-              <button
-                key={opsi.label}
-                type="button"
-                onClick={() => pilihTema(opsi.gelap)}
-                aria-pressed={temaGelap === opsi.gelap}
-                className={temaGelap === opsi.gelap ? "btn-primary" : "btn-ghost"}
-              >
-                {opsi.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-
         {/* Terlipat secara default, pola sama dengan "Unduh data mentah". */}
         <Card>
           {/* Seluruh baris judul jadi tombol, bukan hanya panahnya. */}
@@ -306,6 +281,31 @@ export default function ProfilPage() {
               </Button>
             </form>
           )}
+        </Card>
+
+        {/* Mode terang/gelap. Kelas `dark` di <html> yang mengganti warnanya
+            (globals.css); pilihannya diingat per browser. */}
+        <Card>
+          <div className="mb-4 flex items-center gap-2.5">
+            <SunMoon className="h-5 w-5 text-brand-500" />
+            <h3 className="font-display text-base font-semibold text-ink">Tampilan</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:max-w-xs">
+            {[
+              { gelap: false, label: "Terang" },
+              { gelap: true, label: "Gelap" },
+            ].map((opsi) => (
+              <button
+                key={opsi.label}
+                type="button"
+                onClick={() => pilihTema(opsi.gelap)}
+                aria-pressed={temaGelap === opsi.gelap}
+                className={temaGelap === opsi.gelap ? "btn-primary" : "btn-ghost"}
+              >
+                {opsi.label}
+              </button>
+            ))}
+          </div>
         </Card>
 
         {/* Pola sama dengan hapus kolam di detail kolam: tombol merah membuka

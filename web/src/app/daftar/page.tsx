@@ -123,7 +123,7 @@ export default function DaftarPage() {
           <Input
             label="Kata sandi"
             type="password"
-            placeholder="Minimal 8 karakter"
+            placeholder="Minimal 8 karakter, huruf besar dan simbol"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

@@ -75,8 +75,8 @@ function pesanError(detail: unknown, status: number): string {
  */
 const PESAN_FIELD: Record<string, string> = {
   email: "Email tidak valid. Tulis lengkap dengan domainnya, contoh: nama@email.com",
-  password: "Kata sandi minimal 8 karakter.",
-  new_password: "Kata sandi baru minimal 8 karakter.",
+  password: "Kata sandi minimal 8 karakter, berisi huruf besar dan simbol.",
+  new_password: "Kata sandi baru minimal 8 karakter, berisi huruf besar dan simbol.",
   nama: "Nama tidak boleh kosong.",
   device_code: "Kode device tidak boleh kosong.",
 };

@@ -13,7 +13,13 @@ String? _cekEmail(String? v) => _emailRe.hasMatch(v?.trim() ?? '')
     ? null
     : 'Email tidak valid. Tulis lengkap dengan domainnya, contoh: nama@email.com';
 
-String? _cekSandi(String? v) => (v?.length ?? 0) < 8 ? 'Kata sandi minimal 8 karakter.' : null;
+// Sama dengan aturan Sandi di backend/app/schemas/user.py.
+String? _cekSandi(String? v) {
+  final s = v ?? '';
+  return s.length < 8 || !s.contains(RegExp(r'[A-Z]')) || !s.contains(RegExp(r'[^A-Za-z0-9\s]'))
+      ? 'Kata sandi minimal 8 karakter, berisi huruf besar dan simbol.'
+      : null;
+}
 
 /// Kerangka layar auth: foto kepiting di atas, formulir di bawah.
 class _AuthScaffold extends StatelessWidget {
@@ -286,7 +292,7 @@ class _DaftarScreenState extends State<DaftarScreen> {
               const SizedBox(height: 12),
               PasswordField(
                 controller: password,
-                label: 'Kata sandi (min. 8 karakter)',
+                label: 'Kata sandi (min. 8, huruf besar dan simbol)',
                 validator: _cekSandi,
               ),
             ],
