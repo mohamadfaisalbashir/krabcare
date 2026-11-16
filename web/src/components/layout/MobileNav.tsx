@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, History, BellRing, UserRound, Cpu } from "lucide-react";
@@ -28,7 +29,19 @@ export default function MobileNav() {
       ? [ADMIN_NAV_ITEM, ...NAV.filter((item) => item.href === "/profil")]
       : NAV;
   const unread = useUnreadCount();
-  const index = navItems.findIndex(({ href }) => isNavActive(pathname, href));
+  // Menu yang baru diketuk langsung disorot, tanpa menunggu halamannya selesai
+  // dimuat (bisa ratusan ms, terasa seperti ketukannya tidak masuk). Dibuang
+  // begitu pathname berubah (pola "adjust state during render" React), supaya
+  // tombol Back tidak memunculkan sorotan lama.
+  const [tujuan, setTujuan] = useState<string | null>(null);
+  const [pathnameLalu, setPathnameLalu] = useState(pathname);
+  if (pathname !== pathnameLalu) {
+    setPathnameLalu(pathname);
+    setTujuan(null);
+  }
+  const index = navItems.findIndex(({ href }) =>
+    tujuan ? href === tujuan : isNavActive(pathname, href)
+  );
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-20 flex border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] lg:hidden"
@@ -53,6 +66,7 @@ export default function MobileNav() {
           <Link
             key={href}
             href={href}
+            onClick={() => setTujuan(href)}
             aria-current={active ? "page" : undefined}
             className={clsx(
               // basis-0 + min-w-0: lebar tiap tab sama persis, tidak ikut panjang label.
