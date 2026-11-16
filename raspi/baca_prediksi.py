@@ -7,6 +7,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from edge_pipeline import EdgePipeline
+from validasi_input import semua_kosong, validasi_reading
 
 # ---------- Konfigurasi ----------
 PORT = '/dev/ttyAMA0'
@@ -222,6 +223,16 @@ def main():
             reading, waktu = buat_reading(data)
         except KeyError as e:
             print(f"[WARNING] Field yang dibutuhkan tidak lengkap ({e}), data dilewati: {data}")
+            continue
+
+        # Validasi rentang fisik (validasi_input.py). Nilai rusak, mis. kode
+        # error DS18B20 -127/85 atau pH > 14, diganti None sebelum menyentuh
+        # CSV, cloud, maupun buffer forecast, supaya tidak ikut membentuk tren.
+        reading, alasan = validasi_reading(reading)
+        for a in alasan:
+            print(f"[INVALID] {reading['device_code']}: {a} -> dikirim sebagai null")
+        if semua_kosong(reading):
+            print(f"[SKIP] {reading['device_code']}: ketiga parameter tidak valid, baris dilewati")
             continue
 
         # Simpan ke CSV untuk keperluan dataset ML (rotasi per jam), SEKALIGUS

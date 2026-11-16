@@ -7,6 +7,7 @@ import { ArrowLeft, MailCheck } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import PasswordStrength from "@/components/ui/PasswordStrength";
 import { api } from "@/lib/api";
 
 export default function DaftarPage() {
@@ -130,6 +131,7 @@ export default function DaftarPage() {
             minLength={8}
             autoComplete="new-password"
           />
+          <PasswordStrength value={password} />
 
           {error && (
             <p className="rounded-lg bg-status-bahayaBg px-3.5 py-2.5 text-sm text-status-bahaya">

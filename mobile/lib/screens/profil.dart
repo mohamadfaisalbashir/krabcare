@@ -163,6 +163,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       PasswordField(controller: lama, label: 'Kata sandi lama'),
                       const SizedBox(height: 10),
                       PasswordField(controller: baru, label: 'Kata sandi baru'),
+                      KekuatanSandi(controller: baru),
                       const SizedBox(height: 10),
                       PasswordField(controller: konfirmasi, label: 'Konfirmasi kata sandi baru'),
                       _msg(sandiMsg),

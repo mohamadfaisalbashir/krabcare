@@ -7,6 +7,7 @@ import { ArrowLeft, ShieldCheck } from "lucide-react";
 import Logo from "@/components/layout/Logo";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import PasswordStrength from "@/components/ui/PasswordStrength";
 import { api } from "@/lib/api";
 
 // Link reset dari email berbentuk {FRONTEND_RESET_PASSWORD_URL}?token=<raw>
@@ -79,6 +80,7 @@ function ResetPasswordForm() {
         minLength={8}
         autoComplete="new-password"
       />
+      <PasswordStrength value={password} />
       <Input
         label="Konfirmasi kata sandi baru"
         type="password"

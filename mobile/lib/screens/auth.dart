@@ -295,6 +295,7 @@ class _DaftarScreenState extends State<DaftarScreen> {
                 label: 'Kata sandi (min. 8, huruf besar dan simbol)',
                 validator: _cekSandi,
               ),
+              KekuatanSandi(controller: password),
             ],
           ),
         ),
@@ -540,6 +541,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 child: Column(
                   children: [
                     PasswordField(controller: baru, label: 'Kata sandi baru', validator: _cekSandi),
+                    KekuatanSandi(controller: baru),
                     const SizedBox(height: 12),
                     PasswordField(
                       controller: konfirmasi,

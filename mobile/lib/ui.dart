@@ -317,10 +317,7 @@ class HistoryChart extends StatelessWidget {
                 maxIncluded: false,
                 getTitlesWidget: (v, meta) => SideTitleWidget(
                   meta: meta,
-                  child: Text(
-                    numStr(double.parse(v.toStringAsFixed(2))),
-                    style: TextStyle(fontSize: 10, color: cInk),
-                  ),
+                  child: Text(numStr(double.parse(v.toStringAsFixed(2))), style: TextStyle(fontSize: 10, color: cInk)),
                 ),
               ),
             ),
@@ -417,5 +414,77 @@ class _PasswordFieldState extends State<PasswordField> {
         onPressed: () => setState(() => hide = !hide),
       ),
     ),
+  );
+}
+
+/// Contoh sandi + bar Lemah/Kuat/Sangat kuat di bawah kolom sandi baru.
+/// Lemah = belum lolos aturan backend (schemas/user.py), Kuat = lolos,
+/// Sangat kuat = lolos + panjang 12, ada angka dan huruf kecil.
+/// Sama dengan web/src/components/ui/PasswordStrength.tsx.
+class KekuatanSandi extends StatelessWidget {
+  const KekuatanSandi({super.key, required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: controller,
+    builder: (context, _) {
+      final s = controller.text;
+      final muted = TextStyle(fontSize: 12, color: Theme.of(context).hintColor);
+      if (s.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text('Contoh kata sandi: Kepiting#2026', style: muted),
+        );
+      }
+      final kurang = [
+        if (s.length < 8) 'minimal 8 karakter',
+        if (!s.contains(RegExp(r'[A-Z]'))) 'huruf besar',
+        if (!s.contains(RegExp(r'[^A-Za-z0-9\s]'))) 'simbol',
+      ];
+      final level = kurang.isNotEmpty
+          ? 1
+          : s.length >= 12 && s.contains(RegExp(r'\d')) && s.contains(RegExp(r'[a-z]'))
+          ? 3
+          : 2;
+      final (label, status) = const [('Lemah', 'Bahaya'), ('Kuat', 'Waspada'), ('Sangat kuat', 'Aman')][level - 1];
+      final warna = statusColor(status);
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                for (var i = 1; i <= 3; i++)
+                  Expanded(
+                    child: Container(
+                      height: 5,
+                      margin: EdgeInsets.only(right: i < 3 ? 4 : 0),
+                      decoration: BoxDecoration(
+                        color: i <= level ? warna : Theme.of(context).dividerColor,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text.rich(
+              TextSpan(
+                style: muted,
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: TextStyle(color: warna, fontWeight: FontWeight.w700),
+                  ),
+                  if (kurang.isNotEmpty) TextSpan(text: '. Masih perlu ${kurang.join(', ')}.'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    },
   );
 }

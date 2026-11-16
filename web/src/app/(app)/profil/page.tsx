@@ -16,6 +16,7 @@ import Topbar from "@/components/layout/Topbar";
 import Card from "@/components/ui/Card";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
+import PasswordStrength from "@/components/ui/PasswordStrength";
 import Skeleton from "@/components/ui/Skeleton";
 import { api, confirmLogout, logout } from "@/lib/api";
 import { setUser, useUser } from "@/lib/user-store";
@@ -260,6 +261,7 @@ export default function ProfilPage() {
                 required
                 minLength={8}
               />
+              <PasswordStrength value={newPassword} />
               <Input
                 label="Konfirmasi kata sandi baru"
                 type="password"
