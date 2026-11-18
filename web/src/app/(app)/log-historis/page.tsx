@@ -11,6 +11,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import ExportPanel from "@/components/log/ExportPanel";
 import { AmmoniaRiskLog, SensorReading, Sensor, StatusLabel } from "@/lib/types";
 import { PARAM_KEYS, PARAM_UI, ParamKey, statusOf, formatValue } from "@/lib/parameter";
+import { PARAM_EMOJI } from "@/lib/param-icons";
 import {
   AMONIA_UI,
   LOG_PARAM_AMONIA,
@@ -524,6 +525,7 @@ function LogHistorisView() {
                 active={param === value}
                 onClick={() => handleParamChange(value)}
               >
+                <span aria-hidden className="mr-1">{PARAM_EMOJI[value]}</span>
                 {label}
               </FilterPill>
             ))}

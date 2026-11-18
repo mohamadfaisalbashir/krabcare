@@ -4,8 +4,8 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
-from app.models import Device, SensorReading
-from app.schemas.sensor_reading import SensorReadingIn, SkippedDuplicateOut
+from app.models import Device, DeviceRestart, SensorReading
+from app.schemas.sensor_reading import RestartIn, SensorReadingIn, SkippedDuplicateOut
 from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
 
 
@@ -58,3 +58,26 @@ async def ingest_readings(
         await db.commit()
 
     return inserted, unknown, skipped_duplicates
+
+
+async def ingest_restart(db: AsyncSession, payload: RestartIn) -> tuple[Device | None, bool]:
+    """Catat satu restart ESP. Return (device, baru); device None = tidak dikenal.
+
+    `baru` False berarti laporan yang sama dikirim ulang (retry), jangan
+    dinotifikasi dua kali.
+    """
+    device = (await find_devices_by_code(db, [payload.device_code])).get(payload.device_code)
+    if device is None:
+        return None, False
+    inserted, _ = await insert_skip_duplicates(
+        db,
+        DeviceRestart,
+        [{"device_id": device.id, "time": payload.time, "reset_reason": payload.reset_reason}],
+        [DeviceRestart.device_id, DeviceRestart.time],
+    )
+    if inserted:
+        await db.execute(
+            update(Device).where(Device.id == device.id).values(last_restart_at=func.now())
+        )
+    await db.commit()
+    return device, bool(inserted)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PlugZap, Pencil, Trash2, Clock3, X, Wifi, WifiOff } from "lucide-react";
+import { PlugZap, Pencil, Trash2, Clock3, X } from "lucide-react";
 import clsx from "clsx";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
@@ -22,12 +22,12 @@ import {
   AmmoniaRisk,
   SensorStatus,
   StatusLabel,
-  categoryToLabel,
 } from "@/lib/types";
-import { DISCLAIMER as AMONIA_DISCLAIMER } from "@/lib/ammonia";
-import { ParamKey, PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
+import { DISCLAIMER as AMONIA_DISCLAIMER, riskToStatus } from "@/lib/ammonia";
+import { ParamKey, PARAM_KEYS, PARAM_UI, lantai5Menit, statusKolam } from "@/lib/parameter";
+import { KONEKSI_UI } from "@/components/dashboard/PondCard";
 import { api } from "@/lib/api";
-import { formatWaktu, isOnline } from "@/lib/tanggal";
+import { formatWaktu, statusKoneksi } from "@/lib/tanggal";
 
 // Judul & catatan tiap bagian, ditulis sekali. biar saat ganti posisi sama
 const SECTION = {
@@ -49,8 +49,12 @@ export default function RakDetail({
   onClose,
   onChanged,
   onDataUpdate,
+  restartAt,
 }: {
   kolam: Kolam;
+  /** last_restart_at device kolam ini. Dari polling dashboard, karena daftar
+   *  device di sini cuma diambil sekali. */
+  restartAt?: string | null;
   onClose: () => void;
   // Dipanggil setelah nama diubah atau rak dihapus, supaya daftar kartu di dashboard refresh
   onChanged: () => void;
@@ -69,7 +73,6 @@ export default function RakDetail({
 
   // Satu rak = satu device. Backend menolak klaim kedua dengan 409.
   const [device, setDevice] = useState<Device | null>(null);
-  const [quality, setQuality] = useState<LatestQuality | null>(null);
   const [reading, setReading] = useState<SensorReading | null>(null);
   const [history, setHistory] = useState<SensorReading[]>([]);
   const [predictions, setPredictions] = useState<FuzzyPrediction[]>([]);
@@ -120,7 +123,6 @@ export default function RakDetail({
 
   useEffect(() => {
     if (!device) {
-      setQuality(null);
       setReading(null);
       setHistory([]);
       setPredictions([]);
@@ -134,22 +136,26 @@ export default function RakDetail({
 
     async function loadDeviceData(deviceId: number) {
       try {
-        const [qualityList, readings, predictionList, ammoniaList, sensorStatus] =
+        const [qualityList, terbaru, readings, predictionList, ammoniaList, sensorStatus] =
           await Promise.all([
             api.getLatestQuality(deviceId),
-            api.getReadings({ device_id: deviceId, limit: 100 }),
+            // Bacaan terbaru diambil terpisah: versi per 5 menit memilih bacaan
+            // paling awal tiap ember, jadi bisa telat sampai 5 menit.
+            api.getReadings({ device_id: deviceId, limit: 1 }),
+            // Grafik pemantauan: satu titik per 5 menit, 100 titik ≈ 8 jam.
+            api.getReadings({ device_id: deviceId, limit: 100, interval_minutes: 5 }),
             api.getPredictions(deviceId),
             api.getAmmoniaRisk(deviceId),
             // Label tambahan saja: kalau gagal, data utama tetap tampil tanpa label.
             api.getSensorStatus(deviceId).catch((): SensorStatus => ({})),
           ]);
         const quality = qualityList[0] ?? null;
-        const reading = readings[0] ?? null;
+        const reading = terbaru[0] ?? null;
         const ammonia = ammoniaList[0] ?? null;
-        setQuality(quality);
         setReading(reading);
         // Backend mengurutkan terbaru dulu (time DESC)
-        setHistory([...readings].reverse());
+        // Dibulatkan ke 5 menit supaya label sumbu grafik rapi (16.00, 16.05, ...).
+        setHistory([...readings].reverse().map((r) => ({ ...r, time: lantai5Menit(r.time) })));
         setPredictions(predictionList[0]?.predictions ?? []);
         setAmmonia(ammonia);
         setSensorStatus(sensorStatus);
@@ -205,16 +211,19 @@ export default function RakDetail({
     }
   }
 
-  const statusLabel: StatusLabel | null = quality?.classification
-    ? categoryToLabel(quality.classification.quality_category)
-    : null;
+  // Terburuk dari pH, suhu, salinitas, amonia; sama dengan kartu kolam.
+  const statusLabel: StatusLabel | null = statusKolam(
+    reading,
+    riskToStatus(ammonia?.current?.risk_level),
+    sensorStatus
+  );
 
   const updated = reading
     ? formatWaktu(reading.time)
     : null;
 
   // Dihitung ulang tiap polling 60 detik, karena setReading memicu render.
-  const online = isOnline(reading?.received_at);
+  const koneksi = KONEKSI_UI[statusKoneksi(reading?.received_at, restartAt)];
 
   return (
     <div className="glass overflow-hidden">
@@ -270,10 +279,10 @@ export default function RakDetail({
             {/* Ditahan selama bacaan pertama belum sampai, supaya tidak sempat berkedip "Offline". */}
             {device && !dataLoading && (
               <DetailPill
-                icon={online ? Wifi : WifiOff}
-                iconClassName={online ? "text-status-aman" : "text-status-bahaya"}
+                icon={koneksi.icon}
+                iconClassName={clsx(koneksi.color, koneksi.spin && "motion-safe:animate-spin")}
               >
-                {online ? "Online" : "Offline"}
+                {koneksi.label}
               </DetailPill>
             )}
             {updated && <DetailPill icon={Clock3}>Pembacaan terakhir {updated}</DetailPill>}

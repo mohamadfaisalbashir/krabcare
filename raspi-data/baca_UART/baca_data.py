@@ -2,6 +2,7 @@ import serial
 import json
 import csv
 import os
+import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -9,6 +10,10 @@ from zoneinfo import ZoneInfo
 PORT = '/dev/ttyAMA0'
 BAUDRATE = 115200
 TIMEZONE = ZoneInfo("Asia/Jakarta")  # WIB (UTC+7)
+
+# ---------- Laporan restart ESP ke cloud ----------
+CLOUD_URL_RESTART = os.environ.get("CLOUD_URL_RESTART", "https://api.krabcare.com/api/v1/ingest/restart")
+GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "")
 
 # ---------- Konfigurasi Penyimpanan Dataset (per jam) ----------
 OUTPUT_DIR = "/home/pi/TA_Kepiting/data_kualitas_air"   # sesuaikan path sesuai kebutuhan
@@ -38,10 +43,32 @@ def buat_reading(data: dict) -> dict:
     return {
         "device_code": dapatkan_device_code(data.get("id", "UNKNOWN")),
         "time": waktu_sekarang,
-        "ph": data["ph"],
-        "temperature_c": data["suhu"],
-        "salinity_ppt": data["salinitas"],
+        # Sensor yang gagal membaca tidak mengirim key-nya, mis.
+        # {"id": ..., "suhu": 28.4, "salinitas": 19.2} saat probe pH error.
+        "ph": data.get("ph"),
+        "temperature_c": data.get("suhu"),
+        "salinity_ppt": data.get("salinitas"),
     }
+
+
+def kirim_restart(data: dict):
+    """ESP mengirim {"id": ..., "event": "boot", "reset_reason": "WDT"} sekali saat boot.
+
+    ponytail: langsung POST tanpa buffer. Laporan restart yang baru terkirim
+    belasan menit kemudian sudah tidak berguna untuk status dashboard.
+    """
+    payload = {
+        "device_code": dapatkan_device_code(data.get("id", "UNKNOWN")),
+        "time": datetime.now(TIMEZONE).isoformat(timespec="seconds"),
+        "reset_reason": data.get("reset_reason"),
+    }
+    try:
+        resp = requests.post(
+            CLOUD_URL_RESTART, json=payload, headers={"X-API-Key": GATEWAY_API_KEY}, timeout=5
+        )
+        print(f"[RESTART] {payload['device_code']} -> HTTP {resp.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"[WARNING] Gagal kirim laporan restart {payload['device_code']}: {e}")
 
 
 def dapatkan_nama_file_jam(waktu: datetime) -> str:
@@ -86,6 +113,10 @@ def main():
             data = json.loads(line)
         except json.JSONDecodeError:
             print(f"[WARNING] Data tidak valid, dilewati: {line}")
+            continue
+
+        if data.get("event") in ("boot", "restart"):
+            kirim_restart(data)
             continue
 
         try:

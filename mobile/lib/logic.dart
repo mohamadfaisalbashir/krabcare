@@ -29,6 +29,29 @@ String statusOf(String param, num value) {
   return 'Aman';
 }
 
+const _peringkat = {'Aman': 0, 'Waspada': 1, 'Bahaya': 2};
+
+/// Parameter ini tampil "Error": bacaan ada tapi nilainya kosong (sensor tidak
+/// mengirim key-nya), atau backend menandai sensornya error. Kolam yang belum
+/// punya bacaan sama sekali bukan error. Cermin nilaiError di web.
+bool nilaiError(Json? reading, Json? sensor, String p) =>
+    reading != null && (reading[p] == null || sensor?[p] != null);
+
+/// Amonia dihitung edge dari ketiga parameter, jadi ikut error kalau salah satunya error.
+bool amoniaError(Json? reading, Json? sensor) => paramKeys.any((p) => nilaiError(reading, sensor, p));
+
+/// Status kolam = terburuk dari pH, suhu, salinitas, dan amonia. Parameter yang
+/// kosong atau error dilewati; null kalau tidak ada yang tersisa. Cermin statusKolam di web.
+String? statusKolam(Json? reading, String? statusAmonia, [Json? sensor]) {
+  final semua = [
+    for (final p in paramKeys)
+      if (reading?[p] != null && sensor?[p] == null) statusOf(p, reading![p]),
+    if (!amoniaError(reading, sensor)) ?statusAmonia,
+  ];
+  if (semua.isEmpty) return null;
+  return semua.reduce((a, b) => _peringkat[b]! > _peringkat[a]! ? b : a);
+}
+
 /// Angka mentah tanpa ".0" di belakang: 29.0 → "29", 7.5 → "7.5" (sama dengan String(n) di JS).
 String numStr(num v) => v == v.truncate() ? v.truncate().toString() : v.toString();
 
@@ -127,6 +150,31 @@ const onlineMaksMenit = 3;
 bool isOnline(String? receivedAt) =>
     receivedAt != null &&
     DateTime.now().difference(DateTime.parse(receivedAt)) <= const Duration(minutes: onlineMaksMenit);
+
+/// 'restarting' selama ESP baru melapor restart (paling lama onlineMaksMenit)
+/// dan belum ada bacaan yang masuk sesudahnya; selain itu 'online'/'offline'.
+/// Kedua jam dari server. Samakan dengan statusKoneksi di web/src/lib/tanggal.ts.
+String statusKoneksi(String? receivedAt, String? restartAt, {DateTime? now}) {
+  now ??= DateTime.now();
+  if (restartAt != null) {
+    final restart = DateTime.parse(restartAt);
+    final bacaanSesudahnya = receivedAt != null && !DateTime.parse(receivedAt).isBefore(restart);
+    if (!bacaanSesudahnya && now.difference(restart) <= const Duration(minutes: onlineMaksMenit)) {
+      return 'restarting';
+    }
+  }
+  return receivedAt != null &&
+          now.difference(DateTime.parse(receivedAt)) <= const Duration(minutes: onlineMaksMenit)
+      ? 'online'
+      : 'offline';
+}
+
+/// Waktu dibulatkan ke bawah ke kelipatan 5 menit, supaya label grafik rapi.
+String lantai5Menit(String iso) {
+  const ms = 5 * 60 * 1000;
+  final t = DateTime.parse(iso).millisecondsSinceEpoch;
+  return DateTime.fromMillisecondsSinceEpoch(t ~/ ms * ms, isUtc: true).toIso8601String();
+}
 
 String formatWaktuDetik(String iso) => '${formatWaktu(iso)}:${_p(wib(iso).second)}';
 

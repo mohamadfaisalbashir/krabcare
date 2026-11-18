@@ -32,8 +32,9 @@ import {
   SensorReading,
   SensorStatus,
   StatusLabel,
-  categoryToLabel,
 } from "@/lib/types";
+import { riskToStatus } from "@/lib/ammonia";
+import { statusKolam } from "@/lib/parameter";
 import { api } from "@/lib/api";
 import { useUser } from "@/lib/user-store";
 
@@ -55,10 +56,10 @@ const restrictToGrid: Modifier = ({ transform, draggingNodeRect: card, container
   };
 };
 
-// Label status UI dari klasifikasi fuzzy terbaru. `null` = device kolam ini belum pernah mengirim data. 
+// Status kolam = terburuk dari pH, suhu, salinitas, amonia (sama dengan PondCard).
+// `null` = device kolam ini belum pernah mengirim data.
 function getStatusLabel(item: KolamDashboard): StatusLabel | null {
-  if (!item.quality?.classification) return null;
-  return categoryToLabel(item.quality.classification.quality_category);
+  return statusKolam(item.latestReading, riskToStatus(item.ammonia?.risk_level), item.sensorStatus);
 }
 
 export default function DashboardPage() {
@@ -424,6 +425,7 @@ export default function DashboardPage() {
                 onClose={() => setSelected(null)}
                 onChanged={() => loadDashboard(true)}
                 onDataUpdate={handleDetailData}
+                restartAt={selectedItem.devices[0]?.last_restart_at}
               />
             </div>
           )}

@@ -1,10 +1,20 @@
 "use client";
 
-import { AlertTriangle, Droplets, Thermometer, FlaskConical, ChevronDown, Waves, Wind, Wifi, WifiOff } from "lucide-react";
-import { KolamDashboard, SENSOR_ERROR_TEKS, StatusLabel, categoryToLabel } from "@/lib/types";
-import { formatFraksi } from "@/lib/ammonia";
-import { PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
-import { isOnline } from "@/lib/tanggal";
+import { AlertTriangle, ChevronDown, Loader2, Waves, Wifi, WifiOff, type LucideIcon } from "lucide-react";
+import { KolamDashboard, SENSOR_ERROR_TEKS, StatusLabel } from "@/lib/types";
+import { formatFraksi, riskToStatus } from "@/lib/ammonia";
+import {
+  PARAM_KEYS,
+  PARAM_UI,
+  ParamKey,
+  amoniaError,
+  formatValue,
+  nilaiError,
+  statusKolam,
+  statusOf,
+} from "@/lib/parameter";
+import { PARAM_EMOJI } from "@/lib/param-icons";
+import { Koneksi, statusKoneksi } from "@/lib/tanggal";
 import clsx from "clsx";
 import type { DraggableSyntheticListeners } from "@dnd-kit/core";
 
@@ -22,6 +32,13 @@ const TONE: Record<StatusLabel, { tile: string; dot: string; text: string }> = {
 };
 
 const KOSONG = { tile: "bg-kaca/50 text-muted", dot: "bg-border", text: "text-muted" };
+
+/** Ikon, warna, dan label status koneksi device. Dipakai juga pill di RakDetail. */
+export const KONEKSI_UI: Record<Koneksi, { icon: LucideIcon; color: string; label: string; spin?: boolean }> = {
+  online: { icon: Wifi, color: "text-status-aman", label: "Online" },
+  offline: { icon: WifiOff, color: "text-status-bahaya", label: "Offline" },
+  restarting: { icon: Loader2, color: "text-status-waspada", label: "Restarting", spin: true },
+};
 
 /** Bagian useSortable (dnd-kit) yang dipasang ke tombol kartu. `attributes`
  *  dnd-kit sengaja tidak dipakai: ia mengganti peran tombol jadi "sortable"
@@ -53,7 +70,7 @@ export default function PondCard({
   /** Diisi dashboard di mode grid supaya kartu bisa ditarik untuk diurutkan. */
   sortable?: PondCardSortable;
 }) {
-  const { kolam, quality, latestReading, ammonia } = item;
+  const { kolam, latestReading, ammonia } = item;
   // Satu baris per sensor yang terindikasi error, beserta alasannya, mis.
   // "pH (Nilai melonjak tidak wajar)". Kosong = semua sensor sehat.
   const sensorError = PARAM_KEYS.flatMap((p) => {
@@ -61,11 +78,11 @@ export default function PondCard({
     return sebab ? [`${PARAM_UI[p].short} (${SENSOR_ERROR_TEKS[sebab]})`] : [];
   });
 
-  // null = belum ada klasifikasi (device belum diklaim atau belum kirim data).
-  // Jangan dipaksa jadi "Waspada", kolam kosong bukan anomali.
-  const statusLabel: StatusLabel | null = quality?.classification
-    ? categoryToLabel(quality.classification.quality_category)
-    : null;
+  const amoniaRusak = amoniaError(latestReading, item.sensorStatus);
+  const statusAmonia = amoniaRusak ? null : riskToStatus(ammonia?.risk_level);
+  // Terburuk dari pH, suhu, salinitas, amonia. null = belum ada data sama
+  // sekali; jangan dipaksa jadi "Waspada", kolam kosong bukan anomali.
+  const statusLabel = statusKolam(latestReading, statusAmonia, item.sensorStatus);
   const tone = statusLabel ? TONE[statusLabel] : KOSONG;
 
   const updated = latestReading
@@ -77,7 +94,18 @@ export default function PondCard({
     : "N/A";
 
   // Dashboard polling 60 detik membuat kartu dirender ulang, jadi status ini ikut segar.
-  const online = isOnline(latestReading?.received_at);
+  const koneksi = KONEKSI_UI[
+    statusKoneksi(latestReading?.received_at, item.devices[0]?.last_restart_at)
+  ];
+  const KoneksiIcon = koneksi.icon;
+
+  // Angka parameter yang diwarnai statusnya; emoji-nya tidak bisa diwarnai.
+  // Sensor error atau tidak terbaca: tulisan "Error" abu, bukan angka.
+  const nilai = (p: ParamKey) => {
+    const v = latestReading?.[p];
+    if (nilaiError(latestReading, item.sensorStatus, p)) return { teks: "Error", warna: KOSONG.text };
+    return { teks: v == null ? "N/A" : formatValue(v), warna: v == null ? KOSONG.text : TONE[statusOf(p, v)].text };
+  };
 
   return (
     // <button>, bukan <Link>: detail rak terbuka di bawah kartu ini, bukan di
@@ -119,17 +147,13 @@ export default function PondCard({
           {/* Ikon wifi, bukan titik: titik di kartu ini sudah dipakai status kualitas air. */}
           {item.devices.length > 0 && (
             <span
-              className={clsx(
-                "inline-flex items-center gap-1 text-[11px] font-medium",
-                online ? "text-status-aman" : "text-status-bahaya"
-              )}
+              className={clsx("inline-flex items-center gap-1 text-[11px] font-medium", koneksi.color)}
             >
-              {online ? (
-                <Wifi className="h-3.5 w-3.5" strokeWidth={2.2} />
-              ) : (
-                <WifiOff className="h-3.5 w-3.5" strokeWidth={2.2} />
-              )}
-              {online ? "Online" : "Offline"}
+              <KoneksiIcon
+                className={clsx("h-3.5 w-3.5", koneksi.spin && "motion-safe:animate-spin")}
+                strokeWidth={2.2}
+              />
+              {koneksi.label}
             </span>
           )}
           {/* Chevron ke bawah, bukan panah keluar: detailnya terbuka di bawah
@@ -171,21 +195,27 @@ export default function PondCard({
       {/* Garis pemisah putih, bukan `border-border` yang keabuan: di atas kaca,
           garis terang terbaca sebagai tepi lempeng. */}
       <div className="mt-3 flex items-center justify-between gap-1 border-t border-kaca/70 dark:border-border pt-3 font-mono text-xs text-muted">
+        {PARAM_KEYS.map((p) => {
+          const { teks, warna } = nilai(p);
+          return (
+            <span key={p} className="inline-flex items-center gap-1">
+              <span aria-hidden>{PARAM_EMOJI[p]}</span>
+              <span className={warna}>
+                {teks}
+                {p === "temperature_c" && teks !== "N/A" && teks !== "Error" ? "°" : ""}
+              </span>
+            </span>
+          );
+        })}
         <span className="inline-flex items-center gap-1">
-          <FlaskConical className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
-          {latestReading?.ph ?? "N/A"}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Thermometer className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
-          {latestReading?.temperature_c ?? "N/A"}°
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Droplets className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
-          {latestReading?.salinity_ppt ?? "N/A"}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Wind className="h-3.5 w-3.5 text-[#1C6970] dark:text-aksen" />
-          {ammonia?.fraction_nh3_pct != null ? `${formatFraksi(ammonia.fraction_nh3_pct)}%` : "N/A"}
+          <span aria-hidden>{PARAM_EMOJI.amonia}</span>
+          <span className={statusAmonia ? TONE[statusAmonia].text : KOSONG.text}>
+            {amoniaRusak
+              ? "Error"
+              : ammonia?.fraction_nh3_pct != null
+                ? `${formatFraksi(ammonia.fraction_nh3_pct)}%`
+                : "N/A"}
+          </span>
         </span>
       </div>
     </button>

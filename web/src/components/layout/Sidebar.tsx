@@ -20,7 +20,7 @@ import { isNavActive } from "@/lib/nav";
 import { useUser } from "@/lib/user-store";
 import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
 import { AMONIA_UI, LOG_PARAM_AMONIA, LogParam } from "@/lib/ammonia";
-import { AMONIA_ICON, PARAM_ICON } from "@/lib/param-icons";
+import { PARAM_EMOJI } from "@/lib/param-icons";
 import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
 const STORAGE_KEY = "sidebar_collapsed";
@@ -349,9 +349,6 @@ function NavGroup({
             <div className="space-y-0.5" aria-hidden={!showChildren}>
               {children_!.map(({ param, label: childLabel }) => {
                 const childActive = active && activeParam === param;
-                // Ikon yang sama dengan kartu parameter dan panel prediksi.
-                const ChildIcon =
-                  param === LOG_PARAM_AMONIA ? AMONIA_ICON : PARAM_ICON[param];
                 return (
                   <Link
                     key={param}
@@ -379,9 +376,10 @@ function NavGroup({
                         childActive ? "scale-y-100 opacity-100" : "scale-y-0 opacity-0"
                       )}
                     />
-                    {/* Sedikit lebih kecil dari ikon induk (18px) supaya hierarkinya
-                        terbaca. Gaya goresannya sama. */}
-                    <ChildIcon className="h-4 w-4 shrink-0" strokeWidth={2.2} />
+                    {/* Emoji yang sama dengan kartu kolam. */}
+                    <span aria-hidden className="w-4 shrink-0 text-center text-sm leading-none">
+                      {PARAM_EMOJI[param]}
+                    </span>
                     {childLabel}
                   </Link>
                 );

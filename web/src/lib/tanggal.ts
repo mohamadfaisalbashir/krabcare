@@ -45,6 +45,23 @@ export function isOnline(receivedAt: string | null | undefined, now = Date.now()
   return !!receivedAt && now - new Date(receivedAt).getTime() <= ONLINE_MAKS_MENIT * 60_000;
 }
 
+export type Koneksi = "online" | "offline" | "restarting";
+
+/** "restarting" selama ESP baru melapor restart (paling lama ONLINE_MAKS_MENIT)
+ *  dan belum ada bacaan yang masuk sesudahnya. Kedua jam dari server. */
+export function statusKoneksi(
+  receivedAt: string | null | undefined,
+  restartAt: string | null | undefined,
+  now = Date.now()
+): Koneksi {
+  if (restartAt) {
+    const restart = new Date(restartAt).getTime();
+    const bacaanSesudahnya = !!receivedAt && new Date(receivedAt).getTime() >= restart;
+    if (!bacaanSesudahnya && now - restart <= ONLINE_MAKS_MENIT * 60_000) return "restarting";
+  }
+  return isOnline(receivedAt, now) ? "online" : "offline";
+}
+
 export const NAMA_BULAN = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
   "Juli", "Agustus", "September", "Oktober", "November", "Desember",

@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 from app.models.enums import WaterQualityCategory
 from app.schemas.ammonia import AmmoniaRiskIn
+from app.schemas.common import AngkaOpsional
 from app.schemas.sensor_reading import SkippedDuplicateOut
 
 
@@ -76,9 +77,9 @@ class FuzzyPredictionIn(BaseModel):
     predicted_quality_score: float | None = Field(default=None, ge=0, le=100)
     predicted_category: WaterQualityCategory | None = None
     # Ramalan per parameter, opsional supaya payload lama tetap diterima.
-    predicted_ph: float | None = None
-    predicted_temperature_c: float | None = None
-    predicted_salinity_ppt: float | None = None
+    predicted_ph: AngkaOpsional = None
+    predicted_temperature_c: AngkaOpsional = None
+    predicted_salinity_ppt: AngkaOpsional = None
     model_version: str = "v1"
 
 

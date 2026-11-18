@@ -41,6 +41,9 @@ class Device(Base):
     location_note: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(default=True, nullable=False)
     last_seen_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
+    #: Jam server saat laporan restart terakhir masuk. Dibandingkan dengan
+    #: received_at reading untuk status "Restarting" di dashboard.
+    last_restart_at: Mapped[datetime | None] = mapped_column(TIMESTAMP(timezone=True))
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), server_default=func.now(), nullable=False
     )

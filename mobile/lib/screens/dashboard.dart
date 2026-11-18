@@ -9,7 +9,7 @@ import '../logic.dart';
 import '../ui.dart';
 
 /// `sensor`: parameter yang sensornya terindikasi error (api.getSensorStatus), kosong = sehat.
-typedef KolamItem = ({Json kolam, List<Json> devices, Json? quality, Json? reading, Json? ammonia, Json sensor});
+typedef KolamItem = ({Json kolam, List<Json> devices, Json? reading, Json? ammonia, Json sensor});
 
 /// Keterangan singkat di samping label "Sensor error" (SENSOR_ERROR_TEKS di web).
 const _sensorErrorTeks = {'lonjakan': 'Nilai melonjak tidak wajar', 'kosong': 'Nilai tidak terbaca'};
@@ -50,10 +50,8 @@ class _SensorError extends StatelessWidget {
   }
 }
 
-String? _statusKualitas(Json? quality) {
-  final c = quality?['classification'];
-  return c == null ? null : categoryToLabel(c['quality_category']);
-}
+/// Status kolam di dashboard: terburuk dari pH, suhu, salinitas, amonia.
+String? _statusItem(KolamItem i) => statusKolam(i.reading, riskToStatus(i.ammonia?['risk_level']), i.sensor);
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -94,12 +92,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> load({bool silent = false}) async {
     if (!silent) setState(() => loading = true);
     try {
-      final [kolamList, qualityList] = await Future.wait([api.listKolam(), api.getLatestQuality()]);
+      final kolamList = await api.listKolam();
       final hasil = await Future.wait(
         kolamList.map((kolam) async {
           final devices = await _atauNull(api.getKolamDevices(kolam['id'])) ?? [];
-          final ids = devices.map((d) => d['id']).toSet();
-          final quality = qualityList.where((q) => ids.contains(q['device_id'])).firstOrNull;
           Json? reading, ammonia;
           var sensor = <String, dynamic>{};
           if (devices.isNotEmpty) {
@@ -111,7 +107,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return (
             kolam: kolam,
             devices: devices,
-            quality: quality,
             reading: reading,
             ammonia: ammonia,
             sensor: sensor,
@@ -158,7 +153,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final hitung = <String, int>{};
     for (final i in items) {
-      final s = _statusKualitas(i.quality);
+      final s = _statusItem(i);
       if (s != null) hitung[s] = (hitung[s] ?? 0) + 1;
     }
     return RefreshIndicator(
@@ -285,9 +280,14 @@ class _PondCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = _statusKualitas(item.quality);
+    final status = _statusItem(item);
     final r = item.reading;
-    String v(String p, [String suffix = '']) => r?[p] == null ? 'N/A' : '${formatValue(r![p])}$suffix';
+    // Sensor error atau tidak terbaca: tulisan "Error", bukan angka.
+    String v(String p, [String suffix = '']) => nilaiError(r, item.sensor, p)
+        ? 'Error'
+        : r?[p] == null
+        ? 'N/A'
+        : '${formatValue(r![p])}$suffix';
     final nh3 = item.ammonia?['fraction_nh3_pct'];
     return Card(
       child: InkWell(
@@ -334,20 +334,27 @@ class _PondCard extends StatelessWidget {
                     ),
                   ),
                   // Ikon wifi, bukan titik: titik di kartu ini sudah dipakai status kualitas air.
-                  if (item.devices.isNotEmpty) _OnlineLabel(isOnline(r?['received_at'])),
+                  if (item.devices.isNotEmpty)
+                    _OnlineLabel(statusKoneksi(r?['received_at'], item.devices.first['last_restart_at'])),
                   Icon(Icons.chevron_right, color: cAxis),
                 ],
               ),
               const Divider(height: 20),
               DefaultTextStyle.merge(
                 style: mono.copyWith(fontSize: 13, color: cMuted),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Wrap, bukan Row: dengan label "Suhu" barisnya bisa melebihi
+                // lebar HP kecil, dan Wrap menurunkan sisanya ke baris kedua.
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  spacing: 12,
+                  runSpacing: 4,
                   children: [
                     Text('pH ${v('ph')}'),
-                    Text(v('temperature_c', '°')),
+                    Text('Suhu ${v('temperature_c', '°')}'),
                     Text('${v('salinity_ppt')} ppt'),
-                    Text('NH₃ ${nh3 == null ? 'N/A' : '${formatFraksi(nh3)}%'}'),
+                    Text(
+                      'NH₃ ${amoniaError(r, item.sensor) ? 'Error' : nh3 == null ? 'N/A' : '${formatFraksi(nh3)}%'}',
+                    ),
                   ],
                 ),
               ),
@@ -373,8 +380,10 @@ class RakDetailScreen extends StatefulWidget {
 class _RakDetailScreenState extends State<RakDetailScreen> {
   late String namaKolam = widget.kolam['nama'];
   int get kolamId => widget.kolam['id'];
-  Json? device, quality, ammonia;
+  Json? device, ammonia;
+  String? restartAt; // last_restart_at device, diambil ulang tiap polling
   List<Json> history = [], predictions = [];
+  Json? terbaru; // bacaan terbaru, bukan titik grafik terakhir
   bool loading = true, busy = false;
   bool deviceDicek = false; // daftar device kolam sudah berhasil diambil sekali
   String? error, rakMsg, hapusError;
@@ -427,10 +436,14 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     if (d == null) return;
     try {
       final res = await Future.wait([
-        api.getLatestQuality(d['id']),
-        api.getReadings(deviceId: d['id'], limit: 100),
+        api.getKolamDevices(kolamId),
+        // Grafik pemantauan: satu titik per 5 menit, 100 titik kira-kira 8 jam.
+        api.getReadings(deviceId: d['id'], limit: 100, intervalMinutes: 5),
         api.getPredictions(d['id']),
         api.getAmmoniaRisk(d['id']),
+        // Bacaan terbaru terpisah: versi per 5 menit memilih bacaan paling
+        // awal tiap ember, jadi bisa telat sampai 5 menit.
+        api.getReadings(deviceId: d['id'], limit: 1),
       ]);
       // Label tambahan saja: kalau gagal, data utama tetap tampil tanpa label.
       Json st = {};
@@ -440,8 +453,10 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
       if (!mounted) return;
       setState(() {
         sensor = st;
-        quality = res[0].firstOrNull;
-        history = res[1].reversed.toList(); // backend: terbaru dulu
+        restartAt = res[0].where((x) => x['id'] == d['id']).firstOrNull?['last_restart_at'];
+        // Backend: terbaru dulu. Waktu dibulatkan ke 5 menit supaya label grafik rapi.
+        history = [for (final h in res[1].reversed) {...h, 'time': lantai5Menit(h['time'])}];
+        terbaru = res[4].firstOrNull;
         predictions = ((res[2].firstOrNull?['predictions'] ?? []) as List).cast<Json>();
         ammonia = res[3].firstOrNull;
         error = null;
@@ -464,8 +479,9 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final status = _statusKualitas(quality);
-    final reading = history.lastOrNull;
+    final reading = terbaru;
+    final status = statusKolam(reading, riskToStatus(ammonia?['current']?['risk_level']), sensor);
+    final koneksi = statusKoneksi(reading?['received_at'], restartAt);
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Kolam')),
       body: loading
@@ -544,10 +560,7 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
                           device == null ? 'Belum terhubung ke device' : 'Terhubung ke ${device!['device_code']}',
                         ),
                       // Dihitung ulang tiap polling 60 detik, karena loadData memanggil setState.
-                      if (device != null)
-                        isOnline(reading?['received_at'])
-                            ? _Pill(Icons.wifi, 'Online', iconColor: statusColor('Aman'))
-                            : _Pill(Icons.wifi_off, 'Offline', iconColor: statusColor('Bahaya')),
+                      if (device != null) _Pill(null, _koneksiUi[koneksi]!.label, leading: _koneksiIkon(koneksi)),
                       if (reading != null) _Pill(Icons.schedule, 'Pembacaan terakhir ${formatWaktu(reading['time'])}'),
                     ],
                   ),
@@ -611,8 +624,9 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            for (final p in paramKeys) _ParamCell(param: p, value: reading?[p], sensorError: sensor[p]),
-            _AmoniaCell(current: current),
+            for (final p in paramKeys)
+              _ParamCell(param: p, value: reading?[p], sensorError: sensor[p], error: nilaiError(reading, sensor, p)),
+            _AmoniaCell(current: current, error: amoniaError(reading, sensor)),
             const SizedBox(height: 12),
             Text.rich(
               TextSpan(
@@ -849,21 +863,39 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
   );
 }
 
-/// Status Online/Offline di kartu kolam, padanan label di PondCard web.
+/// Label, warna status, dan ikon tiap status koneksi (statusKoneksi di logic.dart).
+/// Ikon null = spinner untuk Restarting.
+const _koneksiUi = {
+  'online': (label: 'Online', status: 'Aman', icon: Icons.wifi),
+  'offline': (label: 'Offline', status: 'Bahaya', icon: Icons.wifi_off),
+  'restarting': (label: 'Restarting', status: 'Waspada', icon: null),
+};
+
+Widget _koneksiIkon(String koneksi) {
+  final ui = _koneksiUi[koneksi]!;
+  final c = statusColor(ui.status);
+  final icon = ui.icon;
+  return icon != null
+      ? Icon(icon, size: 14, color: c)
+      : SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: c));
+}
+
+/// Status koneksi di kartu kolam, padanan label di PondCard web.
 class _OnlineLabel extends StatelessWidget {
-  const _OnlineLabel(this.online);
-  final bool online;
+  const _OnlineLabel(this.koneksi);
+  final String koneksi;
   @override
   Widget build(BuildContext context) {
-    final c = statusColor(online ? 'Aman' : 'Bahaya');
+    final ui = _koneksiUi[koneksi]!;
+    final c = statusColor(ui.status);
     return Padding(
       padding: const EdgeInsets.only(right: 4),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(online ? Icons.wifi : Icons.wifi_off, size: 14, color: c),
+          _koneksiIkon(koneksi),
           const SizedBox(width: 4),
-          Text(online ? 'Online' : 'Offline', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c)),
+          Text(ui.label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: c)),
         ],
       ),
     );
@@ -872,10 +904,10 @@ class _OnlineLabel extends StatelessWidget {
 
 /// DetailPill web: ikon + teks di atas latar putih bergaris tipis.
 class _Pill extends StatelessWidget {
-  const _Pill(this.icon, this.text, {this.iconColor});
-  final IconData icon;
+  const _Pill(this.icon, this.text, {this.leading});
+  final IconData? icon;
   final String text;
-  final Color? iconColor; // null = warna tinta tema
+  final Widget? leading; // pengganti ikon, mis. spinner status koneksi
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -887,7 +919,7 @@ class _Pill extends StatelessWidget {
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: iconColor ?? cInk),
+        leading ?? Icon(icon, size: 14, color: cInk),
         const SizedBox(width: 6),
         Flexible(
           child: Text(
@@ -1079,15 +1111,17 @@ class _Track extends StatelessWidget {
 }
 
 class _ParamCell extends StatelessWidget {
-  const _ParamCell({required this.param, required this.value, this.sensorError});
+  const _ParamCell({required this.param, required this.value, this.sensorError, this.error = false});
   final String param;
   final num? value;
   final String? sensorError; // 'lonjakan' | 'kosong' | null = sensor sehat
+  final bool error; // sensor error/tidak terbaca: angka diganti "Error" abu
 
   @override
   Widget build(BuildContext context) {
+    final value = error ? null : this.value;
     final ui = paramUi[param]!, r = range[param]!;
-    final status = value == null ? null : statusOf(param, value!);
+    final status = value == null ? null : statusOf(param, value);
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -1105,10 +1139,10 @@ class _ParamCell extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: value == null ? 'N/A' : formatValue(value!),
-                  style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: cInk),
+                  text: error ? 'Error' : value == null ? 'N/A' : formatValue(value),
+                  style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: error ? cMuted : cInk),
                 ),
-                if (ui.unit != ui.short || value == null)
+                if (!error && (ui.unit != ui.short || value == null))
                   TextSpan(
                     text: ' ${ui.unit}',
                     style: TextStyle(color: cMuted),
@@ -1116,12 +1150,11 @@ class _ParamCell extends StatelessWidget {
               ],
             ),
           ),
-          // Angka dan status di atas tetap tampil apa adanya; label ini yang
-          // memberi tahu bahwa keduanya belum tentu bisa dipercaya.
+          // Angka di atas sudah diganti "Error"; label ini yang menjelaskan kenapa.
           if (sensorError != null) _SensorError(_sensorErrorTeks[sensorError] ?? ''),
           const SizedBox(height: 6),
           _Track(
-            frac: value == null ? null : rangeFrac(param, value!),
+            frac: value == null ? null : rangeFrac(param, value),
             band: (rangeFrac(param, r.lo), rangeFrac(param, r.hi)),
             color: statusColor(status),
           ),
@@ -1133,13 +1166,14 @@ class _ParamCell extends StatelessWidget {
 }
 
 class _AmoniaCell extends StatelessWidget {
-  const _AmoniaCell({required this.current});
+  const _AmoniaCell({required this.current, this.error = false});
   final Json? current;
+  final bool error; // salah satu sensor asal error: nilai amonia yang tersisa nilai lama
 
   @override
   Widget build(BuildContext context) {
-    final pct = current?['fraction_nh3_pct'] as num?;
-    final status = riskToStatus(current?['risk_level']);
+    final pct = error ? null : current?['fraction_nh3_pct'] as num?;
+    final status = error ? null : riskToStatus(current?['risk_level']);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1155,14 +1189,15 @@ class _AmoniaCell extends StatelessWidget {
           TextSpan(
             children: [
               TextSpan(
-                text: pct == null ? 'N/A' : formatFraksi(pct),
-                style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: cInk),
+                text: error ? 'Error' : pct == null ? 'N/A' : formatFraksi(pct),
+                style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: error ? cMuted : cInk),
               ),
               // "%" polos seperti AmmoniaCell.tsx, supaya selebar satuan kolom lain.
-              TextSpan(
-                text: ' %',
-                style: TextStyle(color: cMuted),
-              ),
+              if (!error)
+                TextSpan(
+                  text: ' %',
+                  style: TextStyle(color: cMuted),
+                ),
             ],
           ),
         ),

@@ -110,15 +110,45 @@ async def _insert_abaikan_duplikat(db: AsyncSession, values: dict) -> Notificati
     await db.commit()
     return result.scalars().first()
 
-async def _last_classification_category(db: AsyncSession, device_id: int) -> str | None:
-    """Kategori pada notifikasi klasifikasi terakhir device ini, acuan transition-check."""
-    result = await db.execute(
-        select(Notification.quality_category)
-        .where(Notification.device_id == device_id, Notification.source == "classification")
-        .order_by(Notification.event_time.desc())
-        .limit(1)
+async def _kategori_sebelumnya(
+    db: AsyncSession,
+    device_id: int,
+    source: str,
+    parameter: str | None,
+    sensor_param: str | None,
+) -> str | None:
+    """Kategori notifikasi terakhir, acuan transition-check.
+
+    None juga kalau sesudah notifikasi itu sempat ada notifikasi sensor
+    (tidak terbaca, error, atau pulih) untuk `sensor_param` (None = sensor
+    apa pun). Di antaranya datanya kosong, jadi perubahan kategori tidak bisa
+    disebut "membaik". Dengan None, pemanggil memakai aturan "pertama kali":
+    Aman tidak dinotifikasi, Waspada/Bahaya dicatat ulang.
+    """
+    terakhir = (
+        await db.execute(
+            select(Notification.quality_category, Notification.event_time)
+            .where(
+                Notification.device_id == device_id,
+                Notification.source == source,
+                Notification.parameter.is_not_distinct_from(parameter),
+            )
+            .order_by(Notification.event_time.desc())
+            .limit(1)
+        )
+    ).first()
+    if terakhir is None:
+        return None
+    gangguan = select(Notification.id).where(
+        Notification.device_id == device_id,
+        Notification.source == "sensor",
+        Notification.event_time > terakhir.event_time,
     )
-    return result.scalar_one_or_none()
+    if sensor_param is not None:
+        gangguan = gangguan.where(Notification.parameter == sensor_param)
+    if await db.scalar(select(gangguan.exists())):
+        return None
+    return terakhir.quality_category
 
 async def create_classification_notification(
     db: AsyncSession,
@@ -129,7 +159,7 @@ async def create_classification_notification(
     sensor_reading_time: datetime,
 ) -> Notification | None:
     """Notifikasi status sekarang, hanya dibuat saat kategori berubah"""
-    previous = await _last_classification_category(db, device.id)
+    previous = await _kategori_sebelumnya(db, device.id, "classification", None, None)
     if previous == category:
         return None
 
@@ -230,7 +260,9 @@ async def create_parameter_notification(
     reading_time: datetime,
 ) -> Notification | None:
     """Notifikasi status satu parameter, hanya dibuat saat kategorinya berubah."""
-    previous = await _last_parameter_category(db, device.id, parameter)
+    # Amonia dihitung dari ketiga sensor, jadi gangguan sensor mana pun berlaku.
+    sensor_param = None if parameter == "ammonia" else parameter
+    previous = await _kategori_sebelumnya(db, device.id, "parameter", parameter, sensor_param)
     if previous == category:
         return None
 
@@ -307,8 +339,10 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         tokens = result.scalars().all()
         if not tokens:
             continue
-        if notif.source == "sensor":
-            title = "Sensor Error" if notif.quality_category in ANOMALY_CATEGORIES else "Sensor Kembali Normal"
+        if notif.source == "restart":
+            title = "Perangkat Restart"
+        elif notif.source == "sensor":
+            title = "Sensor Error" if notif.quality_category in ANOMALY_CATEGORIES else "Sensor Pulih"
         elif notif.parameter:
             param_label = PARAM_CONFIG.get(notif.parameter, {}).get(
                 "label", "Risiko amonia" if notif.parameter == "ammonia" else notif.parameter
@@ -487,9 +521,9 @@ async def dispatch_from_quality_ingest(
 
 
 SENSOR_LABEL: dict[str, str] = {"ph": "pH", "temperature_c": "suhu", "salinity_ppt": "salinitas"}
-SENSOR_SEBAB: dict[str, str] = {
-    "lonjakan": "Nilainya melonjak tidak wajar dalam waktu singkat.",
-    "kosong": "Nilainya tidak terbaca.",
+SENSOR_PESAN: dict[str, str] = {
+    "kosong": "tidak terbaca.",
+    "lonjakan": "error, nilainya melonjak tidak wajar.",
 }
 
 
@@ -520,11 +554,12 @@ async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> No
             previous = await _last_parameter_category(db, device.id, parameter, source="sensor")
             if previous == category or (previous is None and category == "baik"):
                 continue
+            # Satu notifikasi per perubahan status: sensor yang terus tidak
+            # terbaca tidak dinotifikasi tiap menit (previous == category di atas).
             message = (
-                f"Sensor {label} {_label_device(device, kolam)} kemungkinan error. "
-                f"{SENSOR_SEBAB[error[parameter]]}"
+                f"Sensor {label} {_label_device(device, kolam)} {SENSOR_PESAN[error[parameter]]}"
                 if parameter in error
-                else f"Sensor {label} {_label_device(device, kolam)} kembali normal."
+                else f"Sensor {label} {_label_device(device, kolam)} pulih."
             )
             notif = await _insert_abaikan_duplikat(
                 db,
@@ -544,6 +579,61 @@ async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> No
 
     if baru:
         await dispatch_push(db, baru)
+
+
+# Kenop: notifikasi restart paling banyak RESTART_NOTIF_MAKS per device dalam
+# RESTART_NOTIF_JENDELA. ESP yang bootloop tetap tercatat di device_restarts,
+# tapi tidak membanjiri HP pemilik.
+RESTART_NOTIF_MAKS = 3
+RESTART_NOTIF_JENDELA = timedelta(minutes=10)
+
+
+async def dispatch_restart(
+    db: AsyncSession, device_id: int, waktu: datetime, reset_reason: str | None = None
+) -> None:
+    """Notifikasi ESP restart, dibatasi RESTART_NOTIF_MAKS per jendela.
+
+    Kategori "sedang" karena kolom quality_category wajib terisi. Teksnya
+    sengaja tanpa kata Aman/Waspada/Bahaya (klien mewarnai kata-kata itu).
+    """
+    result = await db.execute(
+        select(Device, Kolam).join(Kolam, Device.kolam_id == Kolam.id).where(Device.id == device_id)
+    )
+    pasangan = result.first()
+    if pasangan is None:
+        return  # device belum diklaim kolam, tidak ada pemilik untuk diberi tahu
+    device, kolam = pasangan
+
+    jumlah = await db.scalar(
+        select(func.count())
+        .select_from(Notification)
+        .where(
+            Notification.device_id == device.id,
+            Notification.source == "restart",
+            Notification.created_at >= datetime.now(timezone.utc) - RESTART_NOTIF_JENDELA,
+        )
+    )
+    if jumlah >= RESTART_NOTIF_MAKS:
+        return
+
+    notif = await _insert_abaikan_duplikat(
+        db,
+        {
+            "user_id": kolam.owner_user_id,
+            "device_id": device.id,
+            "kolam_id": kolam.id,
+            "source": "restart",
+            "parameter": None,
+            "quality_category": "sedang",
+            "event_time": waktu,
+            "message": (
+                f"Perangkat {_label_device(device, kolam)} baru saja restart pukul {jam_wib(waktu)} WIB"
+                + (f" (penyebab: {reset_reason})." if reset_reason else ".")
+            ),
+        },
+    )
+    if notif is not None and _masih_segar(waktu, datetime.now(timezone.utc) - PUSH_MAKS_UMUR):
+        await dispatch_push(db, [notif])
 
 
 async def list_notifications(

@@ -30,6 +30,7 @@ Install dulu: pip install watchdog requests --break-system-packages
 import os
 import csv
 import json
+import math
 import time
 import threading
 import sqlite3
@@ -149,6 +150,12 @@ def simpan_ke_buffer_quality(payload: dict, catatan: str = ""):
 
 # ---------- Sanitasi nilai ----------
 def sanitasi_reading(reading: dict) -> dict:
+    # CSV berisi "nan" saat probe gagal membaca. float("nan") lolos parsing,
+    # tapi requests menolak NaN di JSON, jadi barisnya tertahan di buffer.
+    for kunci in ("ph", "temperature_c", "salinity_ppt"):
+        nilai = reading.get(kunci)
+        if nilai is not None and not math.isfinite(nilai):
+            reading[kunci] = None
     ph = reading.get("ph")
     if ph is not None and not (0 <= ph <= 14):
         print(f"[WARNING] ph di luar rentang valid (0-14): {ph} -> dikirim sebagai null. "

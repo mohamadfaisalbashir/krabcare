@@ -61,6 +61,8 @@ export interface Device {
   parent_device_id: number | null;
   is_active: boolean;
   last_seen_at: string | null;
+  /** Jam server saat laporan restart ESP terakhir masuk. */
+  last_restart_at?: string | null;
 }
 
 /** DeviceAdminOut, Device + status klaim, dipakai halaman admin /perangkat. */
@@ -193,7 +195,7 @@ export interface DeviceAmmonia {
 // Notification (schemas/notification.py)
 
 /** notifications.source, nilai CHECK di database/init/08_notifications.sql. */
-export type NotifSource = "classification" | "prediction" | "parameter" | "sensor";
+export type NotifSource = "classification" | "prediction" | "parameter" | "sensor" | "restart";
 
 /** NotificationOut */
 export interface Notification {

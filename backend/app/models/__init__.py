@@ -3,6 +3,7 @@ sekaligus jaminan seluruh tabel terdaftar di metadata Alembic."""
 
 from app.models.ammonia_risk import AmmoniaRisk
 from app.models.device import Device
+from app.models.device_restart import DeviceRestart
 from app.models.fuzzy_classification import FuzzyClassification
 from app.models.fuzzy_prediction import FuzzyPrediction
 from app.models.kolam import Kolam
@@ -14,6 +15,7 @@ from app.models.user import User
 __all__ = [
     "AmmoniaRisk",
     "Device",
+    "DeviceRestart",
     "FuzzyClassification",
     "FuzzyPrediction",
     "Kolam",

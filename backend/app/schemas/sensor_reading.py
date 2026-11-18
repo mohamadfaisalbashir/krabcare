@@ -4,15 +4,26 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import AngkaOpsional
+
 
 class SensorReadingIn(BaseModel):
     """Satu pembacaan sensor dari satu slave node (dikirim gateway per level/tingkat)."""
 
     device_code: str
     time: datetime
-    ph: float | None = Field(default=None, ge=0, le=14)
-    temperature_c: float | None = None
-    salinity_ppt: float | None = Field(default=None, ge=0)
+    ph: AngkaOpsional = Field(default=None, ge=0, le=14)
+    temperature_c: AngkaOpsional = None
+    salinity_ppt: AngkaOpsional = Field(default=None, ge=0)
+
+
+class RestartIn(BaseModel):
+    """ESP mengirim baris boot lewat UART, Raspi meneruskannya ke sini."""
+
+    device_code: str
+    time: datetime
+    #: Kode penyebab dari ESP, mis. "WDT", "POWERON", "PANIC".
+    reset_reason: str | None = Field(default=None, max_length=50)
 
 
 class SensorReadingBatchIn(BaseModel):

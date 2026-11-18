@@ -2,6 +2,7 @@ import serial
 import json
 import csv
 import os
+import requests
 import pickle
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -98,6 +99,31 @@ def dapatkan_device_code(chip_id: str) -> str:
     return chip_id
 
 
+# ---------- Laporan restart ESP ke cloud ----------
+CLOUD_URL_RESTART = os.environ.get("CLOUD_URL_RESTART", "https://api.krabcare.com/api/v1/ingest/restart")
+GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "")
+
+
+def kirim_restart(data: dict):
+    """ESP mengirim {"id": ..., "event": "boot", "reset_reason": "WDT"} sekali saat boot.
+
+    ponytail: langsung POST tanpa buffer. Laporan restart yang baru terkirim
+    belasan menit kemudian sudah tidak berguna untuk status dashboard.
+    """
+    payload = {
+        "device_code": dapatkan_device_code(data.get("id", "UNKNOWN")),
+        "time": datetime.now(TIMEZONE).isoformat(timespec="seconds"),
+        "reset_reason": data.get("reset_reason"),
+    }
+    try:
+        resp = requests.post(
+            CLOUD_URL_RESTART, json=payload, headers={"X-API-Key": GATEWAY_API_KEY}, timeout=5
+        )
+        print(f"[RESTART] {payload['device_code']} ({payload['reset_reason']}) -> HTTP {resp.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"[WARNING] Gagal kirim laporan restart {payload['device_code']}: {e}")
+
+
 def buat_reading(data: dict) -> tuple[dict, datetime]:
     """Ubah data mentah dari ESP32 menjadi format 'reading' sesuai skema cloud.
 
@@ -108,9 +134,11 @@ def buat_reading(data: dict) -> tuple[dict, datetime]:
     reading = {
         "device_code": dapatkan_device_code(data.get("id", "UNKNOWN")),
         "time": waktu_sekarang.isoformat(timespec="seconds"),
-        "ph": data["ph"],
-        "temperature_c": data["suhu"],
-        "salinity_ppt": data["salinitas"],
+        # Sensor yang gagal membaca tidak mengirim key-nya, mis.
+        # {"id": ..., "suhu": 28.4, "salinitas": 19.2} saat probe pH error.
+        "ph": data.get("ph"),
+        "temperature_c": data.get("suhu"),
+        "salinity_ppt": data.get("salinitas"),
     }
     return reading, waktu_sekarang
 
@@ -216,6 +244,10 @@ def main():
             data = json.loads(line)
         except json.JSONDecodeError:
             print(f"[WARNING] Data tidak valid, dilewati: {line}")
+            continue
+
+        if data.get("event") in ("boot", "restart"):
+            kirim_restart(data)
             continue
 
         try:

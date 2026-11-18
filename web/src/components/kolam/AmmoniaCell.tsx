@@ -34,14 +34,18 @@ export default function AmmoniaCell({
   mode,
   current,
   forecast,
+  error = false,
 }: {
   mode: "terkini" | "prediksi";
   current?: AmmoniaRisk | null;
   forecast?: AmmoniaRisk[];
+  /** Salah satu sensor asal (pH/suhu/salinitas) error, jadi nilai amonia yang
+   *  tersisa adalah nilai lama: tampil "Error" abu tanpa status. */
+  error?: boolean;
 }) {
   const isi =
     mode === "terkini"
-      ? renderTerkini(current ?? null)
+      ? renderTerkini(current ?? null, error)
       : renderPrediksi(forecast ?? []);
 
   return (
@@ -59,7 +63,7 @@ export default function AmmoniaCell({
                 <span className="font-semibold text-ink">{isi.status}</span>
               </>
             ) : (
-              <span className="text-muted">Belum ada data</span>
+              !error && <span className="text-muted">Belum ada data</span>
             )}
           </span>
         )}
@@ -78,12 +82,15 @@ export default function AmmoniaCell({
   );
 }
 
-function renderTerkini(risk: AmmoniaRisk | null): {
+function renderTerkini(
+  risk: AmmoniaRisk | null,
+  error: boolean
+): {
   status: StatusLabel | null;
   body: React.ReactNode;
 } {
-  const status = riskToStatus(risk?.risk_level);
-  const nilai = risk?.fraction_nh3_pct ?? null;
+  const status = error ? null : riskToStatus(risk?.risk_level);
+  const nilai = error ? null : (risk?.fraction_nh3_pct ?? null);
 
   // Pita "optimal" = wilayah di bawah ambang perhatian. Satu skala dengan
   // penanda nilai (skalaPersen), aturan yang sama dengan optimalBand() dan
@@ -101,10 +108,15 @@ function renderTerkini(risk: AmmoniaRisk | null): {
             kiri dan tidak sejajar dengan kolom lain. Makna "dari TAN" tetap ada
             di AMONIA_DISCLAIMER dan di label pita di bawah. */}
         <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
-          <span className="font-mono text-3xl font-semibold leading-none text-ink">
-            {nilai != null ? formatFraksi(nilai) : "N/A"}
+          <span
+            className={clsx(
+              "font-mono text-3xl font-semibold leading-none",
+              error ? "text-muted" : "text-ink"
+            )}
+          >
+            {error ? "Error" : nilai != null ? formatFraksi(nilai) : "N/A"}
           </span>
-          <span className="text-sm text-muted">%</span>
+          {!error && <span className="text-sm text-muted">%</span>}
         </p>
 
         <div className="mt-4">

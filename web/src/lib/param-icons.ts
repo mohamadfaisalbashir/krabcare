@@ -1,17 +1,13 @@
-import { Droplets, FlaskConical, Thermometer, Wind, type LucideIcon } from "lucide-react";
-import type { ParamKey } from "./parameter";
+import type { LogParam } from "./ammonia";
 
 /**
- * Ikon per parameter, satu sumber untuk ParameterStrip, PredictionPanel, dan
- * PondCard. Bukan di PARAM_UI (lib/parameter.ts): berkas itu murni TypeScript
- * tanpa React supaya bisa dimuat `node --test`.
+ * Emoji per parameter, satu sumber untuk PondCard, submenu Log historis di
+ * Sidebar, dan pil parameter di halaman Log historis. Emoji berwarna sendiri
+ * dan tidak bisa diwarnai CSS, jadi status ditunjukkan lewat warna angkanya.
  */
-export const PARAM_ICON: Record<ParamKey, LucideIcon> = {
-  ph: FlaskConical,
-  temperature_c: Thermometer,
-  salinity_ppt: Droplets,
+export const PARAM_EMOJI: Record<LogParam, string> = {
+  ph: "🧪",
+  temperature_c: "🌡️",
+  salinity_ppt: "🌊",
+  amonia: "☣️",
 };
-
-/** Amonia di luar PARAM_ICON karena bukan ParamKey (lib/ammonia.ts).
- *  Memasukkannya akan melebarkan tipe dan menyeret amonia ke grafik & ekspor. */
-export const AMONIA_ICON: LucideIcon = Wind;

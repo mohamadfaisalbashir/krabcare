@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import Row, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.water_thresholds import ParamKey, StatusFilter, kolom, predikat_status
+from app.core.water_thresholds import ParamKey, StatusFilter, predikat_status
 from app.models import Device, SensorReading
 
 
@@ -66,10 +66,11 @@ async def get_readings(
         kondisi.append(SensorReading.time <= end_time)
     if allowed_device_ids is not None:
         kondisi.append(SensorReading.device_id.in_(allowed_device_ids))
-    if param is not None:
-        kondisi.append(kolom(param).is_not(None))
-        if status is not None:
-            kondisi.append(predikat_status(param, status))
+    # Baris yang parameternya NULL (sensor gagal baca) tetap ikut log, tampil
+    # "N/A". Filter status otomatis membuangnya: perbandingan dengan NULL tidak
+    # pernah benar.
+    if param is not None and status is not None:
+        kondisi.append(predikat_status(param, status))
 
     stmt = select(SensorReading, Device.device_code).join(
         Device, SensorReading.device_id == Device.id

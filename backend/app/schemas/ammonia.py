@@ -4,6 +4,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import AngkaOpsional
+
 #: Ditempel di setiap response supaya angkanya tidak lepas dari batasannya.
 #: Jangan dipendekkan: ini yang membedakan estimasi fraksi dari klaim
 #: pengukuran yang tidak dimiliki sistem ini (amonia.md:7-8).
@@ -64,11 +66,11 @@ class AmmoniaRiskIn(BaseModel):
     horizon_minutes: int = Field(
         ge=0, description="0 = kondisi terukur; >0 = ramalan sekian menit ke depan"
     )
-    input_ph: float | None = None
-    input_temperature_c: float | None = None
-    input_salinity_ppt: float | None = None
-    fraction_nh3_pct: float | None = None
-    pka: float | None = None
+    input_ph: AngkaOpsional = None
+    input_temperature_c: AngkaOpsional = None
+    input_salinity_ppt: AngkaOpsional = None
+    fraction_nh3_pct: AngkaOpsional = None
+    pka: AngkaOpsional = None
     risk_level: str | None = None
     in_valid_range: bool = True
     model_version: str = "speciation-bb78"

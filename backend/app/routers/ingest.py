@@ -2,13 +2,13 @@
 
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import verify_gateway_api_key
 from app.db.session import get_db
 from app.schemas.fuzzy import QualityIngestIn, QualityIngestResultOut
-from app.schemas.sensor_reading import IngestResultOut, SensorReadingBatchIn
+from app.schemas.sensor_reading import IngestResultOut, RestartIn, SensorReadingBatchIn
 from app.services import ingest_service, notification_service, quality_ingest_service
 
 logger = logging.getLogger("app.routers.ingest")
@@ -43,6 +43,25 @@ async def ingest_readings(
         unknown_device_codes=unknown,
         skipped_duplicates=skipped_duplicates,
     )
+
+@router.post("/restart", status_code=201)
+async def ingest_restart(payload: RestartIn, db: AsyncSession = Depends(get_db)) -> dict:
+    """Laporan ESP restart, diteruskan Raspi dari baris boot UART."""
+    device, baru = await ingest_service.ingest_restart(db, payload)
+    if device is None:
+        raise HTTPException(status_code=404, detail="Device tidak dikenal")
+    if baru:
+        # Sama seperti /readings: restart sudah tercatat, gagal notifikasi
+        # jangan membuat Raspi menganggap kirimannya gagal.
+        try:
+            await notification_service.dispatch_restart(
+                db, device.id, payload.time, payload.reset_reason
+            )
+        except Exception:
+            logger.exception("Gagal memproses notifikasi restart")
+            await db.rollback()
+    return {"recorded": baru}
+
 
 @router.post("/quality", response_model=QualityIngestResultOut, status_code=201)
 async def ingest_quality(

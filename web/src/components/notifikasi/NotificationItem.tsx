@@ -10,6 +10,7 @@ const SOURCE_LABEL: Record<string, string> = {
   prediction: "Prediksi",
   parameter: "Parameter",
   sensor: "Sensor error",
+  restart: "Restart perangkat",
 };
 
 const PARAM_LABELS: Record<string, string> = {

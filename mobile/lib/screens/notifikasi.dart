@@ -21,6 +21,7 @@ const _sourceLabel = {
   'prediction': 'Prediksi',
   'parameter': 'Parameter',
   'sensor': 'Sensor error',
+  'restart': 'Restart perangkat',
 };
 const _paramLabel = {'ph': 'pH', 'temperature_c': 'Suhu', 'salinity_ppt': 'Salinitas', 'ammonia': 'Amonia'};
 

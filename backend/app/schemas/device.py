@@ -32,6 +32,7 @@ class DeviceOut(BaseModel):
     parent_device_id: int | None
     is_active: bool
     last_seen_at: datetime | None
+    last_restart_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 

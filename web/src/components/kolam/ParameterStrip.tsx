@@ -16,7 +16,9 @@ import {
   PARAM_KEYS,
   PARAM_UI,
   RANGE,
+  amoniaError,
   formatValue,
+  nilaiError,
   optimalBand,
   rangePercent,
   statusOf,
@@ -52,9 +54,14 @@ export default function ParameterStrip({
           param={param}
           value={reading?.[param] ?? null}
           sensorError={sensorStatus?.[param]}
+          error={nilaiError(reading, sensorStatus, param)}
         />
       ))}
-      <AmmoniaCell mode="terkini" current={ammonia ?? null} />
+      <AmmoniaCell
+        mode="terkini"
+        current={ammonia ?? null}
+        error={amoniaError(reading, sensorStatus)}
+      />
     </div>
   );
 }
@@ -69,13 +76,17 @@ const MARKER: Record<StatusLabel, string> = {
 
 function ParameterCell({
   param,
-  value,
+  value: nilaiMentah,
   sensorError,
+  error,
 }: {
   param: ParamKey;
   value: number | null;
   sensorError?: "lonjakan" | "kosong";
+  /** Sensor error atau tidak terbaca: angka diganti "Error" abu, tanpa status. */
+  error: boolean;
 }) {
+  const value = error ? null : nilaiMentah;
   const { label, short, unit } = PARAM_UI[param];
   const { min, max } = RANGE[param];
 
@@ -100,7 +111,7 @@ function ParameterCell({
               <span className="font-semibold text-ink">{status}</span>
             </>
           ) : (
-            <span className="text-muted">Belum ada data</span>
+            !error && <span className="text-muted">Belum ada data</span>
           )}
         </span>
         {/* Tautan per parameter, bukan satu tautan untuk semuanya: tanpa
@@ -118,14 +129,19 @@ function ParameterCell({
       {/* Angka monospace: lebar digit yang tetap membuat koma ketiga kolom
           sejajar walau angkanya berganti tiap menit. */}
       <p className="mt-3 flex items-baseline justify-end gap-1.5 sm:justify-start">
-        <span className="font-mono text-3xl font-semibold leading-none text-ink">
-          {value != null ? formatValue(value) : "N/A"}
+        <span
+          className={clsx(
+            "font-mono text-3xl font-semibold leading-none",
+            error ? "text-muted" : "text-ink"
+          )}
+        >
+          {error ? "Error" : value != null ? formatValue(value) : "N/A"}
         </span>
-        <span className="text-sm text-muted">{unit}</span>
+        {!error && <span className="text-sm text-muted">{unit}</span>}
       </p>
 
-      {/* Angka dan status di atas tetap ditampilkan apa adanya. Label ini yang
-          memberi tahu bahwa keduanya belum tentu bisa dipercaya. */}
+      {/* Alasannya: angka di atas sudah diganti "Error", label ini yang
+          menjelaskan kenapa. */}
       {sensorError && (
         <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs">
           <span className="inline-flex items-center gap-1 font-semibold text-status-bahaya">

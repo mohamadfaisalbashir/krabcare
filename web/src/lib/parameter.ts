@@ -1,6 +1,6 @@
 // Ambang & penyajian tiga parameter kualitas air. Satu tempat supaya angkanya
 // tidak berbeda antara kartu parameter, panel prediksi, dan log historis.
-import type { StatusLabel } from "./types";
+import type { SensorStatus, StatusLabel } from "./types";
 
 export type ParamKey = "ph" | "temperature_c" | "salinity_ppt";
 
@@ -63,15 +63,22 @@ export function yTicks(lo: number, hi: number): number[] {
   return [...ticks, hi];
 }
 
-/** Sumbu X kedua grafik: rentang 100 pembacaan ≈ 25 jam, jadi jam saja berulang. */
+/** Sumbu X grafik: satu label per titik 5 menit, jam saja ("16.05"). Tanggal
+ *  lengkapnya ada di tooltip. */
 export function chartTickLabel(iso: string): string {
-  return new Date(iso).toLocaleString("id-ID", {
-    day: "numeric",
-    month: "numeric",
+  return new Date(iso).toLocaleTimeString("id-ID", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Jakarta",
   });
+}
+
+/** Waktu dibulatkan ke bawah ke kelipatan 5 menit (16.07 jadi 16.05). Backend
+ *  memberi satu bacaan per ember 5 menit, tapi jam bacaannya sendiri acak di
+ *  dalam ember; dibulatkan supaya label sumbu selalu berjarak tepat 5 menit. */
+export function lantai5Menit(iso: string): string {
+  const ms = 5 * 60_000;
+  return new Date(Math.floor(new Date(iso).getTime() / ms) * ms).toISOString();
 }
 
 /** Di luar toleransi → Bahaya. Di luar optimal (tapi masih toleransi) → Waspada. */
@@ -80,6 +87,46 @@ export function statusOf(param: ParamKey, value: number): StatusLabel {
   if (value < min || value > max) return "Bahaya";
   if (value < optimal[0] || value > optimal[1]) return "Waspada";
   return "Aman";
+}
+
+const PERINGKAT: Record<StatusLabel, number> = { Aman: 0, Waspada: 1, Bahaya: 2 };
+
+type BacaanParam = Partial<Record<ParamKey, number | null>> | null | undefined;
+
+/** Parameter ini tampil "Error": bacaan ada tapi nilainya kosong (sensor tidak
+ *  mengirim key-nya), atau backend menandai sensornya error. Kolam yang belum
+ *  punya bacaan sama sekali bukan error, tetap "N/A". */
+export function nilaiError(
+  reading: BacaanParam,
+  sensorStatus: SensorStatus | undefined,
+  p: ParamKey
+): boolean {
+  return !!reading && (reading[p] == null || !!sensorStatus?.[p]);
+}
+
+/** Amonia dihitung edge dari ketiga parameter dan dilewati kalau salah satunya
+ *  kosong, jadi nilai yang tersisa adalah nilai lama. */
+export function amoniaError(reading: BacaanParam, sensorStatus: SensorStatus | undefined): boolean {
+  return PARAM_KEYS.some((p) => nilaiError(reading, sensorStatus, p));
+}
+
+/** Status kolam = status terburuk dari pH, suhu, salinitas, dan amonia.
+ *  Parameter yang kosong atau error dilewati karena nilainya tidak bisa
+ *  dipercaya; null kalau tidak ada yang tersisa. */
+export function statusKolam(
+  reading: BacaanParam,
+  statusAmonia: StatusLabel | null,
+  sensorStatus?: SensorStatus
+): StatusLabel | null {
+  const semua = [
+    ...PARAM_KEYS.map((p) => {
+      const v = reading?.[p];
+      return v == null || sensorStatus?.[p] ? null : statusOf(p, v);
+    }),
+    amoniaError(reading, sensorStatus) ? null : statusAmonia,
+  ].filter((s): s is StatusLabel => s != null);
+  if (semua.length === 0) return null;
+  return semua.reduce((a, b) => (PERINGKAT[b] > PERINGKAT[a] ? b : a));
 }
 
 /**

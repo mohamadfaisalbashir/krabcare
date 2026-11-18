@@ -180,4 +180,38 @@ void main() {
     expect(r.start, '2026-08-31T17:00:00.000Z');
     expect(r.end, '2026-09-09T16:59:59.999Z');
   });
+
+  test('statusKolam memakai status terburuk', () {
+    final aman = {'ph': 8.0, 'temperature_c': 29.0, 'salinity_ppt': 20.0};
+    expect(statusKolam(aman, 'Aman'), 'Aman');
+    // Kasus di layar HP: semua parameter Aman tapi amonia Waspada.
+    expect(statusKolam(aman, 'Waspada'), 'Waspada');
+    expect(statusKolam({...aman, 'ph': 13.97}, 'Waspada'), 'Bahaya');
+    expect(statusKolam({'ph': null, 'temperature_c': 25.0}, null), 'Waspada');
+    expect(statusKolam(null, null), null);
+  });
+
+  test('statusKoneksi: restarting sampai bacaan berikutnya masuk', () {
+    final now = DateTime.parse('2026-11-18T10:05:00Z');
+    const restart = '2026-11-18T10:04:00Z';
+    expect(statusKoneksi('2026-11-18T10:03:30Z', restart, now: now), 'restarting');
+    expect(statusKoneksi('2026-11-18T10:04:30Z', restart, now: now), 'online');
+    expect(statusKoneksi(null, restart, now: now), 'restarting');
+    expect(statusKoneksi('2026-11-18T09:00:00Z', '2026-11-18T09:58:00Z', now: now), 'offline');
+  });
+
+  test('sensor error: parameter dilewati, amonia ikut error', () {
+    final bacaan = {'ph': 13.97, 'temperature_c': 29.0, 'salinity_ppt': 20.0};
+    expect(statusKolam(bacaan, 'Aman', {'ph': 'lonjakan'}), 'Aman');
+    // Key pH hilang dari JSON ESP.
+    final tanpaPh = {'ph': null, 'temperature_c': 29.0, 'salinity_ppt': 20.0};
+    expect(nilaiError(tanpaPh, {}, 'ph'), true);
+    expect(amoniaError(tanpaPh, {}), true);
+    expect(statusKolam(tanpaPh, 'Bahaya', {}), 'Aman');
+    expect(nilaiError(null, {}, 'ph'), false);
+  });
+
+  test('lantai5Menit membulatkan ke bawah', () {
+    expect(lantai5Menit('2026-11-18T09:07:42Z'), '2026-11-18T09:05:00.000Z');
+  });
 }

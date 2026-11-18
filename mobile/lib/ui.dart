@@ -262,8 +262,19 @@ class HistoryChart extends StatelessWidget {
   final double height;
   final bool showX;
 
+  /// Kenop: lebar untuk satu label jam ("16:05") beserta jaraknya. Jumlah titik
+  /// = lebar plot / angka ini, jadi tiap titik 5 menit kebagian label sendiri.
+  static const lebarLabel = 48.0;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, batas) {
+      final n = ((batas.maxWidth - 40) / lebarLabel).floor().clamp(2, 1 << 30);
+      return _chart(rows.length > n ? rows.sublist(rows.length - n) : rows);
+    },
+  );
+
+  Widget _chart(List<Json> rows) {
     final r = range[param]!;
     final color = paramColor(param);
     final pad = (r.max - r.min) * 0.08;
@@ -289,7 +300,7 @@ class HistoryChart extends StatelessWidget {
           // Kisi tegak seperti HistoryChart.tsx: terbaca sebagai penanda waktu.
           gridData: FlGridData(
             drawHorizontalLine: false,
-            verticalInterval: (rows.length / 6).ceilToDouble().clamp(1, double.infinity),
+            verticalInterval: 1,
             getDrawingVerticalLine: (_) => FlLine(color: cBorder.withValues(alpha: .9), strokeWidth: 1),
           ),
           rangeAnnotations: RangeAnnotations(
@@ -324,8 +335,9 @@ class HistoryChart extends StatelessWidget {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: showX,
-                reservedSize: 40,
-                interval: (rows.length / 3).ceilToDouble().clamp(1, double.infinity),
+                reservedSize: 24,
+                // Setiap titik diberi label: jumlah titik sudah disesuaikan lebar layar.
+                interval: 1,
                 getTitlesWidget: (v, meta) {
                   final i = v.toInt();
                   if (i < 0 || i >= rows.length || v != i) return const SizedBox.shrink();
@@ -333,7 +345,7 @@ class HistoryChart extends StatelessWidget {
                   return SideTitleWidget(
                     meta: meta,
                     child: Text(
-                      '${formatTanggal(t).substring(0, 5)}\n${formatJam(t)}',
+                      formatJam(t),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 10, color: cInk),
                     ),

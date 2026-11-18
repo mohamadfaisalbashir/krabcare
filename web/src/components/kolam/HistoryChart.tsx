@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -28,6 +29,13 @@ import ChartTooltip from "./ChartTooltip";
  *  2.1999999999999997. Recharts memakai ujung domain apa adanya sebagai tick
  *  pertama, dan label sepanjang itu tidak muat di sumbu selebar 44px. */
 const round1 = (n: number) => Math.round(n * 10) / 10;
+
+/** Kenop: lebar yang disediakan untuk satu label jam ("16.05") beserta jaraknya.
+ *  Jumlah titik = lebar area plot / angka ini, jadi tiap titik 5 menit kebagian
+ *  label sendiri dan HP menampilkan lebih sedikit titik daripada desktop. */
+const LEBAR_LABEL = 56;
+/** Sumbu Y (52px) + margin kanan (8px), tidak dipakai label waktu. */
+const BUKAN_PLOT = 60;
 
 /**
  * Riwayat satu parameter, digambar di atas pita ambangnya.
@@ -63,10 +71,26 @@ export default function HistoryChart({
   const cfg = PARAM_UI[parameter];
   const { min, max, optimal } = RANGE[parameter];
 
+  const wadah = useRef<HTMLDivElement>(null);
+  const [lebar, setLebar] = useState(0);
+  useEffect(() => {
+    const el = wadah.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([e]) => setLebar(e.contentRect.width));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // ponytail: saat device offline ada ember 5 menit yang bolong, jadi dua titik
+  // bersebelahan bisa terpaut lebih dari 5 menit. Isi ember kosong kalau itu
+  // mengganggu pembacaan.
+  const titik = lebar
+    ? data.slice(-Math.max(2, Math.floor((lebar - BUKAN_PLOT) / LEBAR_LABEL)))
+    : data;
+
   // Bantalan 8% supaya garis di batas toleransi tidak menempel tepi bingkai,
   // dan nilai Bahaya sedikit di luar ambang tetap tergambar.
   const pad = (max - min) * 0.08;
-  const values = data
+  const values = titik
     .map((d) => d[parameter])
     .filter((v): v is number => typeof v === "number");
   // Kalau data keluar jauh dari toleransi, ikut lebarkan. Memotong pembacaan
@@ -75,7 +99,7 @@ export default function HistoryChart({
   const hi = round1(Math.max(max + pad, ...values));
 
   return (
-    <div className={`${height} w-full text-black dark:text-ink`}>
+    <div ref={wadah} className={`${height} w-full text-black dark:text-ink`}>
       {/* debounce: ResponsiveContainer memakai ResizeObserver, dan tanpa jeda
           ini seluruh grafik digambar ulang tiap frame selama sidebar
           menguncup atau membentang. */}
@@ -86,7 +110,7 @@ export default function HistoryChart({
         {/* Tanpa syncId. syncId menyamakan activeTooltipIndex, bukan cuma garis
             kursornya, jadi grafik yang tidak disentuh ikut membuka tooltip.
             Angka hanya boleh muncul di grafik yang ada di bawah kursor. */}
-        <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+        <AreaChart data={titik} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
           <defs>
             <linearGradient id={`grad-${parameter}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={cfg.color} stopOpacity={0.28} />
@@ -119,8 +143,10 @@ export default function HistoryChart({
           <XAxis
             dataKey="time"
             tickFormatter={chartTickLabel}
-            interval="preserveStartEnd"
-            minTickGap={64}
+            // Setiap titik diberi label: jumlah titik sudah disesuaikan lebar.
+            interval={0}
+            // Label titik pertama & terakhir tidak terpotong tepi grafik.
+            padding={{ left: 20, right: 20 }}
             tick={hideXAxis ? false : { fontSize: 13, fill: "currentColor" }}
             height={hideXAxis ? 0 : undefined}
             axisLine={false}
