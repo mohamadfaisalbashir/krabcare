@@ -11,13 +11,16 @@
 #   wajib karena Next.js standalone menyuntik skrip inline untuk hydration dan
 #   ada skrip tema inline di app/layout.tsx; nonce butuh middleware yang belum
 #   ada. connect-src mengizinkan domain API supaya fetch dari web tidak diblokir.
+#   worker-src blob: wajib untuk unduh XLSX: fflate (dipakai write-excel-file)
+#   mengompres berkas di Web Worker dari blob URL. Tanpa ini XLSX gagal
+#   sementara CSV tetap jalan. Blob hanya bisa dibuat skrip halaman sendiri.
 (keamanan) {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://{$DOMAIN}"
+		Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' https://{$DOMAIN}; worker-src 'self' blob:"
 		-Server
 	}
 }

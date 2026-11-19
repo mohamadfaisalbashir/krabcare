@@ -94,7 +94,9 @@ function FilterPill({
     <button
       onClick={onClick}
       className={clsx(
-        "whitespace-nowrap rounded-full border px-2 py-1.5 text-center text-[11px] font-semibold transition sm:px-3.5 sm:text-xs",
+        // Tanpa nowrap di HP: grid 4 kolom rata cuma ~60px per pil di layar
+        // 360px, jadi "Semua data"/"Salinitas" turun baris alih-alih meluber.
+        "flex min-w-0 flex-wrap items-center justify-center leading-tight sm:whitespace-nowrap rounded-full border px-2 py-1.5 text-center text-[11px] font-semibold transition sm:px-3.5 sm:text-xs",
         active
           ? "border-brand-500 bg-brand-50 text-aksen-kuat"
           : "border-border text-muted hover:bg-bg"
