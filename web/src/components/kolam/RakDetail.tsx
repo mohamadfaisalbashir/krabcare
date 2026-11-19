@@ -24,7 +24,14 @@ import {
   StatusLabel,
 } from "@/lib/types";
 import { DISCLAIMER as AMONIA_DISCLAIMER, riskToStatus } from "@/lib/ammonia";
-import { ParamKey, PARAM_KEYS, PARAM_UI, lantai5Menit, statusKolam } from "@/lib/parameter";
+import {
+  ParamKey,
+  PARAM_KEYS,
+  PARAM_UI,
+  amoniaError,
+  lantai5Menit,
+  statusKolam,
+} from "@/lib/parameter";
 import { KONEKSI_UI } from "@/components/dashboard/PondCard";
 import { api } from "@/lib/api";
 import { formatWaktu, statusKoneksi } from "@/lib/tanggal";
@@ -329,7 +336,11 @@ export default function RakDetail({
           <Section {...SECTION.prediksi}>
             <PredictionPanel
               predictions={predictions}
-              ammoniaForecast={ammonia?.forecast ?? []}
+              // Sensor asal error: ramalan amonia yang tersisa dari run lama,
+              // jadi disembunyikan seperti amonia terkini di ParameterStrip.
+              ammoniaForecast={
+                amoniaError(reading, sensorStatus) ? [] : (ammonia?.forecast ?? [])
+              }
             />
             <WarnaKondisiLegend />
           </Section>

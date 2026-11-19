@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../api.dart';
 import '../logic.dart';
+import '../main.dart' show navBar, tabIndex;
 import '../ui.dart';
 
 /// `sensor`: parameter yang sensornya terindikasi error (api.getSensorStatus), kosong = sehat.
@@ -484,6 +485,16 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
     final koneksi = statusKoneksi(reading?['received_at'], restartAt);
     return Scaffold(
       appBar: AppBar(title: const Text('Detail Kolam')),
+      // Menu bawah yang sama dengan Shell: pindah menu langsung dari sini, dan
+      // isi layar tidak lagi tertutup taskbar di tablet (NavigationBar memberi
+      // ruang untuk inset sistem bawah).
+      bottomNavigationBar: navBar(
+        selected: 0,
+        onSelected: (i) {
+          tabIndex.value = i;
+          Navigator.of(context).popUntil((r) => r.isFirst);
+        },
+      ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -608,7 +619,8 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
 
   List<Widget> _data(Json? reading) {
     final current = ammonia?['current'] as Json?;
-    final forecast = ((ammonia?['forecast'] ?? []) as List).cast<Json>();
+    // Sensor asal error: ramalan amonia sisa run lama, disembunyikan seperti amonia terkini.
+    final forecast = amoniaError(reading, sensor) ? <Json>[] : ((ammonia?['forecast'] ?? []) as List).cast<Json>();
     final window = predictions.where((p) => p['horizon_minutes'] <= 60).toList();
     const field = {
       'ph': 'predicted_ph',

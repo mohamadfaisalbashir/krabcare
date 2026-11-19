@@ -24,6 +24,10 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 final currentUser = ValueNotifier<Json?>(null);
 final unreadCount = ValueNotifier<int>(0);
 
+/// Menu bawah yang aktif di [Shell]. Global supaya layar yang dibuka di atas
+/// Shell (Detail Kolam) bisa pindah menu lewat [navBar].
+final tabIndex = ValueNotifier<int>(0);
+
 /// false selama google-services.json belum dipasang: app tetap jalan tanpa push.
 bool pushReady = false;
 
@@ -271,14 +275,43 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
+/// Navigasi bawah Shell. Dipakai juga Detail Kolam supaya bisa pindah menu
+/// tanpa kembali ke Dashboard dulu.
+Widget navBar({required int selected, required ValueChanged<int> onSelected}) {
+  final isAdmin = currentUser.value?['role'] == 'admin';
+  final notifIcon = ValueListenableBuilder(
+    valueListenable: unreadCount,
+    builder: (_, n, _) => Badge(
+      isLabelVisible: n > 0,
+      label: Text(n >= 200 ? '200+' : '$n'),
+      child: const Icon(Icons.notifications_outlined),
+    ),
+  );
+  return NavigationBar(
+    selectedIndex: selected,
+    onDestinationSelected: onSelected,
+    destinations: isAdmin
+        ? const [
+            NavigationDestination(icon: Icon(Icons.memory), label: 'Perangkat'),
+            NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
+          ]
+        : [
+            const NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+            const NavigationDestination(icon: Icon(Icons.history), label: 'Log'),
+            NavigationDestination(icon: notifIcon, label: 'Notifikasi'),
+            const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
+          ],
+  );
+}
+
 class _ShellState extends State<Shell> {
-  int index = 0;
   Timer? poll;
   final isAdmin = currentUser.value?['role'] == 'admin';
 
   @override
   void initState() {
     super.initState();
+    tabIndex.value = 0; // login ulang selalu mulai dari menu pertama
     if (!isAdmin) {
       refreshUnread();
       poll = Timer.periodic(const Duration(seconds: 60), (_) => refreshUnread());
@@ -296,35 +329,16 @@ class _ShellState extends State<Shell> {
     final pages = isAdmin
         ? [const PerangkatScreen(), const ProfilScreen()]
         : [const DashboardScreen(), const LogScreen(), const NotifikasiScreen(), const ProfilScreen()];
-    final notifIcon = ValueListenableBuilder(
-      valueListenable: unreadCount,
-      builder: (_, n, _) => Badge(
-        isLabelVisible: n > 0,
-        label: Text(n >= 200 ? '200+' : '$n'),
-        child: const Icon(Icons.notifications_outlined),
-      ),
-    );
-    return Scaffold(
-      // Dashboard tanpa AppBar: tanpa ini ikon status bar putih dari layar login ikut terbawa.
-      body: AnnotatedRegion(
-        // Ikon status bar: gelap di atas latar terang, terang di mode gelap.
-        value: gelap ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
-        child: SafeArea(bottom: false, child: pages[index]),
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: index,
-        onDestinationSelected: (i) => setState(() => index = i),
-        destinations: isAdmin
-            ? const [
-                NavigationDestination(icon: Icon(Icons.memory), label: 'Perangkat'),
-                NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
-              ]
-            : [
-                const NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
-                const NavigationDestination(icon: Icon(Icons.history), label: 'Log'),
-                NavigationDestination(icon: notifIcon, label: 'Notifikasi'),
-                const NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profil'),
-              ],
+    return ValueListenableBuilder(
+      valueListenable: tabIndex,
+      builder: (_, index, _) => Scaffold(
+        // Dashboard tanpa AppBar: tanpa ini ikon status bar putih dari layar login ikut terbawa.
+        body: AnnotatedRegion(
+          // Ikon status bar: gelap di atas latar terang, terang di mode gelap.
+          value: gelap ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
+          child: SafeArea(bottom: false, child: pages[index]),
+        ),
+        bottomNavigationBar: navBar(selected: index, onSelected: (i) => tabIndex.value = i),
       ),
     );
   }

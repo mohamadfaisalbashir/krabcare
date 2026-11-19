@@ -251,11 +251,7 @@ def main():
             kirim_restart(data)
             continue
 
-        try:
-            reading, waktu = buat_reading(data)
-        except KeyError as e:
-            print(f"[WARNING] Field yang dibutuhkan tidak lengkap ({e}), data dilewati: {data}")
-            continue
+        reading, waktu = buat_reading(data)
 
         # Validasi rentang fisik (validasi_input.py). Nilai rusak, mis. kode
         # error DS18B20 -127/85 atau pH > 14, diganti None sebelum menyentuh

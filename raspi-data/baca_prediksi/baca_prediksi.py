@@ -250,11 +250,7 @@ def main():
             kirim_restart(data)
             continue
 
-        try:
-            reading, waktu = buat_reading(data)
-        except KeyError as e:
-            print(f"[WARNING] Field yang dibutuhkan tidak lengkap ({e}), data dilewati: {data}")
-            continue
+        reading, waktu = buat_reading(data)
 
         # Simpan ke CSV untuk keperluan dataset ML (rotasi per jam), SEKALIGUS
         # inilah file yang dipantau cloud_forwarder_watch.py untuk reading mentah.

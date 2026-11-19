@@ -7,6 +7,13 @@ PARAMETERS: tuple[str, ...] = ("ph", "temperature_c", "salinity_ppt")
 
 _ROUNDING = {"ph": 2, "temperature_c": 1, "salinity_ppt": 2}
 
+# Kenop: titik valid terakhir sebuah parameter harus lebih baru dari ini
+# (dihitung dari as_of) supaya parameternya diramal. Tanpa batas ini sensor
+# yang mati masih diramal dari titik lama di buffer sampai titik itu keluar
+# dari jendela horizon. ESP kirim tiap ~60 detik, jadi 5 menit = beberapa
+# kiriman terlewat. Naikkan kalau interval kirim diperpanjang.
+MAKS_UMUR_TITIK = timedelta(minutes=5)
+
 
 @dataclass(frozen=True)
 class HorizonConfig:
@@ -149,6 +156,9 @@ class WLRForecaster:
                     for r in self._buffer
                     if r.time <= as_of and getattr(r, param) is not None
                 ]
+                if not times or as_of - times[-1] > MAKS_UMUR_TITIK:
+                    row[param] = None  # sensor parameter ini sudah tidak mengirim
+                    continue
                 pred = weighted_linear_forecast(times, vals, target_time, cfg.window_minutes, cfg.half_life_minutes)
                 row[param] = round(pred, _ROUNDING[param]) if pred is not None else None
             result[h] = row

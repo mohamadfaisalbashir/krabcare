@@ -93,9 +93,9 @@ class EdgePipeline:
     def process(self, time: datetime, ph: float | None, temperature_c: float | None, salinity_ppt: float | None) -> dict:
         """Satu reading masuk -> payload lengkap {classifications, predictions, ammonia_risks}.
 
-        `time` HARUS timezone-aware. Kalau salah satu parameter None (sensor mati),
-        klasifikasi/amonia kondisi-sekarang dilewati (bukan diisi nilai palsu) —
-        tapi reading tetap ditambahkan ke buffer forecast kalau nilainya ada.
+        `time` HARUS timezone-aware. Parameter None (sensor mati) dilewati:
+        klasifikasi dan prediksi tetap dibuat dari parameter yang ada, amonia
+        hanya kalau ketiganya ada, karena rumusnya butuh pH, suhu, dan salinitas.
         """
         classifications: list[dict] = []
         predictions: list[dict] = []
@@ -103,7 +103,7 @@ class EdgePipeline:
         anomaly_categories_now: list[str] = []
         anomaly_predictions: list[dict] = []
 
-        if ph is not None and temperature_c is not None and salinity_ppt is not None:
+        if any(v is not None for v in (ph, temperature_c, salinity_ppt)):
             row, category = self._classification_row(time, time, ph, temperature_c, salinity_ppt)
             classifications.append(row)
             if category in ANOMALY_CATEGORIES:
@@ -118,8 +118,8 @@ class EdgePipeline:
 
         for h in HORIZONS_MINUTES:
             nilai = forecast[h]
-            if nilai["ph"] is None or nilai["temperature_c"] is None or nilai["salinity_ppt"] is None:
-                continue  # histori belum cukup di jendela horizon ini (baru nyala)
+            if all(v is None for v in nilai.values()):
+                continue  # histori belum cukup atau semua sensor mati
 
             target_time = time + timedelta(minutes=h)
             row, category = self._prediction_row(

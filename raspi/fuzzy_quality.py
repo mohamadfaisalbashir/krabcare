@@ -210,15 +210,22 @@ def infer_parameter(parameter: str, value: float) -> tuple[float, str, dict[str,
     return n_star, status_from_n(n_star), memberships
 
 
-def classify_water_quality(ph: float, temperature_c: float, salinity_ppt: float) -> dict:
-    """Klasifikasi kualitas air dari tiga parameter.
+def classify_water_quality(
+    ph: float | None = None, temperature_c: float | None = None, salinity_ppt: float | None = None
+) -> dict | None:
+    """Klasifikasi kualitas air dari parameter yang tersedia.
 
     Tiga sistem Mamdani terpisah (suhu, pH, salinitas) sesuai CD-3, lalu
     status kolam mengikuti parameter dengan kategori terburuk (CD-4 4.1.1 B).
     Rincian per parameter dikirim apa adanya ke backend di membership_degrees.
+
+    Parameter None (sensor rusak) dilewati, jangan diganti 0: pH 0 akan
+    dinilai Bahaya. Kalau ketiganya None, hasilnya None.
     """
     per_parameter = {}
     for parameter, value in (("suhu", temperature_c), ("ph", ph), ("salinitas", salinity_ppt)):
+        if value is None:
+            continue
         n_star, status, memberships = infer_parameter(parameter, value)
         per_parameter[parameter] = {
             "value": value,
@@ -226,6 +233,8 @@ def classify_water_quality(ph: float, temperature_c: float, salinity_ppt: float)
             "category": CATEGORY_TO_DB[status],
             "membership": {name: round(degree, 4) for name, degree in memberships.items()},
         }
+    if not per_parameter:
+        return None
 
     overall_category = max(
         (p["category"] for p in per_parameter.values()), key=lambda c: _SEVERITY_ORDER[c]
