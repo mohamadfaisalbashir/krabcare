@@ -103,10 +103,14 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       };
 
       const { start, end } = dayRangeToIso(from, to);
+      const satuDevice = sensors.length === 1 ? sensors[0] : null;
       // Paralel antar sensor (maksimal 3), berurutan di dalam satu sensor.
-      const results = await Promise.all(
-        sensors.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))
-      );
+      // Amonia diambil bersamaan, bukan sesudahnya: tidak bergantung pada
+      // reading, dan kalau berurutan waktu tunggunya jadi kira-kira dua kali.
+      const [results, amoniaRows] = await Promise.all([
+        Promise.all(sensors.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))),
+        ambilAmonia(start, end, satuDevice?.deviceId),
+      ]);
 
       // flatMap menyambung sensor demi sensor, jadi berkas gabungan melompat
       // mundur tiap ganti sensor. Diurutkan lagi supaya kronologis.
@@ -122,8 +126,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
       const params =
         paramSel === "semua" ? PARAM_KEYS : paramSel === "amonia" ? [] : [paramSel];
       const kolamByDevice = Object.fromEntries(sensors.map((s) => [s.deviceId, s.kolamNama]));
-      const satuDevice = sensors.length === 1 ? sensors[0] : null;
-      const amonia = petaAmoniaDari(await ambilAmonia(start, end, satuDevice?.deviceId));
+      const amonia = petaAmoniaDari(amoniaRows);
 
       const filename = namaBerkas(satuDevice?.deviceCode ?? "semua", params, from, to, format);
       if (format === "xlsx") {
