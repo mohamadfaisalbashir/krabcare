@@ -1,7 +1,6 @@
 # KrabCare
 
-Sistem monitoring kualitas air untuk budidaya kepiting sistem vertikal, dikembangkan
-bersama Supermarket Kepiting Surabaya.
+Sistem monitoring kualitas air untuk budidaya kepiting sistem vertikal.
 
 Alurnya: ESP32 di tiap rak membaca pH, suhu, dan salinitas, Raspberry Pi gateway
 menghitung klasifikasi, forecast, dan risiko amonia, lalu semuanya dikirim ke backend
