@@ -1,9 +1,9 @@
-import { StatusLabel } from "@/lib/types";
-import { CheckCircle2, AlertTriangle, AlertOctagon } from "lucide-react";
+import { BadgeLabel } from "@/lib/types";
+import { CheckCircle2, AlertTriangle, AlertOctagon, CircleAlert } from "lucide-react";
 import clsx from "clsx";
 
 const CONFIG: Record<
-  StatusLabel,
+  BadgeLabel,
   { text: string; bg: string; icon: React.ElementType }
 > = {
   Aman: { text: "text-status-aman", bg: "bg-status-amanBg", icon: CheckCircle2 },
@@ -17,13 +17,18 @@ const CONFIG: Record<
     bg: "bg-status-bahayaBg",
     icon: AlertOctagon,
   },
+  ERROR: {
+    text: "text-status-error",
+    bg: "bg-status-errorBg",
+    icon: CircleAlert,
+  },
 };
 
 export default function StatusBadge({
   status,
   size = "md",
 }: {
-  status: StatusLabel;
+  status: BadgeLabel;
   size?: "sm" | "md";
 }) {
   const cfg = CONFIG[status];

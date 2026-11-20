@@ -10,7 +10,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import NotificationItem from "@/components/notifikasi/NotificationItem";
 import StatusBadge from "@/components/ui/StatusBadge";
 import KeAtas from "@/components/ui/KeAtas";
-import { Notification, NotifSource, Sensor } from "@/lib/types";
+import { Notification, NotifFilterSource, Sensor } from "@/lib/types";
 import { api, ambilSensorSaya } from "@/lib/api";
 import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/notif-store";
 
@@ -18,7 +18,7 @@ import { refreshUnreadCount, useUnreadCount, formatUnreadBadge } from "@/lib/not
  *  log-historis. Diiris di database, bukan dipotong di klien. */
 const PAGE = 20;
 
-type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi" | "sensor";
+type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi" | "sistem";
 
 /**
  * Filter -> nilai `source` di backend. undefined = tanpa filter.
@@ -27,20 +27,23 @@ type NotifFilter = "semua" | "kolam" | "parameter" | "prediksi" | "sensor";
  * menyaring setelah LIMIT membuat tab tampak kosong padahal barisnya ada di
  * halaman berikutnya.
  */
-const FILTER_SOURCE: Record<NotifFilter, NotifSource | undefined> = {
+const FILTER_SOURCE: Record<NotifFilter, NotifFilterSource | undefined> = {
   semua: undefined,
   kolam: "classification",
   parameter: "parameter",
   prediksi: "prediction",
-  sensor: "sensor",
+  // Sensor error/pulih dan restart sekaligus; backend memetakannya ke dua source.
+  sistem: "sistem",
 };
 
-const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
+/** `pendek`: label di layar sempit. Kelima tab harus muat satu baris di 360px;
+ *  "Sistem error" penuh membuat deretannya meluber dan halaman bisa digeser. */
+const FILTER_BUTTONS: { id: NotifFilter; label: string; pendek?: string }[] = [
   { id: "semua", label: "Semua" },
   { id: "kolam", label: "Kualitas Kolam" },
   { id: "parameter", label: "Parameter" },
   { id: "prediksi", label: "Prediksi" },
-  { id: "sensor", label: "Sensor" },
+  { id: "sistem", label: "Sistem error", pendek: "Sistem" },
 ];
 
 export default function NotifikasiPage() {
@@ -371,11 +374,19 @@ function FilterSwitch({
             className={clsx(
               // flex-auto: tiap tombol selebar labelnya ditambah bagian sisa
               // ruang yang sama, teks tetap di tengah tombolnya.
-              "relative z-10 flex-auto whitespace-nowrap rounded-md px-2.5 py-1.5 text-center text-xs font-semibold transition-colors duration-200 sm:px-3",
+              // px-1.5 di HP: lima tab dengan px-2.5 meluber ±20px di layar 375px.
+              "relative z-10 flex-auto whitespace-nowrap rounded-md px-1.5 py-1.5 text-center text-xs font-semibold transition-colors duration-200 sm:px-3",
               active ? "text-aksen-kuat" : "text-muted hover:text-ink"
             )}
           >
-            {btn.label}
+            {btn.pendek ? (
+              <>
+                <span className="sm:hidden">{btn.pendek}</span>
+                <span className="hidden sm:inline">{btn.label}</span>
+              </>
+            ) : (
+              btn.label
+            )}
           </button>
         );
       })}
@@ -447,9 +458,12 @@ function PanduanBaca() {
                 tren data terakhir. Belum terjadi, jadi bisa dipakai untuk berjaga-jaga.
               </li>
               <li>
-                <ChipJenis>Sensor error</ChipJenis> pembacaan sebuah sensor tidak wajar, misalnya
-                nilainya melonjak tiba-tiba atau tidak terbaca. Periksa alatnya, karena angka dari
-                sensor itu belum tentu bisa dipercaya.
+                <ChipJenis>Sensor error</ChipJenis> sebuah sensor tidak terbaca. Periksa probenya.
+                Notifikasi Aman dengan label ini berarti sensornya sudah terbaca lagi.
+              </li>
+              <li>
+                <ChipJenis>Restart perangkat</ChipJenis> alat di kolam baru saja menyala ulang,
+                misalnya karena listrik sempat putus.
               </li>
             </ul>
           </li>
@@ -473,6 +487,10 @@ function PanduanBaca() {
               <li>
                 <StatusBadge status="Bahaya" size="sm" /> melewati batas toleransi kepiting. Segera
                 periksa kolam.
+              </li>
+              <li>
+                <StatusBadge status="ERROR" size="sm" /> yang bermasalah alatnya, bukan airnya:
+                sensor tidak terbaca atau perangkat restart. Semuanya ada di tab Sistem error.
               </li>
             </ul>
           </li>

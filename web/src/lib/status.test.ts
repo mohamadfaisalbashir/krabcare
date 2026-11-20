@@ -29,7 +29,7 @@ test("statusKoneksi: restarting sampai bacaan berikutnya masuk", () => {
 test("sensor error: parameter dilewati, amonia ikut error", () => {
   const bacaan = { ph: 13.97, temperature_c: 29, salinity_ppt: 20 };
   // pH 13.97 dari sensor yang ditandai error tidak membuat kolam Bahaya.
-  assert.equal(statusKolam(bacaan, "Aman", { ph: "lonjakan" }), "Aman");
+  assert.equal(statusKolam(bacaan, "Aman", { ph: "kosong" }), "Aman");
   // Key pH hilang dari JSON ESP: pH error, amonia (nilai lama) diabaikan.
   const tanpaPh = { ph: null, temperature_c: 29, salinity_ppt: 20 };
   assert.equal(nilaiError(tanpaPh, {}, "ph"), true);

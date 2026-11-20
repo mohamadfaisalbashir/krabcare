@@ -10,4 +10,5 @@ export const PARAM_EMOJI: Record<LogParam, string> = {
   temperature_c: "🌡️",
   salinity_ppt: "🌊",
   amonia: "☣️",
+  sistem: "⚠️",
 };

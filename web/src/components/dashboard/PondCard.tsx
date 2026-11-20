@@ -72,7 +72,7 @@ export default function PondCard({
 }) {
   const { kolam, latestReading, ammonia } = item;
   // Satu baris per sensor yang terindikasi error, beserta alasannya, mis.
-  // "pH (Nilai melonjak tidak wajar)". Kosong = semua sensor sehat.
+  // "pH (Nilai tidak terbaca)". Kosong = semua sensor sehat.
   const sensorError = PARAM_KEYS.flatMap((p) => {
     const sebab = item.sensorStatus[p];
     return sebab ? [`${PARAM_UI[p].short} (${SENSOR_ERROR_TEKS[sebab]})`] : [];
@@ -100,10 +100,10 @@ export default function PondCard({
   const KoneksiIcon = koneksi.icon;
 
   // Angka parameter yang diwarnai statusnya; emoji-nya tidak bisa diwarnai.
-  // Sensor error atau tidak terbaca: tulisan "Error" abu, bukan angka.
+  // Sensor error atau tidak terbaca: "---" biru (warna ERROR), bukan angka.
   const nilai = (p: ParamKey) => {
     const v = latestReading?.[p];
-    if (nilaiError(latestReading, item.sensorStatus, p)) return { teks: "Error", warna: KOSONG.text };
+    if (nilaiError(latestReading, item.sensorStatus, p)) return { teks: "---", warna: "text-status-error" };
     return { teks: v == null ? "N/A" : formatValue(v), warna: v == null ? KOSONG.text : TONE[statusOf(p, v)].text };
   };
 
@@ -185,7 +185,7 @@ export default function PondCard({
       {sensorError.map((teks) => (
         <p
           key={teks}
-          className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-status-bahaya"
+          className="mt-1 flex items-start gap-1 text-[11px] font-semibold text-status-error"
         >
           <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" strokeWidth={2.2} />
           <span>Sensor error: {teks}</span>
@@ -202,16 +202,20 @@ export default function PondCard({
               <span aria-hidden>{PARAM_EMOJI[p]}</span>
               <span className={warna}>
                 {teks}
-                {p === "temperature_c" && teks !== "N/A" && teks !== "Error" ? "°" : ""}
+                {p === "temperature_c" && teks !== "N/A" && teks !== "---" ? "°" : ""}
               </span>
             </span>
           );
         })}
         <span className="inline-flex items-center gap-1">
           <span aria-hidden>{PARAM_EMOJI.amonia}</span>
-          <span className={statusAmonia ? TONE[statusAmonia].text : KOSONG.text}>
+          <span
+            className={
+              amoniaRusak ? "text-status-error" : statusAmonia ? TONE[statusAmonia].text : KOSONG.text
+            }
+          >
             {amoniaRusak
-              ? "Error"
+              ? "---"
               : ammonia?.fraction_nh3_pct != null
                 ? `${formatFraksi(ammonia.fraction_nh3_pct)}%`
                 : "N/A"}

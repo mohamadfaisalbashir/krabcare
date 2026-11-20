@@ -10,6 +10,7 @@ from app.models.kolam import Kolam
 from app.models.notification import Notification
 from app.models.push_token import PushToken
 from app.models.sensor_reading import SensorReading
+from app.models.system_log import SystemLog
 from app.models.user import User
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "Notification",
     "PushToken",
     "SensorReading",
+    "SystemLog",
     "User",
 ]

@@ -332,6 +332,26 @@ export const api = {
   getSensorStatus: (deviceId: number) =>
     request<import("./types").SensorStatus>(`/readings/sensor-status?device_id=${deviceId}`),
 
+  /** GET /readings/system-logs → SystemLog[] (sensor error/pulih + restart, terbaru dulu) */
+  getSystemLogs: (params: {
+    device_id?: number;
+    start_time?: string;
+    end_time?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const qs = new URLSearchParams();
+    if (params.device_id) qs.set("device_id", String(params.device_id));
+    if (params.start_time) qs.set("start_time", params.start_time);
+    if (params.end_time) qs.set("end_time", params.end_time);
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.offset != null) qs.set("offset", String(params.offset));
+    const query = qs.toString();
+    return request<import("./types").SystemLog[]>(
+      `/readings/system-logs${query ? `?${query}` : ""}`
+    );
+  },
+
   getAmmoniaRisk: (deviceId?: number) => {
     const qs = deviceId != null ? `?device_id=${deviceId}` : "";
     return request<import("./types").DeviceAmmonia[]>(`/quality/ammonia-risk${qs}`);
@@ -373,7 +393,7 @@ export const api = {
     offset?: number;
     /** Disaring di SQL. Menyaring di klien setelah limit bikin tab filter
      *  tampak kosong padahal barisnya ada di halaman berikutnya. */
-    source?: import("./types").NotifSource;
+    source?: import("./types").NotifFilterSource;
     /** Sama seperti `source`, disaring di SQL. */
     device_id?: number;
   }) => {

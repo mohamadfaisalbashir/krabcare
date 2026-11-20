@@ -76,6 +76,10 @@
   --color-status-waspadaBg: rgb(var(--c-waspada-bg)); /* #FBF0DA */
   --color-status-bahaya: rgb(var(--c-bahaya)); /* #C23B22 */
   --color-status-bahayaBg: rgb(var(--c-bahaya-bg)); /* #FBE7E2 */
+  /* Sensor error / restart: biru, sengaja di luar skala hijau-kuning-merah
+     karena bukan kondisi air, melainkan alatnya yang bermasalah. */
+  --color-status-error: rgb(var(--c-error)); /* #2563EB */
+  --color-status-errorBg: rgb(var(--c-error-bg)); /* #DBEAFE */
 
   /* Satu keluarga huruf untuk seluruh UI, judul maupun isi, mengikuti WinUI 3.
      Font bawaan sistem, bukan Google Font, jadi tidak ada yang diunduh: Segoe
@@ -206,6 +210,8 @@
     --c-waspada-bg: 251 240 218;
     --c-bahaya: 194 59 34;
     --c-bahaya-bg: 251 231 226;
+    --c-error: 37 99 235;
+    --c-error-bg: 219 234 254;
     /* Warna garis grafik per parameter (lib/parameter.ts). */
     --c-param-ph: 14 110 92;
     --c-param-suhu: 193 135 58;
@@ -235,6 +241,8 @@
     --c-waspada-bg: 58 44 16;
     --c-bahaya: 240 128 106;
     --c-bahaya-bg: 61 26 20;
+    --c-error: 125 168 247;
+    --c-error-bg: 22 36 68;
     --c-param-ph: 63 191 163;
     --c-param-suhu: 221 174 100;
     --c-param-salinitas: 90 176 221;

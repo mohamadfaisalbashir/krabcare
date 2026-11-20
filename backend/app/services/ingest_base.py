@@ -12,7 +12,26 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Device
+from app.models import Device, SystemLog
+
+
+async def catat_log_sistem(
+    db: AsyncSession,
+    device_id: int,
+    time: datetime,
+    kind: str,
+    parameter: str | None = None,
+    detail: str | None = None,
+) -> None:
+    """Tambah satu baris system_logs; kejadian yang sama dikirim ulang diabaikan.
+
+    Tidak commit sendiri: ikut transaksi pemanggil.
+    """
+    await db.execute(
+        pg_insert(SystemLog)
+        .values(device_id=device_id, time=time, kind=kind, parameter=parameter, detail=detail)
+        .on_conflict_do_nothing()
+    )
 
 
 async def find_devices_by_code(db: AsyncSession, device_codes: list[str]) -> dict[str, Device]:

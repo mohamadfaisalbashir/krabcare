@@ -62,8 +62,15 @@ export default function AmmoniaCell({
                 <span aria-hidden className={clsx("h-2 w-2 rounded-full", WARNA[isi.status])} />
                 <span className="font-semibold text-ink">{isi.status}</span>
               </>
+            ) : error ? (
+              // Amonia dihitung dari pH, suhu, salinitas: satu sensor error,
+              // amonianya ikut ERROR. Biru sama dengan ParameterStrip.
+              <>
+                <span aria-hidden className="h-2 w-2 rounded-full bg-status-error" />
+                <span className="font-semibold text-status-error">ERROR</span>
+              </>
             ) : (
-              !error && <span className="text-muted">Belum ada data</span>
+              <span className="text-muted">Belum ada data</span>
             )}
           </span>
         )}
@@ -114,7 +121,7 @@ function renderTerkini(
               error ? "text-muted" : "text-ink"
             )}
           >
-            {error ? "Error" : nilai != null ? formatFraksi(nilai) : "N/A"}
+            {error ? "---" : nilai != null ? formatFraksi(nilai) : "N/A"}
           </span>
           {!error && <span className="text-sm text-muted">%</span>}
         </p>

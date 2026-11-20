@@ -8,6 +8,13 @@ export type WaterQualityCategory = "baik" | "sedang" | "buruk";
 /** Label tampilan UI untuk status kualitas air (FR-08 CD GAB). */
 export type StatusLabel = "Aman" | "Waspada" | "Bahaya";
 
+/**
+ * Label badge: status kualitas air, ditambah "ERROR" untuk sensor yang tidak
+ * terbaca atau perangkat restart. ERROR bukan kondisi air, jadi tidak ikut
+ * StatusLabel (statusOf dan statusKolam tidak pernah menghasilkannya).
+ */
+export type BadgeLabel = StatusLabel | "ERROR";
+
 export type UserRole = "admin" | "operator";
 
 const CATEGORY_TO_LABEL: Record<WaterQualityCategory, StatusLabel> = {
@@ -105,17 +112,14 @@ export interface SensorReading {
 }
 
 /**
- * GET /readings/sensor-status: parameter yang sensornya terindikasi error.
- * Parameter yang sehat tidak ada di objeknya. Aturan deteksinya di backend
- * (services/sensor_status.py), di sini cuma ditampilkan.
+ * GET /readings/sensor-status: parameter yang sensornya error. Parameter yang
+ * sehat tidak ada di objeknya. Error = nilai kosong dari edge; validitas
+ * nilainya diputuskan di ESP/Raspi, bukan di backend.
  */
-export type SensorStatus = Partial<
-  Record<"ph" | "temperature_c" | "salinity_ppt", "lonjakan" | "kosong">
->;
+export type SensorStatus = Partial<Record<"ph" | "temperature_c" | "salinity_ppt", "kosong">>;
 
 /** Keterangan singkat di samping label "Sensor error". */
-export const SENSOR_ERROR_TEKS: Record<"lonjakan" | "kosong", string> = {
-  lonjakan: "Nilai melonjak tidak wajar",
+export const SENSOR_ERROR_TEKS: Record<"kosong", string> = {
   kosong: "Nilai tidak terbaca",
 };
 
@@ -196,6 +200,22 @@ export interface DeviceAmmonia {
 
 /** notifications.source, nilai CHECK di database/init/08_notifications.sql. */
 export type NotifSource = "classification" | "prediction" | "parameter" | "sensor" | "restart";
+
+/** Filter GET /notifications: NotifSource, atau "sistem" = sensor + restart sekaligus. */
+export type NotifFilterSource = NotifSource | "sistem";
+
+/** GET /readings/system-logs: satu kejadian di tab "Sistem error" Log Historis. */
+export interface SystemLog {
+  id: number;
+  device_id: number;
+  device_code: string;
+  time: string;
+  kind: "sensor_error" | "sensor_pulih" | "restart";
+  /** ph | temperature_c | salinity_ppt, null untuk restart. */
+  parameter: "ph" | "temperature_c" | "salinity_ppt" | null;
+  /** reset_reason ESP untuk restart, mis. "POWERON". */
+  detail: string | null;
+}
 
 /** NotificationOut */
 export interface Notification {

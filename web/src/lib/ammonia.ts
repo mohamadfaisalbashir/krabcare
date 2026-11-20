@@ -4,12 +4,28 @@
 // menggerakkan grafik, submenu, dan kolom ekspor CSV; amonia angka turunan,
 // bukan parameter terukur, jadi tidak boleh ikut jadi garis di grafik sensor.
 import type { StatusLabel } from "./types";
-import type { ParamKey } from "./parameter";
+import { PARAM_KEYS, type ParamKey } from "./parameter";
 
-/** Nilai `?param=` di halaman Log historis: tiga parameter terukur + amonia.
- *  Dipisah dari ParamKey supaya amonia tidak ikut grafik & ekspor sensor. */
+/** Nilai `?param=` di halaman Log historis: tiga parameter terukur, amonia,
+ *  dan log sistem. Dipisah dari ParamKey supaya amonia dan log sistem tidak
+ *  ikut grafik & ekspor sensor. */
 export const LOG_PARAM_AMONIA = "amonia" as const;
-export type LogParam = ParamKey | typeof LOG_PARAM_AMONIA;
+/** Tab "Sistem error": sensor error/pulih dan restart (GET /readings/system-logs). */
+export const LOG_PARAM_SISTEM = "sistem" as const;
+export type LogParam = ParamKey | typeof LOG_PARAM_AMONIA | typeof LOG_PARAM_SISTEM;
+
+/** Label tab log sistem; bentuknya sama dengan AMONIA_UI supaya bisa jadi `meta`. */
+export const SISTEM_UI = { label: "Sistem error", short: "Sistem error", unit: "" } as const;
+
+/** `?param=` dari URL -> LogParam, "ph" untuk nilai kosong atau tak dikenal.
+ *  Dipakai halaman Log historis dan submenu Sidebar supaya keduanya sepakat. */
+export function resolveLogParam(raw: string | null): LogParam {
+  return raw === LOG_PARAM_AMONIA ||
+    raw === LOG_PARAM_SISTEM ||
+    PARAM_KEYS.includes(raw as ParamKey)
+    ? (raw as LogParam)
+    : "ph";
+}
 
 /** Nilai risk_level dari backend (app/services/ammonia_speciation.py). */
 export type RiskLevel = "normal" | "perhatian" | "berbahaya";

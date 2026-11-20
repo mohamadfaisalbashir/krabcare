@@ -3,13 +3,15 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status as http_status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import DataAccessScope, get_data_access_scope
 from app.core.water_thresholds import ParamKey, StatusFilter
 from app.db.session import get_db
+from app.models import Device, SystemLog
 from app.schemas.common import IdQuery, IdQueryReq
-from app.schemas.sensor_reading import SensorReadingOut
+from app.schemas.sensor_reading import SensorReadingOut, SystemLogOut
 from app.services import reading_service, sensor_status
 
 router = APIRouter(prefix="/readings", tags=["readings"])
@@ -21,7 +23,7 @@ async def sensor_status_device(
     scope: DataAccessScope = Depends(get_data_access_scope),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, str]:
-    """Parameter yang sensornya terindikasi error -> "lonjakan" | "kosong".
+    """Parameter yang sensornya error -> "kosong" (nilai null dari edge).
 
     Objek kosong berarti semua sensor device ini sehat. Aturannya di
     services/sensor_status.py; web dan mobile cuma menampilkan hasilnya.
@@ -29,6 +31,47 @@ async def sensor_status_device(
     if scope.allowed_device_ids is not None and device_id not in scope.allowed_device_ids:
         raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail="Device tidak ditemukan")
     return sensor_status.deteksi_sensor_error(await sensor_status.pembacaan_terakhir(db, device_id))
+
+
+@router.get("/system-logs", response_model=list[SystemLogOut])
+async def list_system_logs(
+    device_id: IdQuery = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    limit: int = Query(default=25, gt=0, le=1000),
+    offset: int = Query(default=0, ge=0),
+    scope: DataAccessScope = Depends(get_data_access_scope),
+    db: AsyncSession = Depends(get_db),
+) -> list[SystemLogOut]:
+    """Log sensor error/pulih dan restart (tabel system_logs), terbaru dulu.
+
+    Dibatasi hak akses sama seperti /readings: device di luar kolam user
+    menghasilkan list kosong, bukan 404.
+    """
+    stmt = select(SystemLog, Device.device_code).join(Device, SystemLog.device_id == Device.id)
+    if device_id is not None:
+        stmt = stmt.where(SystemLog.device_id == device_id)
+    if start_time is not None:
+        stmt = stmt.where(SystemLog.time >= start_time)
+    if end_time is not None:
+        stmt = stmt.where(SystemLog.time <= end_time)
+    if scope.allowed_device_ids is not None:
+        stmt = stmt.where(SystemLog.device_id.in_(scope.allowed_device_ids))
+    # id sebagai tiebreaker: restart dan sensor error bisa berbagi `time`.
+    stmt = stmt.order_by(SystemLog.time.desc(), SystemLog.id.desc()).offset(offset).limit(limit)
+    rows = (await db.execute(stmt)).all()
+    return [
+        SystemLogOut(
+            id=log.id,
+            device_id=log.device_id,
+            device_code=code,
+            time=log.time,
+            kind=log.kind,
+            parameter=log.parameter,
+            detail=log.detail,
+        )
+        for log, code in rows
+    ]
 
 
 @router.get("", response_model=list[SensorReadingOut])

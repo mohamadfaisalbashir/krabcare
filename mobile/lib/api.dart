@@ -210,10 +210,30 @@ class _Api {
       },
     ),
   );
-  /// Parameter yang sensornya terindikasi error → 'lonjakan' | 'kosong'. Kosong
+  /// Parameter yang sensornya error → 'kosong' (nilai null dari edge). Kosong
   /// = semua sehat. Aturannya di backend (services/sensor_status.py).
   Future<Json> getSensorStatus(int deviceId) async =>
       await _request('GET', '/readings/sensor-status', query: {'device_id': deviceId});
+  /// Log sensor error/pulih dan restart (tab "Sistem error" Log Historis), terbaru dulu.
+  Future<List<Json>> getSystemLogs({
+    int? deviceId,
+    String? startTime,
+    String? endTime,
+    int? limit,
+    int? offset,
+  }) async => _list(
+    await _request(
+      'GET',
+      '/readings/system-logs',
+      query: {
+        'device_id': deviceId,
+        'start_time': startTime,
+        'end_time': endTime,
+        'limit': limit,
+        'offset': offset,
+      },
+    ),
+  );
   Future<List<Json>> getLatestQuality([int? deviceId]) async =>
       _list(await _request('GET', '/quality/latest', query: {'device_id': deviceId}));
   Future<List<Json>> getPredictions([int? deviceId]) async =>

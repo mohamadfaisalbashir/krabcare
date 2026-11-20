@@ -9,15 +9,18 @@ import Button from "@/components/ui/Button";
 import StatusBadge from "@/components/ui/StatusBadge";
 import Skeleton from "@/components/ui/Skeleton";
 import ExportPanel from "@/components/log/ExportPanel";
-import { AmmoniaRiskLog, SensorReading, Sensor, StatusLabel } from "@/lib/types";
+import { AmmoniaRiskLog, SensorReading, Sensor, StatusLabel, SystemLog } from "@/lib/types";
 import { PARAM_KEYS, PARAM_UI, ParamKey, statusOf, formatValue } from "@/lib/parameter";
 import { PARAM_EMOJI } from "@/lib/param-icons";
 import {
   AMONIA_UI,
   LOG_PARAM_AMONIA,
+  LOG_PARAM_SISTEM,
   LogParam,
+  SISTEM_UI,
   STATUS_TO_RISK,
   formatFraksi,
+  resolveLogParam,
   riskToStatus,
 } from "@/lib/ammonia";
 import { dayRangeToIso, INTERVALS } from "@/lib/export";
@@ -34,7 +37,16 @@ const DESKRIPSI: Record<LogParam, string> = {
   temperature_c: "Pembacaan sensor suhu air kolam",
   salinity_ppt: "Pembacaan sensor salinitas air kolam",
   [LOG_PARAM_AMONIA]: "Hasil hitung risiko amonia (NH₃) dari data sensor",
+  [LOG_PARAM_SISTEM]: "Riwayat sensor tidak terbaca dan perangkat restart",
 };
+
+/** Kalimat satu baris log sistem, mis. "Sensor pH tidak terbaca". */
+function teksLogSistem(log: SystemLog): string {
+  const sensor = log.parameter ? PARAM_UI[log.parameter].short : "";
+  if (log.kind === "sensor_error") return `Sensor ${sensor} tidak terbaca`;
+  if (log.kind === "sensor_pulih") return `Sensor ${sensor} terbaca lagi`;
+  return `Perangkat restart${log.detail ? ` (penyebab: ${log.detail})` : ""}`;
+}
 
 const STATUS_FILTERS: Array<StatusLabel | "Semua"> = [
   "Semua",
@@ -72,14 +84,10 @@ const RANGE_MODES: Array<{ value: RangeMode; label: string }> = [
   { value: "jam", label: "Per jam" },
 ];
 
-/** Param aktif dari `?param=` di URL, fallback "ph" untuk nilai tak dikenal.
- *  Dipisah dari komponen karena dipakai untuk state awal sekaligus untuk
- *  sinkron balik saat URL berubah dari luar (submenu sidebar, tombol Back). */
-function resolveParam(raw: string | null): LogParam {
-  return raw === LOG_PARAM_AMONIA || PARAM_KEYS.includes(raw as ParamKey)
-    ? (raw as LogParam)
-    : "ph";
-}
+/** Param aktif dari `?param=` di URL (resolveLogParam, sama dengan Sidebar).
+ *  Dipakai untuk state awal sekaligus untuk sinkron balik saat URL berubah
+ *  dari luar (submenu sidebar, tombol Back). */
+const resolveParam = resolveLogParam;
 
 function FilterPill({
   active,
@@ -152,9 +160,13 @@ function LogHistorisView() {
   // Amonia bukan kolom sensor_readings, barisnya dari endpoint lain
   // (/quality/ammonia-risk/history), jadi halaman ini bercabang di sini.
   const isAmonia = param === LOG_PARAM_AMONIA;
+  // Log sistem juga dari endpoint sendiri (/readings/system-logs). Status dan
+  // interval tidak berlaku untuk kejadian, jadi filternya disembunyikan.
+  const isSistem = param === LOG_PARAM_SISTEM;
 
   const [rows, setRows] = useState<SensorReading[]>([]);
   const [ammoniaRows, setAmmoniaRows] = useState<AmmoniaRiskLog[]>([]);
+  const [sistemRows, setSistemRows] = useState<SystemLog[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [sensors, setSensors] = useState<Sensor[]>([]);
   // Supaya teks "belum ada device" tidak berkedip selama daftarnya dimuat.
@@ -229,8 +241,24 @@ function LogHistorisView() {
   const muatHalaman = useCallback(
     async (
       offset: number
-    ): Promise<{ sensor: SensorReading[]; amonia: AmmoniaRiskLog[]; jumlah: number }> => {
+    ): Promise<{
+      sensor: SensorReading[];
+      amonia: AmmoniaRiskLog[];
+      sistem: SystemLog[];
+      jumlah: number;
+    }> => {
       const rentang = rentangIso();
+
+      if (isSistem) {
+        const halaman = await api.getSystemLogs({
+          limit: PAGE,
+          offset,
+          ...(deviceSel !== "semua" ? { device_id: deviceSel } : {}),
+          ...(rentang.start ? { start_time: rentang.start } : {}),
+          ...(rentang.end ? { end_time: rentang.end } : {}),
+        });
+        return { sensor: [], amonia: [], sistem: halaman, jumlah: halaman.length };
+      }
       const bersama = {
         limit: PAGE,
         offset,
@@ -249,7 +277,7 @@ function LogHistorisView() {
             ? { risk_level: STATUS_TO_RISK[statusFilter] }
             : {}),
         });
-        return { sensor: [], amonia: halaman, jumlah: halaman.length };
+        return { sensor: [], amonia: halaman, sistem: [], jumlah: halaman.length };
       }
 
       const halaman = await api.getReadings({
@@ -257,9 +285,9 @@ function LogHistorisView() {
         param: param as ParamKey,
         ...(statusFilter !== "Semua" ? { status: STATUS_QUERY[statusFilter] } : {}),
       });
-      return { sensor: halaman, amonia: [], jumlah: halaman.length };
+      return { sensor: halaman, amonia: [], sistem: [], jumlah: halaman.length };
     },
-    [param, isAmonia, statusFilter, rentangIso, deviceSel, intervalMenit]
+    [param, isAmonia, isSistem, statusFilter, rentangIso, deviceSel, intervalMenit]
   );
 
   // Ganti parameter/status/rentang, kembali ke halaman pertama.
@@ -272,6 +300,7 @@ function LogHistorisView() {
         if (batal) return;
         setRows(page.sensor);
         setAmmoniaRows(page.amonia);
+        setSistemRows(page.sistem);
         setHasMore(page.jumlah === PAGE);
       })
       .catch((err: unknown) => {
@@ -290,9 +319,12 @@ function LogHistorisView() {
     setLoadingMore(true);
     setError(null);
     try {
-      const page = await muatHalaman(isAmonia ? ammoniaRows.length : rows.length);
+      const page = await muatHalaman(
+        isSistem ? sistemRows.length : isAmonia ? ammoniaRows.length : rows.length
+      );
       setRows((sebelumnya) => [...sebelumnya, ...page.sensor]);
       setAmmoniaRows((sebelumnya) => [...sebelumnya, ...page.amonia]);
+      setSistemRows((sebelumnya) => [...sebelumnya, ...page.sistem]);
       setHasMore(page.jumlah === PAGE);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal memuat log sensor.");
@@ -301,8 +333,12 @@ function LogHistorisView() {
     }
   }
 
-  const meta = isAmonia ? AMONIA_UI : PARAM_UI[param as ParamKey];
-  const kosong = isAmonia ? ammoniaRows.length === 0 : rows.length === 0;
+  const meta = isSistem ? SISTEM_UI : isAmonia ? AMONIA_UI : PARAM_UI[param as ParamKey];
+  const kosong = isSistem
+    ? sistemRows.length === 0
+    : isAmonia
+      ? ammoniaRows.length === 0
+      : rows.length === 0;
 
   return (
     <>
@@ -406,7 +442,7 @@ function LogHistorisView() {
             </div>
             {/* Interval: satu data per device tiap 15/30/60 menit, supaya rentang
                 panjang tidak tenggelam dalam ribuan baris. */}
-            <div className={clsx("mt-3", ringkas && "hidden")}>
+            <div className={clsx("mt-3", (ringkas || isSistem) && "hidden")}>
               {/* Gaya sama dengan judul "Rentang Waktu" di atas. */}
               <p className="mb-2 text-sm font-semibold text-ink">
                 Interval{" "}
@@ -493,7 +529,10 @@ function LogHistorisView() {
               )}
             </div>
 
-            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
+            <div
+              // Ganti utuh, bukan ditambah "hidden": sm:flex akan mengalahkannya.
+              className={isSistem ? "hidden" : "grid grid-cols-4 gap-2 sm:flex sm:flex-wrap"}
+            >
               {STATUS_FILTERS.map((s) => (
                 <FilterPill
                   key={s}
@@ -510,17 +549,18 @@ function LogHistorisView() {
               menguncup bersama rentang waktu di atasnya. Di atas lg submenu
               sidebar (yang juga lengket) sudah mengerjakan hal yang sama; di
               bawah lg sidebar tidak dirender dan bar bawah tidak punya submenu,
-              jadi tanpa ini parameter terkunci di pH. Grid 4 kolom rata supaya
-              keempat pil sejajar. */}
+              jadi tanpa ini parameter terkunci di pH. Lima pil: 3 kolom di HP
+              (dua baris, label tidak terpotong), 5 kolom rata mulai sm. */}
           <div
             className={clsx(
-              "grid grid-cols-4 gap-2 border-t border-border px-4 py-3 lg:hidden",
+              "grid grid-cols-3 gap-2 border-t border-border px-4 py-3 sm:grid-cols-5 lg:hidden",
               ringkas && "hidden"
             )}
           >
             {[
               ...PARAM_KEYS.map((p) => ({ value: p as LogParam, label: PARAM_UI[p].short })),
               { value: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
+              { value: LOG_PARAM_SISTEM as LogParam, label: SISTEM_UI.short },
             ].map(({ value, label }) => (
               <FilterPill
                 key={value}
@@ -597,7 +637,25 @@ function LogHistorisView() {
               );
             })}
 
+          {/* Baris log sistem: satu kejadian per baris. Error dan restart memakai
+              badge ERROR biru, sensor yang terbaca lagi memakai Aman. */}
+          {isSistem &&
+            sistemRows.map((log) => (
+              <div key={log.id} className="flex items-center justify-between gap-4 px-5 py-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-ink">
+                    {log.device_code} <span className="text-muted">{teksLogSistem(log)}</span>
+                  </p>
+                  <p className="text-xs font-semibold text-aksen-kuat">{formatWaktu(log.time)}</p>
+                </div>
+                <div className="shrink-0">
+                  <StatusBadge status={log.kind === "sensor_pulih" ? "Aman" : "ERROR"} size="sm" />
+                </div>
+              </div>
+            ))}
+
           {!isAmonia &&
+            !isSistem &&
             rows.map((r, i) => {
             // Sesaat setelah parameter diganti, baris lama masih terpasang.
             // Kolom yang null harus tetap aman: formatValue() menerima number.

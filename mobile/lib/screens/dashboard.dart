@@ -13,15 +13,15 @@ import '../ui.dart';
 typedef KolamItem = ({Json kolam, List<Json> devices, Json? reading, Json? ammonia, Json sensor});
 
 /// Keterangan singkat di samping label "Sensor error" (SENSOR_ERROR_TEKS di web).
-const _sensorErrorTeks = {'lonjakan': 'Nilai melonjak tidak wajar', 'kosong': 'Nilai tidak terbaca'};
+const _sensorErrorTeks = {'kosong': 'Nilai tidak terbaca'};
 
-/// Label merah "Sensor error" + keterangannya, dipakai kartu kolam dan kolom parameter.
+/// Label biru "Sensor error" + keterangannya, dipakai kartu kolam dan kolom parameter.
 class _SensorError extends StatelessWidget {
   const _SensorError(this.teks);
   final String teks;
   @override
   Widget build(BuildContext context) {
-    final c = statusColor('Bahaya');
+    final c = statusColor('ERROR');
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
@@ -283,9 +283,9 @@ class _PondCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = _statusItem(item);
     final r = item.reading;
-    // Sensor error atau tidak terbaca: tulisan "Error", bukan angka.
+    // Sensor error atau tidak terbaca: "---", bukan angka.
     String v(String p, [String suffix = '']) => nilaiError(r, item.sensor, p)
-        ? 'Error'
+        ? '---'
         : r?[p] == null
         ? 'N/A'
         : '${formatValue(r![p])}$suffix';
@@ -354,7 +354,7 @@ class _PondCard extends StatelessWidget {
                     Text('Suhu ${v('temperature_c', '°')}'),
                     Text('${v('salinity_ppt')} ppt'),
                     Text(
-                      'NH₃ ${amoniaError(r, item.sensor) ? 'Error' : nh3 == null ? 'N/A' : '${formatFraksi(nh3)}%'}',
+                      'NH₃ ${amoniaError(r, item.sensor) ? '---' : nh3 == null ? 'N/A' : '${formatFraksi(nh3)}%'}',
                     ),
                   ],
                 ),
@@ -1001,6 +1001,7 @@ class _WarnaKondisiLegend extends StatelessWidget {
           item('Aman', 'dalam rentang optimal'),
           item('Waspada', 'di luar optimal, masih toleransi'),
           item('Bahaya', 'di luar rentang toleransi'),
+          item('ERROR', 'sensor tidak terbaca'),
         ],
       ),
     );
@@ -1009,6 +1010,7 @@ class _WarnaKondisiLegend extends StatelessWidget {
 
 /// Status di pojok kanan kolom: titik membawa warna, kata ditulis warna tinta
 /// (seperti ParameterStrip.tsx; teks kuning Waspada di latar terang kurang kontras).
+/// 'ERROR' (sensor tidak terbaca) katanya ikut biru, sama dengan web.
 class _StatusPojok extends StatelessWidget {
   const _StatusPojok(this.status);
   final String? status;
@@ -1022,7 +1024,11 @@ class _StatusPojok extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               status!,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cInk),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: status == 'ERROR' ? statusColor('ERROR') : cInk,
+              ),
             ),
           ],
         );
@@ -1126,8 +1132,8 @@ class _ParamCell extends StatelessWidget {
   const _ParamCell({required this.param, required this.value, this.sensorError, this.error = false});
   final String param;
   final num? value;
-  final String? sensorError; // 'lonjakan' | 'kosong' | null = sensor sehat
-  final bool error; // sensor error/tidak terbaca: angka diganti "Error" abu
+  final String? sensorError; // 'kosong' | null = sensor sehat
+  final bool error; // sensor error/tidak terbaca: angka diganti "---", status ERROR biru
 
   @override
   Widget build(BuildContext context) {
@@ -1144,14 +1150,14 @@ class _ParamCell extends StatelessWidget {
               Expanded(
                 child: Text(ui.label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
               ),
-              _StatusPojok(status),
+              _StatusPojok(error ? 'ERROR' : status),
             ],
           ),
           Text.rich(
             TextSpan(
               children: [
                 TextSpan(
-                  text: error ? 'Error' : value == null ? 'N/A' : formatValue(value),
+                  text: error ? '---' : value == null ? 'N/A' : formatValue(value),
                   style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: error ? cMuted : cInk),
                 ),
                 if (!error && (ui.unit != ui.short || value == null))
@@ -1162,7 +1168,7 @@ class _ParamCell extends StatelessWidget {
               ],
             ),
           ),
-          // Angka di atas sudah diganti "Error"; label ini yang menjelaskan kenapa.
+          // Angka di atas sudah diganti "---"; label ini yang menjelaskan kenapa.
           if (sensorError != null) _SensorError(_sensorErrorTeks[sensorError] ?? ''),
           const SizedBox(height: 6),
           _Track(
@@ -1194,14 +1200,14 @@ class _AmoniaCell extends StatelessWidget {
             const Expanded(
               child: Text('Risiko amonia (NH₃)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
             ),
-            _StatusPojok(status),
+            _StatusPojok(error ? 'ERROR' : status),
           ],
         ),
         Text.rich(
           TextSpan(
             children: [
               TextSpan(
-                text: error ? 'Error' : pct == null ? 'N/A' : formatFraksi(pct),
+                text: error ? '---' : pct == null ? 'N/A' : formatFraksi(pct),
                 style: mono.copyWith(fontSize: 26, fontWeight: FontWeight.w600, color: error ? cMuted : cInk),
               ),
               // "%" polos seperti AmmoniaCell.tsx, supaya selebar satuan kolom lain.

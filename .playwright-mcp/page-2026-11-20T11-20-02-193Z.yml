@@ -1,0 +1,52 @@
+- generic [active] [ref=f9e1]:
+  - button "Open Next.js Dev Tools" [ref=f9e7] [cursor=pointer]
+  - alert [ref=f9e11]
+  - generic [ref=f9e12]:
+    - generic [ref=f9e13]:
+      - banner [ref=f9e14]:
+        - generic [ref=f9e15]:
+          - heading "Log Historis Sistem error" [level=1] [ref=f9e16]
+          - paragraph [ref=f9e17]: Riwayat sensor tidak terbaca dan perangkat restart
+        - link "Buka halaman profil" [ref=f9e18] [cursor=pointer]:
+          - /url: /profil
+          - generic [ref=f9e19]: …
+      - generic [ref=f9e20]:
+        - generic [ref=f9e21]: Device
+        - button "Unduh data mentah" [ref=f9e24] [cursor=pointer]
+        - generic [ref=f9e30]:
+          - generic [ref=f9e31]:
+            - button "Rentang Waktu (lihat data per hari atau per jam)" [expanded] [ref=f9e32] [cursor=pointer]
+            - generic [ref=f9e37]:
+              - button "Per hari" [ref=f9e38] [cursor=pointer]
+              - button "Per jam" [ref=f9e39] [cursor=pointer]
+          - generic [ref=f9e41]:
+            - button "Tanggal mulai" [ref=f9e43] [cursor=pointer]:
+              - generic [ref=f9e44]: Pilih tanggal
+            - generic [ref=f9e47]: s/d
+            - button "Tanggal akhir" [ref=f9e49] [cursor=pointer]:
+              - generic [ref=f9e50]: Pilih tanggal
+          - generic [ref=f9e53]:
+            - button "pH" [ref=f9e54] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f9e55]: 🧪
+              - text: pH
+            - button "Suhu" [ref=f9e56] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f9e57]: 🌡️
+              - text: Suhu
+            - button "Salinitas" [ref=f9e58] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f9e59]: 🌊
+              - text: Salinitas
+            - button "Amonia" [ref=f9e60] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f9e61]: ☣️
+              - text: Amonia
+            - button "Sistem error" [ref=f9e62] [cursor=pointer]:
+              - generic [aria-hidden] [ref=f9e63]: ⚠️
+              - text: Sistem error
+    - navigation "Navigasi utama" [ref=f9e96]:
+      - link "Dashboard" [ref=f9e99] [cursor=pointer]:
+        - /url: /dashboard
+      - link "Log" [ref=f9e106] [cursor=pointer]:
+        - /url: /log-historis
+      - link "Notifikasi" [ref=f9e112] [cursor=pointer]:
+        - /url: /notifikasi
+      - link "Profil" [ref=f9e119] [cursor=pointer]:
+        - /url: /profil

@@ -491,6 +491,10 @@ function WarnaKondisiLegend() {
         <span aria-hidden className="h-2 w-2 rounded-full bg-status-bahaya" />
         Bahaya: di luar rentang toleransi
       </span>
+      <span className="flex items-center gap-1.5 text-status-error">
+        <span aria-hidden className="h-2 w-2 rounded-full bg-status-error" />
+        ERROR: sensor tidak terbaca
+      </span>
     </div>
   );
 }

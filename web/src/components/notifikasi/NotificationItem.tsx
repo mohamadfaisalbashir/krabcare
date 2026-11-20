@@ -1,5 +1,11 @@
-import { AlertOctagon, AlertTriangle, CheckCircle2, Trash2 } from "lucide-react";
-import { Notification, StatusLabel, WaterQualityCategory, categoryToLabel } from "@/lib/types";
+import { AlertOctagon, AlertTriangle, CheckCircle2, CircleAlert, Trash2 } from "lucide-react";
+import {
+  BadgeLabel,
+  Notification,
+  StatusLabel,
+  WaterQualityCategory,
+  categoryToLabel,
+} from "@/lib/types";
 import StatusBadge from "@/components/ui/StatusBadge";
 import clsx from "clsx";
 import { formatWaktu } from "@/lib/tanggal";
@@ -21,7 +27,7 @@ const PARAM_LABELS: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<
-  StatusLabel,
+  BadgeLabel,
   { icon: React.ElementType; text: string; bg: string }
 > = {
   Aman: { icon: CheckCircle2, text: "text-status-aman", bg: "bg-status-amanBg" },
@@ -35,7 +41,11 @@ const STATUS_STYLE: Record<
     text: "text-status-bahaya",
     bg: "bg-status-bahayaBg",
   },
+  ERROR: { icon: CircleAlert, text: "text-status-error", bg: "bg-status-errorBg" },
 };
+
+/** Notifikasi tab "Sistem error": yang bermasalah alatnya, bukan airnya. */
+const SUMBER_SISTEM = new Set(["sensor", "restart"]);
 
 /**
  * Kata status -> label warna. Dua kosakata dipetakan ke tiga warna yang sama:
@@ -96,7 +106,11 @@ export default function NotificationItem({
   /** Hapus satu notifikasi/prediksi ini saja. */
   onDelete?: (id: number) => void;
 }) {
-  const label = categoryToLabel(item.quality_category as WaterQualityCategory);
+  // Sensor error dan restart memakai ERROR biru; sensor pulih ("baik") tetap Aman.
+  const label: BadgeLabel =
+    SUMBER_SISTEM.has(item.source) && item.quality_category !== "baik"
+      ? "ERROR"
+      : categoryToLabel(item.quality_category as WaterQualityCategory);
   const style = STATUS_STYLE[label];
   const Icon = style.icon;
 
@@ -147,7 +161,7 @@ export default function NotificationItem({
                 style.text
               )}
             >
-              Kualitas Kolam
+              {item.source === "restart" ? "Perangkat" : "Kualitas Kolam"}
             </span>
           )}
           {/* Status ditulis sebagai teks. Kalau cuma tersirat dari bentuk dan

@@ -1,0 +1,55 @@
+- generic [active] [ref=f5e10]:
+  - button "Open Next.js Dev Tools" [ref=f5e6] [cursor=pointer]
+  - alert [ref=f5e11]
+  - generic [ref=f5e12]:
+    - generic [ref=f5e14]:
+      - generic [ref=f5e16]:
+        - generic [ref=f5e17]:
+          - generic [ref=f5e18]:
+            - paragraph [ref=f5e19]: Monitoring kualitas air
+            - heading "Dashboard" [level=1] [ref=f5e20]
+            - paragraph [ref=f5e21]: 1 kolam terhubung
+          - link "Buka profil Operator Uji" [ref=f5e22] [cursor=pointer]:
+            - /url: /profil
+            - generic [ref=f5e23]: O
+        - generic [ref=f5e24]:
+          - generic [ref=f5e25]: 1 Aman
+          - generic [ref=f5e27]: 0 Waspada
+          - generic [ref=f5e29]: 0 Bahaya
+      - generic [ref=f5e31]:
+        - paragraph [ref=f5e32]: "Pilih kartu kolam untuk membuka detailnya: parameter terkini, prediksi, dan grafik pemantauan."
+        - generic [ref=f5e33]:
+          - button "Kolam Uji, buka detail kolam" [ref=f5e34] [cursor=pointer]:
+            - generic [ref=f5e35]: Offline
+            - heading "Kolam Uji" [level=3] [ref=f5e52]
+            - paragraph [ref=f5e53]:
+              - generic [ref=f5e55]: Aman
+              - generic [ref=f5e56]: · 18.14
+            - paragraph [ref=f5e57]:
+              - generic [ref=f5e60]: "Sensor error: Salinitas (Nilai tidak terbaca)"
+            - generic [ref=f5e61]:
+              - generic [ref=f5e62]:
+                - generic [aria-hidden] [ref=f5e63]: 🧪
+                - generic [ref=f5e64]: "7.9"
+              - generic [ref=f5e65]:
+                - generic [aria-hidden] [ref=f5e66]: 🌡️
+                - generic [ref=f5e67]: 29.4°
+              - generic [ref=f5e68]:
+                - generic [aria-hidden] [ref=f5e69]: 🌊
+                - generic [ref=f5e70]: "---"
+              - generic [ref=f5e71]:
+                - generic [aria-hidden] [ref=f5e72]: ☣️
+                - generic [ref=f5e73]: "---"
+          - button "Tambah kolam" [ref=f5e74] [cursor=pointer]
+        - status [ref=f5e77]
+    - navigation "Navigasi utama" [ref=f5e79]:
+      - link "Dashboard" [ref=f5e82] [cursor=pointer]:
+        - /url: /dashboard
+      - link "Log" [ref=f5e89] [cursor=pointer]:
+        - /url: /log-historis
+      - link "156 belum dibaca Notifikasi" [ref=f5e95] [cursor=pointer]:
+        - /url: /notifikasi
+        - generic "156 belum dibaca" [ref=f5e102]: "156"
+        - text: Notifikasi
+      - link "Profil" [ref=f5e103] [cursor=pointer]:
+        - /url: /profil

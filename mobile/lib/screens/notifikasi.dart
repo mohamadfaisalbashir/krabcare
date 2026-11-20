@@ -14,7 +14,8 @@ const _tabs = [
   (label: 'Kualitas Kolam', source: 'classification'),
   (label: 'Parameter', source: 'parameter'),
   (label: 'Prediksi', source: 'prediction'),
-  (label: 'Sensor', source: 'sensor'),
+  // 'sistem' = sensor error/pulih + restart; backend memetakannya ke dua source.
+  (label: 'Sistem error', source: 'sistem'),
 ];
 const _sourceLabel = {
   'classification': 'Kondisi aktual',
@@ -377,8 +378,12 @@ class _PanduanBaca extends StatelessWidget {
           ),
           baris(
             _chip('Sensor error'),
-            'pembacaan sebuah sensor tidak wajar, misalnya nilainya melonjak tiba-tiba atau tidak terbaca. '
-                'Periksa alatnya, karena angka dari sensor itu belum tentu bisa dipercaya.',
+            'sebuah sensor tidak terbaca. Periksa probenya. Notifikasi Aman dengan label ini berarti '
+                'sensornya sudah terbaca lagi.',
+          ),
+          baris(
+            _chip('Restart perangkat'),
+            'alat di kolam baru saja menyala ulang, misalnya karena listrik sempat putus.',
           ),
           judul('3. Yang dinilai (label berwarna)'),
           baris(_chip('Kualitas Kolam', bahaya.fg, bahaya.bg), 'penilaian gabungan pH, suhu, dan salinitas.'),
@@ -397,6 +402,11 @@ class _PanduanBaca extends StatelessWidget {
             'mulai keluar dari rentang optimal tetapi masih dalam batas toleransi kepiting. Pantau kolam.',
           ),
           baris(const StatusBadge('Bahaya'), 'melewati batas toleransi kepiting. Segera periksa kolam.'),
+          baris(
+            const StatusBadge('ERROR'),
+            'yang bermasalah alatnya, bukan airnya: sensor tidak terbaca atau perangkat restart. '
+                'Semuanya ada di tab Sistem error.',
+          ),
           judul('5. Belum dibaca'),
           baris(
             Padding(padding: const EdgeInsets.only(top: 5), child: Dot(statusColor('Bahaya'))),
@@ -445,7 +455,11 @@ class _Item extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = categoryToLabel(n['quality_category']);
+    // Sensor error dan restart memakai ERROR biru; sensor pulih ('baik') tetap Aman.
+    final sistem = n['source'] == 'sensor' || n['source'] == 'restart';
+    final status = sistem && n['quality_category'] != 'baik'
+        ? 'ERROR'
+        : categoryToLabel(n['quality_category']);
     final s = statusStyle[status]!;
     final unread = n['is_read'] != true;
     return Container(
@@ -479,6 +493,8 @@ class _Item extends StatelessWidget {
                     _chip(
                       n['parameter'] != null && _paramLabel.containsKey(n['parameter'])
                           ? _paramLabel[n['parameter']]!
+                          : n['source'] == 'restart'
+                          ? 'Perangkat'
                           : 'Kualitas Kolam',
                       s.fg,
                       s.bg,

@@ -18,8 +18,15 @@ import Logo from "./Logo";
 import { confirmLogout } from "@/lib/api";
 import { isNavActive } from "@/lib/nav";
 import { useUser } from "@/lib/user-store";
-import { PARAM_KEYS, PARAM_UI, ParamKey } from "@/lib/parameter";
-import { AMONIA_UI, LOG_PARAM_AMONIA, LogParam } from "@/lib/ammonia";
+import { PARAM_KEYS, PARAM_UI } from "@/lib/parameter";
+import {
+  AMONIA_UI,
+  LOG_PARAM_AMONIA,
+  LOG_PARAM_SISTEM,
+  LogParam,
+  SISTEM_UI,
+  resolveLogParam,
+} from "@/lib/ammonia";
 import { PARAM_EMOJI } from "@/lib/param-icons";
 import { formatUnreadBadge, useUnreadCount } from "@/lib/notif-store";
 
@@ -57,6 +64,8 @@ const NAV = [
       // Amonia di urutan terakhir karena ia turunan dari ketiga parameter di
       // atasnya.
       { param: LOG_PARAM_AMONIA as LogParam, label: AMONIA_UI.short },
+      // Bukan data air: sensor error dan restart perangkat, paling bawah.
+      { param: LOG_PARAM_SISTEM as LogParam, label: SISTEM_UI.short },
     ],
   },
   { href: "/notifikasi", label: "Notifikasi", icon: BellRing },
@@ -135,11 +144,7 @@ export default function Sidebar({ className }: { className?: string }) {
   // Halaman log memakai "ph" untuk param kosong atau tak dikenal
   // (log-historis/page.tsx:69-72). Ditiru di sini supaya /log-historis polos
   // menyalakan submenu "pH".
-  const rawParam = searchParams.get("param");
-  const activeParam: LogParam =
-    rawParam === LOG_PARAM_AMONIA || PARAM_KEYS.includes(rawParam as ParamKey)
-      ? (rawParam as LogParam)
-      : "ph";
+  const activeParam = resolveLogParam(searchParams.get("param"));
 
   return (
     <aside

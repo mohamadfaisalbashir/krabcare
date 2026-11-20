@@ -1,5 +1,6 @@
 """Notifikasi dari hasil pipeline ML"""
 
+import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
@@ -12,8 +13,9 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql import func
 
 from app.core.push import send_push
-from app.models import Device, Kolam, Notification, PushToken, SensorReading, User
+from app.models import Device, Kolam, Notification, PushToken, SensorReading, SystemLog, User
 from app.services import sensor_status
+from app.services.ingest_base import catat_log_sistem
 
 if TYPE_CHECKING:
     from app.schemas.ammonia import AmmoniaRiskIn
@@ -359,7 +361,9 @@ async def dispatch_push(db: AsyncSession, notifications: list[Notification]) -> 
         data = {"kolam_id": str(notif.kolam_id)}
         for token in tokens:
             try:
-                if send_push(token.fcm_token, title, notif.message, data):
+                # firebase-admin sinkron: di thread terpisah supaya satu push
+                # yang lambat tidak menahan request lain di event loop.
+                if await asyncio.to_thread(send_push, token.fcm_token, title, notif.message, data):
                     any_success = True
             except Exception:
                 logger.exception("Gagal kirim push ke user_id=%s", notif.user_id)
@@ -521,16 +525,31 @@ async def dispatch_from_quality_ingest(
 
 
 SENSOR_LABEL: dict[str, str] = {"ph": "pH", "temperature_c": "suhu", "salinity_ppt": "salinitas"}
-SENSOR_PESAN: dict[str, str] = {
-    "kosong": "tidak terbaca.",
-    "lonjakan": "error, nilainya melonjak tidak wajar.",
-}
+SENSOR_PESAN: dict[str, str] = {"kosong": "tidak terbaca."}
+
+
+async def _log_sensor_terakhir(db: AsyncSession, device_id: int, parameter: str) -> str | None:
+    """Jenis log sensor terakhir device+parameter: "sensor_error" | "sensor_pulih" | None.
+
+    Sengaja dari system_logs, bukan dari notifikasi: notifikasi bisa dihapus
+    user, dan log tidak boleh ikut berkedip karenanya.
+    """
+    return await db.scalar(
+        select(SystemLog.kind)
+        .where(
+            SystemLog.device_id == device_id,
+            SystemLog.parameter == parameter,
+            SystemLog.kind.in_(("sensor_error", "sensor_pulih")),
+        )
+        .order_by(SystemLog.time.desc())
+        .limit(1)
+    )
 
 
 async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> None:
-    """Notifikasi sensor error untuk device yang baru mengirim reading
-    (POST /ingest/readings). Dibuat hanya saat statusnya berubah: mulai error,
-    atau pulih. Deteksinya di services/sensor_status.py.
+    """Notifikasi + log sistem sensor error untuk device yang baru mengirim
+    reading (POST /ingest/readings). Dibuat hanya saat statusnya berubah: mulai
+    error, atau pulih. Deteksinya di services/sensor_status.py.
 
     Kategori memakai enum yang sudah ada: "buruk" = error, "baik" = pulih.
     Teksnya sengaja tidak memuat kata Aman/Waspada/Bahaya, karena klien
@@ -550,6 +569,12 @@ async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> No
             continue
         error = sensor_status.deteksi_sensor_error(rows)
         for parameter, label in SENSOR_LABEL.items():
+            log_lama = await _log_sensor_terakhir(db, device.id, parameter)
+            if parameter in error and log_lama != "sensor_error":
+                await catat_log_sistem(db, device.id, rows[0].time, "sensor_error", parameter)
+            elif parameter not in error and log_lama == "sensor_error":
+                await catat_log_sistem(db, device.id, rows[0].time, "sensor_pulih", parameter)
+
             category = "buruk" if parameter in error else "baik"
             previous = await _last_parameter_category(db, device.id, parameter, source="sensor")
             if previous == category or (previous is None and category == "baik"):
@@ -577,6 +602,9 @@ async def dispatch_sensor_error(db: AsyncSession, device_codes: list[str]) -> No
             if notif is not None and _masih_segar(rows[0].time, batas):
                 baru.append(notif)
 
+    # Log sistem bisa tertulis tanpa notifikasi baru (mis. notifikasinya
+    # sudah dihapus user), jadi commit sendiri, jangan menunggu insert notifikasi.
+    await db.commit()
     if baru:
         await dispatch_push(db, baru)
 
@@ -654,7 +682,9 @@ async def list_notifications(
     )
     if unread_only:
         stmt = stmt.where(Notification.is_read.is_(False))
-    if source is not None:
+    if source == "sistem":
+        stmt = stmt.where(Notification.source.in_(("sensor", "restart")))
+    elif source is not None:
         stmt = stmt.where(Notification.source == source)
     # Sudah dibatasi user_id di atas, jadi device milik orang lain cuma menghasilkan list kosong.
     if device_id is not None:

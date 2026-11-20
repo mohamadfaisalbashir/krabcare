@@ -39,11 +39,15 @@ const _statusTerang = <String, GayaStatus>{
   'Aman': (fg: Color(0xFF1F9D55), bg: Color(0xFFE4F6EB), icon: Icons.check_circle_outline),
   'Waspada': (fg: Color(0xFFB9740E), bg: Color(0xFFFBF0DA), icon: Icons.warning_amber_rounded),
   'Bahaya': (fg: Color(0xFFC23B22), bg: Color(0xFFFBE7E2), icon: Icons.report_outlined),
+  // Sensor tidak terbaca / perangkat restart: biru, di luar skala kondisi air
+  // karena yang bermasalah alatnya. Sama dengan --c-error di web.
+  'ERROR': (fg: Color(0xFF2563EB), bg: Color(0xFFDBEAFE), icon: Icons.error_outline),
 };
 const _statusGelap = <String, GayaStatus>{
   'Aman': (fg: Color(0xFF4CC38A), bg: Color(0xFF12301F), icon: Icons.check_circle_outline),
   'Waspada': (fg: Color(0xFFE0A84A), bg: Color(0xFF3A2C10), icon: Icons.warning_amber_rounded),
   'Bahaya': (fg: Color(0xFFF0806A), bg: Color(0xFF3D1A14), icon: Icons.report_outlined),
+  'ERROR': (fg: Color(0xFF7DA8F7), bg: Color(0xFF162444), icon: Icons.error_outline),
 };
 
 /// label status → (warna teks, latar, ikon)

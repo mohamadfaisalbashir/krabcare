@@ -69,3 +69,18 @@ class SensorReadingOut(BaseModel):
     ph: float | None
     temperature_c: float | None
     salinity_ppt: float | None
+
+
+class SystemLogOut(BaseModel):
+    """Satu kejadian sistem untuk tab "Sistem error" di Log Historis."""
+
+    id: int
+    device_id: int
+    device_code: str
+    time: datetime
+    #: "sensor_error" | "sensor_pulih" | "restart"
+    kind: str
+    #: ph | temperature_c | salinity_ppt, null untuk restart.
+    parameter: str | None
+    #: reset_reason ESP untuk restart, mis. "POWERON".
+    detail: str | None

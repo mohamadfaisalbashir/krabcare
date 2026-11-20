@@ -82,8 +82,8 @@ function ParameterCell({
 }: {
   param: ParamKey;
   value: number | null;
-  sensorError?: "lonjakan" | "kosong";
-  /** Sensor error atau tidak terbaca: angka diganti "Error" abu, tanpa status. */
+  sensorError?: "kosong";
+  /** Sensor error atau tidak terbaca: angka diganti "---", status jadi ERROR biru. */
   error: boolean;
 }) {
   const value = error ? null : nilaiMentah;
@@ -110,8 +110,15 @@ function ParameterCell({
               <span aria-hidden className={clsx("h-2 w-2 rounded-full", MARKER[status])} />
               <span className="font-semibold text-ink">{status}</span>
             </>
+          ) : error ? (
+            // Biru, bukan skala hijau-kuning-merah: yang bermasalah alatnya,
+            // bukan airnya. Teksnya ikut biru (#2563EB 5,2:1, lolos AA).
+            <>
+              <span aria-hidden className="h-2 w-2 rounded-full bg-status-error" />
+              <span className="font-semibold text-status-error">ERROR</span>
+            </>
           ) : (
-            !error && <span className="text-muted">Belum ada data</span>
+            <span className="text-muted">Belum ada data</span>
           )}
         </span>
         {/* Tautan per parameter, bukan satu tautan untuk semuanya: tanpa
@@ -135,16 +142,16 @@ function ParameterCell({
             error ? "text-muted" : "text-ink"
           )}
         >
-          {error ? "Error" : value != null ? formatValue(value) : "N/A"}
+          {error ? "---" : value != null ? formatValue(value) : "N/A"}
         </span>
         {!error && <span className="text-sm text-muted">{unit}</span>}
       </p>
 
-      {/* Alasannya: angka di atas sudah diganti "Error", label ini yang
+      {/* Alasannya: angka di atas sudah diganti "---", label ini yang
           menjelaskan kenapa. */}
       {sensorError && (
         <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs">
-          <span className="inline-flex items-center gap-1 font-semibold text-status-bahaya">
+          <span className="inline-flex items-center gap-1 font-semibold text-status-error">
             <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.2} />
             Sensor error
           </span>

@@ -13,6 +13,8 @@ import '../ui.dart';
 
 const _page = 25;
 const _amonia = 'amonia';
+/// Tab "Sistem error": sensor error/pulih dan restart (GET /readings/system-logs).
+const _sistem = 'sistem';
 
 /// Interval tampil/unduh dalam menit; 0 = semua data apa adanya.
 const _intervals = {0: 'Semua', 15: '15 mnt', 30: '30 mnt', 60: '60 mnt'};
@@ -23,7 +25,18 @@ const _deskripsi = {
   'temperature_c': 'Pembacaan sensor suhu air kolam',
   'salinity_ppt': 'Pembacaan sensor salinitas air kolam',
   _amonia: 'Hasil hitung risiko amonia (NH₃) dari data sensor',
+  _sistem: 'Riwayat sensor tidak terbaca dan perangkat restart',
 };
+
+/// Kalimat satu baris log sistem, sama dengan teksLogSistem di log-historis/page.tsx.
+String _teksLogSistem(Json log) {
+  final sensor = paramUi[log['parameter']]?.short ?? '';
+  return switch (log['kind']) {
+    'sensor_error' => 'Sensor $sensor tidak terbaca',
+    'sensor_pulih' => 'Sensor $sensor terbaca lagi',
+    _ => 'Perangkat restart${log['detail'] != null ? ' (penyebab: ${log['detail']})' : ''}',
+  };
+}
 
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
@@ -48,6 +61,8 @@ class _LogScreenState extends State<LogScreen> {
   final _scroll = ScrollController();
 
   bool get isAmonia => param == _amonia;
+  // Status dan interval tidak berlaku untuk kejadian, jadi filternya disembunyikan.
+  bool get isSistem => param == _sistem;
 
   @override
   void initState() {
@@ -97,6 +112,15 @@ class _LogScreenState extends State<LogScreen> {
 
   Future<List<Json>> _muat(int offset) {
     final r = _rentang();
+    if (isSistem) {
+      return api.getSystemLogs(
+        deviceId: deviceSel,
+        startTime: r.start,
+        endTime: r.end,
+        limit: _page,
+        offset: offset,
+      );
+    }
     if (isAmonia) {
       return api.getAmmoniaHistory(
         deviceId: deviceSel,
@@ -183,7 +207,7 @@ class _LogScreenState extends State<LogScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Log Historis ${isAmonia ? 'Amonia' : paramUi[param]!.short}'),
+            Text('Log Historis ${isSistem ? 'Sistem Error' : isAmonia ? 'Amonia' : paramUi[param]!.short}'),
             Text(_deskripsi[param] ?? '', style: TextStyle(fontSize: 12, color: cMuted)),
           ],
         ),
@@ -225,6 +249,7 @@ class _LogScreenState extends State<LogScreen> {
                     segments: [
                       for (final p in paramKeys) ButtonSegment(value: p, label: Text(paramUi[p]!.short)),
                       const ButtonSegment(value: _amonia, label: Text('Amonia')),
+                      const ButtonSegment(value: _sistem, label: Text('⚠️ Sistem')),
                     ],
                     selected: {param},
                     onSelectionChanged: (s) => set(() => param = s.first),
@@ -245,18 +270,21 @@ class _LogScreenState extends State<LogScreen> {
               sliver: SliverList.list(
                 children: [
                   // Satu baris tersegmentasi, sama bentuknya dengan pilihan parameter di atas.
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: SegmentedButton<String>(
-                      showSelectedIcon: false,
-                      segments: [
-                        for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya']) ButtonSegment(value: s, label: Text(s)),
-                      ],
-                      selected: {statusFilter},
-                      onSelectionChanged: (s) => set(() => statusFilter = s.first),
+                  if (!isSistem) ...[
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SegmentedButton<String>(
+                        showSelectedIcon: false,
+                        segments: [
+                          for (final s in ['Semua', 'Aman', 'Waspada', 'Bahaya'])
+                            ButtonSegment(value: s, label: Text(s)),
+                        ],
+                        selected: {statusFilter},
+                        onSelectionChanged: (s) => set(() => statusFilter = s.first),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                  ],
                   ErrorText(error),
                   if (loading)
                     const Padding(
@@ -273,7 +301,11 @@ class _LogScreenState extends State<LogScreen> {
                       child: Column(
                         children: [
                           for (final r in rows) ...[
-                            isAmonia ? _barisAmonia(r) : _barisSensor(r),
+                            isSistem
+                                ? _barisSistem(r)
+                                : isAmonia
+                                ? _barisAmonia(r)
+                                : _barisSensor(r),
                             const Divider(height: 1),
                           ],
                         ],
@@ -397,17 +429,19 @@ class _LogScreenState extends State<LogScreen> {
                     _Jam(jamSampai, (v) => set(() => jamSampai = v)),
                   ],
                 ),
-              const SizedBox(height: 10),
-              judulBerkurung('Interval', 'jarak waktu antar data yang ditampilkan'),
-              const SizedBox(height: 6),
-              SegmentedButton<int>(
-                showSelectedIcon: false,
-                segments: [
-                  for (final e in _intervals.entries) ButtonSegment(value: e.key, label: Text(e.value)),
-                ],
-                selected: {intervalMenit},
-                onSelectionChanged: (s) => set(() => intervalMenit = s.first),
-              ),
+              if (!isSistem) ...[
+                const SizedBox(height: 10),
+                judulBerkurung('Interval', 'jarak waktu antar data yang ditampilkan'),
+                const SizedBox(height: 6),
+                SegmentedButton<int>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final e in _intervals.entries) ButtonSegment(value: e.key, label: Text(e.value)),
+                  ],
+                  selected: {intervalMenit},
+                  onSelectionChanged: (s) => set(() => intervalMenit = s.first),
+                ),
+              ],
             ],
           ),
   );
@@ -459,6 +493,23 @@ class _LogScreenState extends State<LogScreen> {
       trailing: status == null ? null : StatusBadge(status),
     );
   }
+
+  /// Satu kejadian: error dan restart memakai ERROR biru, sensor terbaca lagi memakai Aman.
+  Widget _barisSistem(Json r) => ListTile(
+    title: _sebaris(
+      TextSpan(
+        children: [
+          TextSpan(
+            text: '${r['device_code']} ',
+            style: mono.copyWith(fontSize: 12, color: cInk),
+          ),
+          TextSpan(text: _teksLogSistem(r)),
+        ],
+      ),
+    ),
+    subtitle: Text(formatWaktu(r['time']), style: TextStyle(color: cBrand700)),
+    trailing: StatusBadge(r['kind'] == 'sensor_pulih' ? 'Aman' : 'ERROR'),
+  );
 }
 
 /// Judul baris log selalu sebaris: di layar sempit teksnya mengecil, bukan patah.

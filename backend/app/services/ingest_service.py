@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 
 from app.models import Device, DeviceRestart, SensorReading
 from app.schemas.sensor_reading import RestartIn, SensorReadingIn, SkippedDuplicateOut
-from app.services.ingest_base import find_devices_by_code, insert_skip_duplicates
+from app.services.ingest_base import catat_log_sistem, find_devices_by_code, insert_skip_duplicates
 
 
 async def ingest_readings(
@@ -79,5 +79,6 @@ async def ingest_restart(db: AsyncSession, payload: RestartIn) -> tuple[Device |
         await db.execute(
             update(Device).where(Device.id == device.id).values(last_restart_at=func.now())
         )
+        await catat_log_sistem(db, device.id, payload.time, "restart", detail=payload.reset_reason)
     await db.commit()
     return device, bool(inserted)

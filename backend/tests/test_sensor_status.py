@@ -33,20 +33,9 @@ def test_di_luar_rentang_tapi_stabil_bukan_error():
     assert deteksi_sensor_error(rows) == {}
 
 
-def test_lonjakan_terdeteksi_per_parameter():
-    rows = [baris(0, ph=13.0), baris(1, ph=7.3), baris(2, ph=7.3)]
-    assert deteksi_sensor_error(rows) == {"ph": "lonjakan"}
-
-
-def test_lonjakan_lama_masih_dihitung_dalam_jendela():
-    # Lonjakan suhu 6 pembacaan lalu, sesudahnya tenang: belum dianggap pulih.
-    rows = [baris(i, suhu=70.0) for i in range(6)] + [baris(i, suhu=29.0) for i in range(6, 11)]
-    assert deteksi_sensor_error(rows) == {"temperature_c": "lonjakan"}
-
-
-def test_jeda_panjang_tidak_dibandingkan():
-    # Device mati sejam: beda nilai sebelum dan sesudahnya bukan lonjakan.
-    rows = [baris(0, sal=30.0), baris(60, sal=10.0)]
+def test_lonjakan_bukan_urusan_backend():
+    # Validitas nilai diputuskan di edge; nilai yang melonjak tetap dianggap terbaca.
+    rows = [baris(0, ph=13.0, suhu=70.0), baris(1, ph=7.3), baris(2, ph=7.3)]
     assert deteksi_sensor_error(rows) == {}
 
 

@@ -49,7 +49,9 @@ CSV_FIELDNAMES = ["device_code", "time", "ph", "temperature_c", "salinity_ppt"]
 CLOUD_URL_READINGS = os.environ.get("CLOUD_URL_READINGS", "https://api.krabcare.com/api/v1/ingest/readings")
 CLOUD_URL_QUALITY = os.environ.get("CLOUD_URL_QUALITY", "https://api.krabcare.com/api/v1/ingest/quality")
 GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "")
-REQUEST_TIMEOUT = 10  # detik
+# 30, bukan 10: GSM bisa lambat, dan balasan yang telat membuat batch yang
+# sebenarnya sudah tersimpan di server dikirim ulang (lalu ditolak duplikat).
+REQUEST_TIMEOUT = 30  # detik
 
 # Retry buffer TETAP jalan berkala (bukan event-driven, karena kegagalan
 # jaringan bukan "kejadian file berubah"). Tapi ini interval yang jarang
@@ -285,7 +287,7 @@ def kirim_batch(readings_list: list) -> str:
     try:
         resp = _session.post(CLOUD_URL_READINGS, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Gagal konek ke cloud (readings): {e}")
+        print(f"[ERROR] Gagal konek ke cloud (readings): {type(e).__name__}: {e}")
         return "retry"
     if resp.status_code == 201:
         body = resp.json()
@@ -313,7 +315,7 @@ def kirim_batch_quality(payload: dict) -> str:
     try:
         resp = _session.post(CLOUD_URL_QUALITY, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] Gagal konek ke cloud (quality): {e}")
+        print(f"[ERROR] Gagal konek ke cloud (quality): {type(e).__name__}: {e}")
         return "retry"
     if resp.status_code == 201:
         body = resp.json()

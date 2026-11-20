@@ -1,0 +1,279 @@
+- generic [active] [ref=f7e1]:
+  - button "Open Next.js Dev Tools" [ref=f7e7] [cursor=pointer]
+  - alert [ref=f7e11]
+  - generic [ref=f7e12]:
+    - generic [ref=f7e13]:
+      - banner [ref=f7e14]:
+        - generic [ref=f7e15]:
+          - heading "Notifikasi" [level=1] [ref=f7e16]
+          - paragraph [ref=f7e17]: 156 notifikasi belum dibaca
+        - link "Buka profil Operator Uji" [ref=f7e18] [cursor=pointer]:
+          - /url: /profil
+          - generic [ref=f7e19]: O
+      - generic [ref=f7e20]:
+        - group [ref=f7e21]:
+          - generic "Cara membaca notifikasi" [ref=f7e22] [cursor=pointer]
+        - generic [ref=f7e26]:
+          - tablist "Jenis notifikasi" [ref=f7e27]:
+            - tab "Semua" [selected] [ref=f7e29] [cursor=pointer]
+            - tab "Kualitas Kolam" [ref=f7e30] [cursor=pointer]
+            - tab "Parameter" [ref=f7e31] [cursor=pointer]
+            - tab "Prediksi" [ref=f7e32] [cursor=pointer]
+            - tab "Sistem" [ref=f7e33] [cursor=pointer]
+          - generic [ref=f7e34]:
+            - button "Baca semua" [ref=f7e35] [cursor=pointer]
+            - button "Hapus semua" [ref=f7e39] [cursor=pointer]
+        - generic [ref=f7e43]:
+          - generic [ref=f7e44]:
+            - generic [ref=f7e49]:
+              - generic [ref=f7e50]:
+                - paragraph [ref=f7e51]: 54D660E9BFB4
+                - generic [ref=f7e52]: Sensor error
+                - generic [ref=f7e53]: Salinitas
+                - generic [ref=f7e54]: ERROR
+                - generic "Belum dibaca" [ref=f7e57]
+              - paragraph [ref=f7e58]: Sensor salinitas Kolam Uji (54D660E9BFB4) tidak terbaca.
+              - generic [ref=f7e59]:
+                - paragraph [ref=f7e60]: 20-11-2026 18:14
+                - button "Tandai dibaca" [ref=f7e61] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e62] [cursor=pointer]
+            - generic [ref=f7e70]:
+              - generic [ref=f7e71]:
+                - paragraph [ref=f7e72]: 54D660E9BFB4
+                - generic [ref=f7e73]: Kondisi aktual
+                - generic [ref=f7e74]: Kualitas Kolam
+                - generic [ref=f7e75]: Bahaya
+                - generic "Belum dibaca" [ref=f7e78]
+              - paragraph [ref=f7e79]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e80]:
+                - paragraph [ref=f7e81]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e82] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e83] [cursor=pointer]
+            - generic [ref=f7e91]:
+              - generic [ref=f7e92]:
+                - paragraph [ref=f7e93]: 54D660E9BFB4
+                - generic [ref=f7e94]: Kondisi aktual
+                - generic [ref=f7e95]: Kualitas Kolam
+                - generic [ref=f7e96]: Bahaya
+                - generic "Belum dibaca" [ref=f7e99]
+              - paragraph [ref=f7e100]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e101]:
+                - paragraph [ref=f7e102]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e103] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e104] [cursor=pointer]
+            - generic [ref=f7e112]:
+              - generic [ref=f7e113]:
+                - paragraph [ref=f7e114]: 54D660E9BFB4
+                - generic [ref=f7e115]: Kondisi aktual
+                - generic [ref=f7e116]: Kualitas Kolam
+                - generic [ref=f7e117]: Bahaya
+                - generic "Belum dibaca" [ref=f7e120]
+              - paragraph [ref=f7e121]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e122]:
+                - paragraph [ref=f7e123]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e124] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e125] [cursor=pointer]
+            - generic [ref=f7e133]:
+              - generic [ref=f7e134]:
+                - paragraph [ref=f7e135]: 54D660E9BFB4
+                - generic [ref=f7e136]: Kondisi aktual
+                - generic [ref=f7e137]: Kualitas Kolam
+                - generic [ref=f7e138]: Bahaya
+                - generic "Belum dibaca" [ref=f7e141]
+              - paragraph [ref=f7e142]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e143]:
+                - paragraph [ref=f7e144]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e145] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e146] [cursor=pointer]
+            - generic [ref=f7e154]:
+              - generic [ref=f7e155]:
+                - paragraph [ref=f7e156]: 54D660E9BFB4
+                - generic [ref=f7e157]: Kondisi aktual
+                - generic [ref=f7e158]: Kualitas Kolam
+                - generic [ref=f7e159]: Bahaya
+                - generic "Belum dibaca" [ref=f7e162]
+              - paragraph [ref=f7e163]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e164]:
+                - paragraph [ref=f7e165]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e166] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e167] [cursor=pointer]
+            - generic [ref=f7e175]:
+              - generic [ref=f7e176]:
+                - paragraph [ref=f7e177]: 54D660E9BFB4
+                - generic [ref=f7e178]: Kondisi aktual
+                - generic [ref=f7e179]: Kualitas Kolam
+                - generic [ref=f7e180]: Bahaya
+                - generic "Belum dibaca" [ref=f7e183]
+              - paragraph [ref=f7e184]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e185]:
+                - paragraph [ref=f7e186]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e187] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e188] [cursor=pointer]
+            - generic [ref=f7e196]:
+              - generic [ref=f7e197]:
+                - paragraph [ref=f7e198]: 54D660E9BFB4
+                - generic [ref=f7e199]: Kondisi aktual
+                - generic [ref=f7e200]: Kualitas Kolam
+                - generic [ref=f7e201]: Bahaya
+                - generic "Belum dibaca" [ref=f7e204]
+              - paragraph [ref=f7e205]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e206]:
+                - paragraph [ref=f7e207]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e208] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e209] [cursor=pointer]
+            - generic [ref=f7e217]:
+              - generic [ref=f7e218]:
+                - paragraph [ref=f7e219]: 54D660E9BFB4
+                - generic [ref=f7e220]: Kondisi aktual
+                - generic [ref=f7e221]: Kualitas Kolam
+                - generic [ref=f7e222]: Bahaya
+                - generic "Belum dibaca" [ref=f7e225]
+              - paragraph [ref=f7e226]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e227]:
+                - paragraph [ref=f7e228]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e229] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e230] [cursor=pointer]
+            - generic [ref=f7e238]:
+              - generic [ref=f7e239]:
+                - paragraph [ref=f7e240]: 54D660E9BFB4
+                - generic [ref=f7e241]: Kondisi aktual
+                - generic [ref=f7e242]: Kualitas Kolam
+                - generic [ref=f7e243]: Bahaya
+                - generic "Belum dibaca" [ref=f7e246]
+              - paragraph [ref=f7e247]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e248]:
+                - paragraph [ref=f7e249]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e250] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e251] [cursor=pointer]
+            - generic [ref=f7e259]:
+              - generic [ref=f7e260]:
+                - paragraph [ref=f7e261]: 54D660E9BFB4
+                - generic [ref=f7e262]: Kondisi aktual
+                - generic [ref=f7e263]: Kualitas Kolam
+                - generic [ref=f7e264]: Bahaya
+                - generic "Belum dibaca" [ref=f7e267]
+              - paragraph [ref=f7e268]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e269]:
+                - paragraph [ref=f7e270]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e271] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e272] [cursor=pointer]
+            - generic [ref=f7e280]:
+              - generic [ref=f7e281]:
+                - paragraph [ref=f7e282]: 54D660E9BFB4
+                - generic [ref=f7e283]: Kondisi aktual
+                - generic [ref=f7e284]: Kualitas Kolam
+                - generic [ref=f7e285]: Bahaya
+                - generic "Belum dibaca" [ref=f7e288]
+              - paragraph [ref=f7e289]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e290]:
+                - paragraph [ref=f7e291]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e292] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e293] [cursor=pointer]
+            - generic [ref=f7e301]:
+              - generic [ref=f7e302]:
+                - paragraph [ref=f7e303]: 54D660E9BFB4
+                - generic [ref=f7e304]: Kondisi aktual
+                - generic [ref=f7e305]: Kualitas Kolam
+                - generic [ref=f7e306]: Bahaya
+                - generic "Belum dibaca" [ref=f7e309]
+              - paragraph [ref=f7e310]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e311]:
+                - paragraph [ref=f7e312]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e313] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e314] [cursor=pointer]
+            - generic [ref=f7e322]:
+              - generic [ref=f7e323]:
+                - paragraph [ref=f7e324]: 54D660E9BFB4
+                - generic [ref=f7e325]: Kondisi aktual
+                - generic [ref=f7e326]: Kualitas Kolam
+                - generic [ref=f7e327]: Bahaya
+                - generic "Belum dibaca" [ref=f7e330]
+              - paragraph [ref=f7e331]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e332]:
+                - paragraph [ref=f7e333]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e334] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e335] [cursor=pointer]
+            - generic [ref=f7e343]:
+              - generic [ref=f7e344]:
+                - paragraph [ref=f7e345]: 54D660E9BFB4
+                - generic [ref=f7e346]: Kondisi aktual
+                - generic [ref=f7e347]: Kualitas Kolam
+                - generic [ref=f7e348]: Bahaya
+                - generic "Belum dibaca" [ref=f7e351]
+              - paragraph [ref=f7e352]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e353]:
+                - paragraph [ref=f7e354]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e355] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e356] [cursor=pointer]
+            - generic [ref=f7e364]:
+              - generic [ref=f7e365]:
+                - paragraph [ref=f7e366]: 54D660E9BFB4
+                - generic [ref=f7e367]: Kondisi aktual
+                - generic [ref=f7e368]: Kualitas Kolam
+                - generic [ref=f7e369]: Bahaya
+                - generic "Belum dibaca" [ref=f7e372]
+              - paragraph [ref=f7e373]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e374]:
+                - paragraph [ref=f7e375]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e376] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e377] [cursor=pointer]
+            - generic [ref=f7e385]:
+              - generic [ref=f7e386]:
+                - paragraph [ref=f7e387]: 54D660E9BFB4
+                - generic [ref=f7e388]: Kondisi aktual
+                - generic [ref=f7e389]: Kualitas Kolam
+                - generic [ref=f7e390]: Bahaya
+                - generic "Belum dibaca" [ref=f7e393]
+              - paragraph [ref=f7e394]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e395]:
+                - paragraph [ref=f7e396]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e397] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e398] [cursor=pointer]
+            - generic [ref=f7e406]:
+              - generic [ref=f7e407]:
+                - paragraph [ref=f7e408]: 54D660E9BFB4
+                - generic [ref=f7e409]: Kondisi aktual
+                - generic [ref=f7e410]: Kualitas Kolam
+                - generic [ref=f7e411]: Bahaya
+                - generic "Belum dibaca" [ref=f7e414]
+              - paragraph [ref=f7e415]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e416]:
+                - paragraph [ref=f7e417]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e418] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e419] [cursor=pointer]
+            - generic [ref=f7e427]:
+              - generic [ref=f7e428]:
+                - paragraph [ref=f7e429]: 54D660E9BFB4
+                - generic [ref=f7e430]: Kondisi aktual
+                - generic [ref=f7e431]: Kualitas Kolam
+                - generic [ref=f7e432]: Bahaya
+                - generic "Belum dibaca" [ref=f7e435]
+              - paragraph [ref=f7e436]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e437]:
+                - paragraph [ref=f7e438]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e439] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e440] [cursor=pointer]
+            - generic [ref=f7e448]:
+              - generic [ref=f7e449]:
+                - paragraph [ref=f7e450]: 54D660E9BFB4
+                - generic [ref=f7e451]: Kondisi aktual
+                - generic [ref=f7e452]: Kualitas Kolam
+                - generic [ref=f7e453]: Bahaya
+                - generic "Belum dibaca" [ref=f7e456]
+              - paragraph [ref=f7e457]: Kualitas air Kolam Uji (54D660E9BFB4) tercatat dalam kondisi BAHAYA (skor 50.00).
+              - generic [ref=f7e458]:
+                - paragraph [ref=f7e459]: 20-11-2026 18:13
+                - button "Tandai dibaca" [ref=f7e460] [cursor=pointer]
+                - button "Hapus notifikasi ini" [ref=f7e461] [cursor=pointer]
+          - button "Muat lebih banyak" [ref=f7e466] [cursor=pointer]
+    - navigation "Navigasi utama" [ref=f7e467]:
+      - link "Dashboard" [ref=f7e470] [cursor=pointer]:
+        - /url: /dashboard
+      - link "Log" [ref=f7e477] [cursor=pointer]:
+        - /url: /log-historis
+      - link "156 belum dibaca Notifikasi" [ref=f7e483] [cursor=pointer]:
+        - /url: /notifikasi
+        - generic "156 belum dibaca" [ref=f7e490]: "156"
+        - text: Notifikasi
+      - link "Profil" [ref=f7e491] [cursor=pointer]:
+        - /url: /profil

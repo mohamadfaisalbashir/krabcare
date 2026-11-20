@@ -202,7 +202,7 @@ void main() {
 
   test('sensor error: parameter dilewati, amonia ikut error', () {
     final bacaan = {'ph': 13.97, 'temperature_c': 29.0, 'salinity_ppt': 20.0};
-    expect(statusKolam(bacaan, 'Aman', {'ph': 'lonjakan'}), 'Aman');
+    expect(statusKolam(bacaan, 'Aman', {'ph': 'kosong'}), 'Aman');
     // Key pH hilang dari JSON ESP.
     final tanpaPh = {'ph': null, 'temperature_c': 29.0, 'salinity_ppt': 20.0};
     expect(nilaiError(tanpaPh, {}, 'ph'), true);
