@@ -2,7 +2,6 @@ import serial
 import json
 import csv
 import os
-import requests
 import pickle
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -99,29 +98,28 @@ def dapatkan_device_code(chip_id: str) -> str:
     return chip_id
 
 
-# ---------- Laporan restart ESP ke cloud ----------
-CLOUD_URL_RESTART = os.environ.get("CLOUD_URL_RESTART", "https://api.krabcare.com/api/v1/ingest/restart")
-GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "")
-
-
-def kirim_restart(data: dict):
+# ---------- Laporan restart ESP ----------
+def simpan_restart(data: dict):
     """ESP mengirim {"id": ..., "event": "boot", "reset_reason": "WDT"} sekali saat boot.
 
-    ponytail: langsung POST tanpa buffer. Laporan restart yang baru terkirim
-    belasan menit kemudian sudah tidak berguna untuk status dashboard.
+    Ditulis ke restarts_YYYY-MM-DD_HH.jsonl, sama seperti reading dan quality.
+    Yang mengirim ke /ingest/restart adalah cloud_forwarder_watch.py, dengan
+    API key, retry, dan buffer-nya. Dulu proses ini POST langsung sekali
+    saja: laporan hilang kalau internet sedang putus atau API key belum
+    dimuat service ini.
     """
-    payload = {
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    waktu = datetime.now(TIMEZONE)
+    laporan = {
         "device_code": dapatkan_device_code(data.get("id", "UNKNOWN")),
-        "time": datetime.now(TIMEZONE).isoformat(timespec="seconds"),
+        "time": waktu.isoformat(timespec="seconds"),
         "reset_reason": data.get("reset_reason"),
     }
-    try:
-        resp = requests.post(
-            CLOUD_URL_RESTART, json=payload, headers={"X-API-Key": GATEWAY_API_KEY}, timeout=5
-        )
-        print(f"[RESTART] {payload['device_code']} ({payload['reset_reason']}) -> HTTP {resp.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"[WARNING] Gagal kirim laporan restart {payload['device_code']}: {e}")
+    nama_file = dapatkan_nama_file_jam("restarts", "jsonl", waktu)
+    with open(os.path.join(OUTPUT_DIR, nama_file), "a", encoding="utf-8") as f:
+        f.write(json.dumps(laporan))
+        f.write("\n")
+    print(f"[RESTART] {laporan['device_code']} ({laporan['reset_reason']}) -> {nama_file}")
 
 
 def buat_reading(data: dict) -> tuple[dict, datetime]:
@@ -247,7 +245,7 @@ def main():
             continue
 
         if data.get("event") in ("boot", "restart"):
-            kirim_restart(data)
+            simpan_restart(data)
             continue
 
         reading, waktu = buat_reading(data)

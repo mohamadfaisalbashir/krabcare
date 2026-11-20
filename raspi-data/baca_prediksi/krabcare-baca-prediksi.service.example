@@ -23,9 +23,6 @@ User=pi
 # Butuh akses port serial — user "pi" harus sudah masuk grup "dialout"
 # (biasanya sudah default di Raspberry Pi OS; cek: groups pi).
 WorkingDirectory=/home/pi/TA_Kepiting/baca_prediksi
-# GATEWAY_API_KEY untuk kirim_restart() (laporan boot ESP ke /ingest/restart).
-# File yang sama dengan krabcare-cloud-forwarder.service.
-EnvironmentFile=/home/pi/TA_Kepiting/.env
 ExecStart=/usr/bin/python3 /home/pi/TA_Kepiting/baca_prediksi/baca_prediksi.py
 Restart=on-failure
 RestartSec=5

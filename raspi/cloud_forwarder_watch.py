@@ -48,6 +48,7 @@ CSV_FIELDNAMES = ["device_code", "time", "ph", "temperature_c", "salinity_ppt"]
 # ---------- Konfigurasi Cloud ----------
 CLOUD_URL_READINGS = os.environ.get("CLOUD_URL_READINGS", "https://api.krabcare.com/api/v1/ingest/readings")
 CLOUD_URL_QUALITY = os.environ.get("CLOUD_URL_QUALITY", "https://api.krabcare.com/api/v1/ingest/quality")
+CLOUD_URL_RESTART = os.environ.get("CLOUD_URL_RESTART", "https://api.krabcare.com/api/v1/ingest/restart")
 GATEWAY_API_KEY = os.environ.get("GATEWAY_API_KEY", "")
 # 30, bukan 10: GSM bisa lambat, dan balasan yang telat membuat batch yang
 # sebenarnya sudah tersimpan di server dikirim ulang (lalu ditolak duplikat).
@@ -123,8 +124,30 @@ def init_buffer_db():
             catatan TEXT DEFAULT ''
         )
     """)
+    # Laporan restart ESP: satu baris buffer = satu laporan, karena
+    # /ingest/restart menerima satu objek per permintaan.
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS buffer_restart (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            payload TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            catatan TEXT DEFAULT ''
+        )
+    """)
     conn.commit()
     conn.close()
+
+
+def simpan_ke_buffer_restart(laporan_list: list, catatan: str = ""):
+    conn = sqlite3.connect(BUFFER_DB_PATH)
+    sekarang = datetime.now(TIMEZONE).isoformat(timespec="seconds")
+    conn.executemany(
+        "INSERT INTO buffer_restart (payload, created_at, catatan) VALUES (?, ?, ?)",
+        [(json.dumps(l), sekarang, catatan) for l in laporan_list],
+    )
+    conn.commit()
+    conn.close()
+    print(f"[BUFFERED] {len(laporan_list)} laporan restart disimpan lokal. {catatan}")
 
 
 def simpan_ke_buffer(readings_list: list, catatan: str = ""):
@@ -278,6 +301,33 @@ def baca_baris_quality_baru(path_file: str, offset_lama: int):
     return gabungan, offset_baru
 
 
+# ---------- Baca baris baru dari JSONL restart sejak offset terakhir ----------
+def baca_baris_restart_baru(path_file: str, offset_lama: int):
+    """Tiap baris restarts_*.jsonl = satu laporan restart ESP dari
+    baca_prediksi.py: {device_code, time, reset_reason}. Pola readline() +
+    tell() sama dengan baca_baris_quality_baru()."""
+    laporan = []
+    if not os.path.exists(path_file):
+        return laporan, offset_lama
+
+    with open(path_file, "r", encoding="utf-8") as f:
+        f.seek(offset_lama)
+        pos = offset_lama
+        while True:
+            baris = f.readline()
+            if not baris or not baris.endswith("\n"):
+                break
+            pos = f.tell()
+            baris_bersih = baris.strip()
+            if not baris_bersih:
+                continue
+            try:
+                laporan.append(json.loads(baris_bersih))
+            except json.JSONDecodeError as e:
+                print(f"[WARNING] Baris restart bukan JSON valid, dilewati: {e}")
+    return laporan, pos
+
+
 # ---------- Pengiriman ke cloud: readings ----------
 def kirim_batch(readings_list: list) -> str:
     if not readings_list:
@@ -338,6 +388,45 @@ def kirim_batch_quality(payload: dict) -> str:
     return "retry"
 
 
+# ---------- Pengiriman ke cloud: restart ----------
+def kirim_restart(laporan: dict) -> str:
+    headers = {"X-API-Key": GATEWAY_API_KEY}
+    try:
+        resp = _session.post(CLOUD_URL_RESTART, json=laporan, headers=headers, timeout=REQUEST_TIMEOUT)
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] Gagal konek ke cloud (restart): {type(e).__name__}: {e}")
+        return "retry"
+    if resp.status_code == 201:
+        # recorded=False berarti laporan yang sama sudah pernah diterima (kiriman ulang).
+        print(f"[SENT] restart {laporan.get('device_code')} ({laporan.get('reset_reason')}) "
+              f"recorded={resp.json().get('recorded')}")
+        return "ok"
+    if resp.status_code == 401:
+        print("[FATAL] 401 Unauthorized (restart) — cek GATEWAY_API_KEY.")
+        return "fatal"
+    if resp.status_code == 404:
+        print(f"[FATAL] 404 (restart): device_code {laporan.get('device_code')} belum terdaftar di server.")
+        return "fatal"
+    if resp.status_code == 422:
+        print(f"[FATAL] 422 Unprocessable Entity (restart): {resp.text}")
+        return "fatal"
+    print(f"[ERROR] Status tidak terduga (restart) {resp.status_code}: {resp.text}")
+    return "retry"
+
+
+def kirim_daftar_restart(laporan_list: list):
+    """Kirim berurutan; sejak kegagalan koneksi pertama, sisanya ikut ke
+    buffer supaya urutannya tetap dan tidak membuang waktu menunggu timeout
+    berkali-kali."""
+    for i, laporan in enumerate(laporan_list):
+        hasil = kirim_restart(laporan)
+        if hasil == "retry":
+            simpan_ke_buffer_restart(laporan_list[i:], catatan="gagal koneksi")
+            return
+        if hasil == "fatal":
+            simpan_ke_buffer_restart([laporan], catatan="fatal - perlu dicek manual")
+
+
 def kirim_ulang_buffer():
     conn = sqlite3.connect(BUFFER_DB_PATH)
     rows = conn.execute("SELECT id, payload FROM buffer ORDER BY id ASC").fetchall()
@@ -382,6 +471,27 @@ def kirim_ulang_buffer_quality():
     conn.close()
 
 
+def kirim_ulang_buffer_restart():
+    conn = sqlite3.connect(BUFFER_DB_PATH)
+    rows = conn.execute("SELECT id, payload FROM buffer_restart ORDER BY id ASC").fetchall()
+    if not rows:
+        conn.close()
+        return
+    print(f"[BUFFER] Mencoba kirim ulang {len(rows)} laporan restart tertunda...")
+    for row_id, payload_str in rows:
+        hasil = kirim_restart(json.loads(payload_str))
+        if hasil == "ok":
+            conn.execute("DELETE FROM buffer_restart WHERE id = ?", (row_id,))
+            conn.commit()
+        elif hasil == "fatal":
+            print(f"[BUFFER] Laporan restart id={row_id} gagal permanen, tetap di buffer untuk dicek manual.")
+            continue
+        else:
+            print("[BUFFER] Masih gagal konek (restart), coba lagi nanti.")
+            break
+    conn.close()
+
+
 # ---------- Bagian event-driven (inotify via watchdog) ----------
 class CSVHandler(FileSystemEventHandler):
     """
@@ -403,6 +513,8 @@ class CSVHandler(FileSystemEventHandler):
             self._proses_file_readings(path_file, nama_file)
         elif nama_file.startswith("quality_") and nama_file.endswith(".jsonl"):
             self._proses_file_quality(path_file, nama_file)
+        elif nama_file.startswith("restarts_") and nama_file.endswith(".jsonl"):
+            self._proses_file_restart(path_file, nama_file)
         # File lain yang bukan output baca_prediksi.py (mis. .tmp, log lain) diabaikan.
 
     def _proses_file_readings(self, path_file: str, nama_file: str):
@@ -436,6 +548,17 @@ class CSVHandler(FileSystemEventHandler):
         elif hasil == "fatal":
             simpan_ke_buffer_quality(payload_baru, catatan="fatal - perlu dicek manual")
 
+    def _proses_file_restart(self, path_file: str, nama_file: str):
+        with state_lock:
+            offset_lama = self.state.get(nama_file, 0)
+            laporan_baru, offset_baru = baca_baris_restart_baru(path_file, offset_lama)
+            if not laporan_baru:
+                return
+            self.state[nama_file] = offset_baru
+            save_state(self.state)
+        print(f"[FOUND] {len(laporan_baru)} laporan restart baru dari {nama_file} (event)")
+        kirim_daftar_restart(laporan_baru)
+
     def on_modified(self, event):
         if not event.is_directory:
             self._proses_file(event.src_path)
@@ -457,6 +580,7 @@ def thread_retry_buffer():
     while True:
         kirim_ulang_buffer()
         kirim_ulang_buffer_quality()
+        kirim_ulang_buffer_restart()
         time.sleep(BUFFER_RETRY_INTERVAL)
 
 
@@ -478,6 +602,9 @@ def main():
         handler._proses_file(path_readings_sekarang)
     if os.path.exists(path_quality_sekarang):
         handler._proses_file(path_quality_sekarang)
+    path_restart_sekarang = os.path.join(OUTPUT_DIR, dapatkan_nama_file_jam("restarts", "jsonl", waktu_sekarang))
+    if os.path.exists(path_restart_sekarang):
+        handler._proses_file(path_restart_sekarang)
 
     # Thread retry buffer, jalan independen di background
     threading.Thread(target=thread_retry_buffer, daemon=True).start()
@@ -490,6 +617,7 @@ def main():
     print(f"[OK] Forwarder aktif (EVENT-DRIVEN, bukan polling). Memantau {OUTPUT_DIR}")
     print(f"[OK] Endpoint readings: {CLOUD_URL_READINGS}")
     print(f"[OK] Endpoint quality : {CLOUD_URL_QUALITY}")
+    print(f"[OK] Endpoint restart : {CLOUD_URL_RESTART}")
 
     try:
         while True:
