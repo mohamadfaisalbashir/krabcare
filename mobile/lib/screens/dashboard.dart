@@ -16,9 +16,10 @@ typedef KolamItem = ({Json kolam, List<Json> devices, Json? reading, Json? ammon
 const _sensorErrorTeks = {'kosong': 'Nilai tidak terbaca'};
 
 /// Label biru "Sensor error" + keterangannya, dipakai kartu kolam dan kolom parameter.
+/// Kolom amonia memakai label "Error" (amonia tidak punya sensor sendiri).
 class _SensorError extends StatelessWidget {
-  const _SensorError(this.teks);
-  final String teks;
+  const _SensorError(this.teks, {this.label = 'Sensor error'});
+  final String teks, label;
   @override
   Widget build(BuildContext context) {
     final c = statusColor('ERROR');
@@ -34,7 +35,7 @@ class _SensorError extends StatelessWidget {
                 style: const TextStyle(fontSize: 12),
                 children: [
                   TextSpan(
-                    text: 'Sensor error',
+                    text: label,
                     style: TextStyle(color: c, fontWeight: FontWeight.w600),
                   ),
                   TextSpan(
@@ -638,7 +639,10 @@ class _RakDetailScreenState extends State<RakDetailScreen> {
           children: [
             for (final p in paramKeys)
               _ParamCell(param: p, value: reading?[p], sensorError: sensor[p], error: nilaiError(reading, sensor, p)),
-            _AmoniaCell(current: current, error: amoniaError(reading, sensor)),
+            _AmoniaCell(
+              current: current,
+              paramError: [for (final p in paramKeys) if (nilaiError(reading, sensor, p)) p],
+            ),
             const SizedBox(height: 12),
             Text.rich(
               TextSpan(
@@ -1183,13 +1187,23 @@ class _ParamCell extends StatelessWidget {
   }
 }
 
+/// Nama parameter di kalimat: ['ph', 'temperature_c'] → 'pH dan suhu' (daftarParam di AmmoniaCell.tsx).
+String _daftarParam(List<String> params) {
+  const nama = {'ph': 'pH', 'temperature_c': 'suhu', 'salinity_ppt': 'salinitas'};
+  final n = [for (final p in params) nama[p] ?? p];
+  if (n.length <= 2) return n.join(' dan ');
+  return '${n.sublist(0, n.length - 1).join(', ')}, dan ${n.last}';
+}
+
 class _AmoniaCell extends StatelessWidget {
-  const _AmoniaCell({required this.current, this.error = false});
+  const _AmoniaCell({required this.current, this.paramError = const []});
   final Json? current;
-  final bool error; // salah satu sensor asal error: nilai amonia yang tersisa nilai lama
+  /// Sensor asal yang error. Tidak kosong = nilai amonia yang tersisa nilai lama.
+  final List<String> paramError;
 
   @override
   Widget build(BuildContext context) {
+    final error = paramError.isNotEmpty;
     final pct = error ? null : current?['fraction_nh3_pct'] as num?;
     final status = error ? null : riskToStatus(current?['risk_level']);
     return Column(
@@ -1219,6 +1233,8 @@ class _AmoniaCell extends StatelessWidget {
             ],
           ),
         ),
+        // Amonia tidak punya sensor sendiri: sebut parameter asal yang membuatnya ERROR.
+        if (error) _SensorError('karena nilai ${_daftarParam(paramError)} tidak ada', label: 'Error'),
         const SizedBox(height: 6),
         _Track(
           frac: pct == null ? null : (pct / amoniaSkalaMaks).clamp(0.0, 1.0).toDouble(),

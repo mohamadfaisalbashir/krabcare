@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import clsx from "clsx";
 import { AmmoniaRisk, StatusLabel } from "@/lib/types";
+import type { ParamKey } from "@/lib/parameter";
 import {
   AMBANG,
   AMONIA_UI,
@@ -23,6 +24,19 @@ const WARNA: Record<StatusLabel, string> = {
   Bahaya: "bg-status-bahaya",
 };
 
+const NAMA_PARAM: Record<ParamKey, string> = {
+  ph: "pH",
+  temperature_c: "suhu",
+  salinity_ppt: "salinitas",
+};
+
+/** ["ph", "temperature_c"] -> "pH dan suhu"; tiga nama -> "pH, suhu, dan salinitas". */
+function daftarParam(params: ParamKey[]): string {
+  const nama = params.map((p) => NAMA_PARAM[p]);
+  if (nama.length <= 2) return nama.join(" dan ");
+  return `${nama.slice(0, -1).join(", ")}, dan ${nama.at(-1)}`;
+}
+
 /**
  * Kolom keempat di baris "Parameter" dan baris "Prediksi".
  *
@@ -34,18 +48,19 @@ export default function AmmoniaCell({
   mode,
   current,
   forecast,
-  error = false,
+  paramError = [],
 }: {
   mode: "terkini" | "prediksi";
   current?: AmmoniaRisk | null;
   forecast?: AmmoniaRisk[];
-  /** Salah satu sensor asal (pH/suhu/salinitas) error, jadi nilai amonia yang
-   *  tersisa adalah nilai lama: tampil "Error" abu tanpa status. */
-  error?: boolean;
+  /** Sensor asal (pH/suhu/salinitas) yang error. Tidak kosong = nilai amonia
+   *  yang tersisa adalah nilai lama: tampil "---", status ERROR, dan alasannya. */
+  paramError?: ParamKey[];
 }) {
+  const error = paramError.length > 0;
   const isi =
     mode === "terkini"
-      ? renderTerkini(current ?? null, error)
+      ? renderTerkini(current ?? null, paramError)
       : renderPrediksi(forecast ?? []);
 
   return (
@@ -91,11 +106,12 @@ export default function AmmoniaCell({
 
 function renderTerkini(
   risk: AmmoniaRisk | null,
-  error: boolean
+  paramError: ParamKey[]
 ): {
   status: StatusLabel | null;
   body: React.ReactNode;
 } {
+  const error = paramError.length > 0;
   const status = error ? null : riskToStatus(risk?.risk_level);
   const nilai = error ? null : (risk?.fraction_nh3_pct ?? null);
 
@@ -125,6 +141,19 @@ function renderTerkini(
           </span>
           {!error && <span className="text-sm text-muted">%</span>}
         </p>
+
+        {/* Amonia tidak punya sensor sendiri: ERROR-nya karena nilai asal
+            yang kosong. Disebut hanya parameter yang error, gayanya sama
+            dengan baris "Sensor error" di ParameterStrip. */}
+        {error && (
+          <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-xs">
+            <span className="inline-flex items-center gap-1 font-semibold text-status-error">
+              <AlertTriangle className="h-3.5 w-3.5" strokeWidth={2.2} />
+              Error
+            </span>
+            <span className="text-muted">karena nilai {daftarParam(paramError)} tidak ada</span>
+          </p>
+        )}
 
         <div className="mt-4">
           <div className="relative h-1.5 rounded-full bg-status-waspadaBg/80">

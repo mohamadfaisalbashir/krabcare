@@ -16,7 +16,6 @@ import {
   PARAM_KEYS,
   PARAM_UI,
   RANGE,
-  amoniaError,
   formatValue,
   nilaiError,
   optimalBand,
@@ -60,7 +59,8 @@ export default function ParameterStrip({
       <AmmoniaCell
         mode="terkini"
         current={ammonia ?? null}
-        error={amoniaError(reading, sensorStatus)}
+        // Parameter asal yang error, supaya kolom amonia bisa menyebut penyebabnya.
+        paramError={PARAM_KEYS.filter((p) => nilaiError(reading, sensorStatus, p))}
       />
     </div>
   );
