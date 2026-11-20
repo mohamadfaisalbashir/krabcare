@@ -20,10 +20,15 @@ kirim batch -> kalau gagal, simpan ke buffer SQLite -> dicoba ulang berkala):
                          WLR 15/30/60 menit + risiko amonia, sudah dihitung
                          EdgePipeline di baca_prediksi.py)
 
-Dua buffer SQLite terpisah (tabel `buffer` untuk readings, `buffer_quality`
-untuk quality) — bukan satu tabel campur, karena bentuk payload-nya beda
-(readings = list rata, quality = dict berisi tiga list) dan supaya satu
-jenis yang gagal terus tidak ikut menahan retry jenis satunya.
+  - restarts_*.jsonl -> POST /api/v1/ingest/restart    (laporan ESP restart)
+
+Buffer SQLite terpisah per jenis (`buffer`, `buffer_quality`,
+`buffer_restart`) — bukan satu tabel campur, karena bentuk payload-nya beda
+dan supaya satu jenis yang gagal terus tidak ikut menahan retry jenis lain.
+
+Tiap jenis punya antrean + thread pengirim sendiri (kiriman langsung) dan
+thread retry buffer sendiri. Di dalam satu jenis pengiriman tetap berurutan.
+Isi buffer readings/quality digabung sampai GABUNG_MAKS_BARIS per POST.
 
 Install dulu: pip install watchdog requests --break-system-packages
 """
@@ -32,6 +37,7 @@ import csv
 import json
 import math
 import time
+import queue
 import threading
 import sqlite3
 import requests
@@ -78,7 +84,17 @@ state_lock = threading.Lock()
 # Kalau koneksi memang sudah mati (mis. gara-gara GSM sempat putus beberapa
 # menit), urllib3 otomatis membuka koneksi baru secara transparan -- jadi ini
 # aman dipakai terus-menerus tanpa perlu logic reconnect manual.
-_session = requests.Session()
+#
+# Satu Session per thread (threading.local): pengiriman sekarang berjalan dari
+# beberapa thread pekerja, dan requests.Session tidak dijamin aman dipakai
+# bersama antar thread. Tiap thread tetap memakai ulang koneksinya sendiri.
+_lokal = threading.local()
+
+
+def _sesi() -> requests.Session:
+    if not hasattr(_lokal, "session"):
+        _lokal.session = requests.Session()
+    return _lokal.session
 
 
 # ---------- Util nama file ----------
@@ -335,7 +351,7 @@ def kirim_batch(readings_list: list) -> str:
     headers = {"X-API-Key": GATEWAY_API_KEY}
     payload = {"readings": readings_list}
     try:
-        resp = _session.post(CLOUD_URL_READINGS, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        resp = _sesi().post(CLOUD_URL_READINGS, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
     except requests.exceptions.RequestException as e:
         print(f"[ERROR] Gagal konek ke cloud (readings): {type(e).__name__}: {e}")
         return "retry"
@@ -363,7 +379,7 @@ def kirim_batch_quality(payload: dict) -> str:
         return "ok"
     headers = {"X-API-Key": GATEWAY_API_KEY}
     try:
-        resp = _session.post(CLOUD_URL_QUALITY, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
+        resp = _sesi().post(CLOUD_URL_QUALITY, json=payload, headers=headers, timeout=REQUEST_TIMEOUT)
     except requests.exceptions.RequestException as e:
         print(f"[ERROR] Gagal konek ke cloud (quality): {type(e).__name__}: {e}")
         return "retry"
@@ -392,7 +408,7 @@ def kirim_batch_quality(payload: dict) -> str:
 def kirim_restart(laporan: dict) -> str:
     headers = {"X-API-Key": GATEWAY_API_KEY}
     try:
-        resp = _session.post(CLOUD_URL_RESTART, json=laporan, headers=headers, timeout=REQUEST_TIMEOUT)
+        resp = _sesi().post(CLOUD_URL_RESTART, json=laporan, headers=headers, timeout=REQUEST_TIMEOUT)
     except requests.exceptions.RequestException as e:
         print(f"[ERROR] Gagal konek ke cloud (restart): {type(e).__name__}: {e}")
         return "retry"
@@ -427,48 +443,109 @@ def kirim_daftar_restart(laporan_list: list):
             simpan_ke_buffer_restart([laporan], catatan="fatal - perlu dicek manual")
 
 
-def kirim_ulang_buffer():
+# Isi buffer digabung sampai sekian baris per POST. Setelah internet putus lama,
+# puluhan batch kecil jadi beberapa kiriman saja: tiap POST lewat GSM makan
+# waktu tempuh yang sama berapa pun isinya. Batas backend 5000 per daftar.
+# Sengaja digabung, bukan diparalelkan: urutan menentukan notifikasi
+# "berubah dari X ke Y", dan semua kiriman berbagi satu jalur GSM.
+GABUNG_MAKS_BARIS = 1000
+
+
+def _jumlah_baris_quality(payload: dict) -> int:
+    return sum(len(payload.get(k, [])) for k in ("classifications", "predictions", "ammonia_risks"))
+
+
+def _gabung_quality(payloads: list) -> dict:
+    gabungan = {"classifications": [], "predictions": [], "ammonia_risks": []}
+    for p in payloads:
+        for k in gabungan:
+            gabungan[k].extend(p.get(k, []))
+    return gabungan
+
+
+def _gabung_readings(payloads: list) -> list:
+    return [r for p in payloads for r in p]
+
+
+def _kirim_ulang_gabungan(tabel: str, jenis: str, kirim, gabung, hitung):
+    """Kirim ulang isi buffer `tabel` berurutan, beberapa batch per POST.
+
+    Batch yang pernah gagal permanen (catatan "fatal...") dikirim sendirian,
+    supaya satu batch rusak tidak membuat gabungan yang lain ikut ditolak.
+    Kalau gabungan ditolak permanen, isinya dicoba satu per satu untuk
+    mencari batch yang rusak; sisanya tetap terkirim.
+    """
     conn = sqlite3.connect(BUFFER_DB_PATH)
-    rows = conn.execute("SELECT id, payload FROM buffer ORDER BY id ASC").fetchall()
-    if not rows:
-        conn.close()
-        return
-    print(f"[BUFFER] Mencoba kirim ulang {len(rows)} batch readings tertunda...")
-    for row_id, payload_str in rows:
-        readings_list = json.loads(payload_str)
-        hasil = kirim_batch(readings_list)
-        if hasil == "ok":
-            conn.execute("DELETE FROM buffer WHERE id = ?", (row_id,))
+    try:
+        rows = [
+            (row_id, json.loads(payload), catatan or "")
+            for row_id, payload, catatan in conn.execute(
+                f"SELECT id, payload, catatan FROM {tabel} ORDER BY id ASC"
+            )
+        ]
+        if not rows:
+            return
+        print(f"[BUFFER] Mencoba kirim ulang {len(rows)} batch {jenis} tertunda...")
+
+        def hapus(grup):
+            conn.executemany(f"DELETE FROM {tabel} WHERE id = ?", [(r[0],) for r in grup])
             conn.commit()
-        elif hasil == "fatal":
-            print(f"[BUFFER] Batch readings id={row_id} gagal permanen, tetap di buffer untuk dicek manual.")
-            continue
-        else:
-            print("[BUFFER] Masih gagal konek (readings), coba lagi nanti.")
-            break
-    conn.close()
+
+        def tandai_fatal(row_id):
+            conn.execute(
+                f"UPDATE {tabel} SET catatan = 'fatal - perlu dicek manual' WHERE id = ?", (row_id,)
+            )
+            conn.commit()
+            print(f"[BUFFER] Batch {jenis} id={row_id} gagal permanen, tetap di buffer untuk dicek manual.")
+
+        i = 0
+        while i < len(rows):
+            # Susun satu gabungan: batch berurutan sampai GABUNG_MAKS_BARIS,
+            # minimal satu batch walau batch itu sendiri sudah lebih besar.
+            grup, total = [], 0
+            for row in rows[i:]:
+                fatal = row[2].startswith("fatal")
+                if grup and (fatal or total + hitung(row[1]) > GABUNG_MAKS_BARIS):
+                    break
+                grup.append(row)
+                total += hitung(row[1])
+                if fatal:
+                    break
+            i += len(grup)
+
+            hasil = kirim(gabung([r[1] for r in grup]))
+            if hasil == "ok":
+                hapus(grup)
+                if len(grup) > 1:
+                    print(f"[BUFFER] {len(grup)} batch {jenis} ({total} baris) terkirim dalam satu POST.")
+            elif hasil == "fatal" and len(grup) == 1:
+                tandai_fatal(grup[0][0])
+            elif hasil == "fatal":
+                print(f"[BUFFER] Gabungan {len(grup)} batch {jenis} ditolak, dicoba satu per satu.")
+                for row in grup:
+                    h = kirim(gabung([row[1]]))
+                    if h == "ok":
+                        hapus([row])
+                    elif h == "fatal":
+                        tandai_fatal(row[0])
+                    else:
+                        print(f"[BUFFER] Masih gagal konek ({jenis}), coba lagi nanti.")
+                        return
+            else:
+                print(f"[BUFFER] Masih gagal konek ({jenis}), coba lagi nanti.")
+                return
+    finally:
+        conn.close()
+
+
+def kirim_ulang_buffer():
+    _kirim_ulang_gabungan("buffer", "readings", kirim_batch, _gabung_readings, len)
 
 
 def kirim_ulang_buffer_quality():
-    conn = sqlite3.connect(BUFFER_DB_PATH)
-    rows = conn.execute("SELECT id, payload FROM buffer_quality ORDER BY id ASC").fetchall()
-    if not rows:
-        conn.close()
-        return
-    print(f"[BUFFER] Mencoba kirim ulang {len(rows)} batch quality tertunda...")
-    for row_id, payload_str in rows:
-        payload = json.loads(payload_str)
-        hasil = kirim_batch_quality(payload)
-        if hasil == "ok":
-            conn.execute("DELETE FROM buffer_quality WHERE id = ?", (row_id,))
-            conn.commit()
-        elif hasil == "fatal":
-            print(f"[BUFFER] Batch quality id={row_id} gagal permanen, tetap di buffer untuk dicek manual.")
-            continue
-        else:
-            print("[BUFFER] Masih gagal konek (quality), coba lagi nanti.")
-            break
-    conn.close()
+    _kirim_ulang_gabungan(
+        "buffer_quality", "quality", kirim_batch_quality, _gabung_quality, _jumlah_baris_quality
+    )
 
 
 def kirim_ulang_buffer_restart():
@@ -506,15 +583,43 @@ class CSVHandler(FileSystemEventHandler):
 
     def __init__(self, state: dict):
         self.state = state
+        # Satu antrean + satu thread pekerja per jenis data. Thread watchdog
+        # cuma menaruh path ke antrean, jadi kiriman quality yang lambat
+        # tidak menahan readings atau restart. Di dalam satu jenis tetap
+        # berurutan (satu pekerja), karena urutan memengaruhi notifikasi.
+        self._antrean = {
+            "readings": queue.Queue(),
+            "quality": queue.Queue(),
+            "restarts": queue.Queue(),
+        }
+        proses = {
+            "readings": self._proses_file_readings,
+            "quality": self._proses_file_quality,
+            "restarts": self._proses_file_restart,
+        }
+        for jenis, fungsi in proses.items():
+            threading.Thread(
+                target=self._pekerja, args=(self._antrean[jenis], fungsi), daemon=True
+            ).start()
+
+    @staticmethod
+    def _pekerja(antrean: queue.Queue, fungsi):
+        while True:
+            path_file = antrean.get()
+            try:
+                fungsi(path_file, os.path.basename(path_file))
+            except Exception as e:
+                # Jangan sampai satu error (mis. file terhapus) mematikan pekerja.
+                print(f"[ERROR] Gagal memproses {path_file}: {type(e).__name__}: {e}")
 
     def _proses_file(self, path_file: str):
         nama_file = os.path.basename(path_file)
         if nama_file.startswith("readings_") and nama_file.endswith(".csv"):
-            self._proses_file_readings(path_file, nama_file)
+            self._antrean["readings"].put(path_file)
         elif nama_file.startswith("quality_") and nama_file.endswith(".jsonl"):
-            self._proses_file_quality(path_file, nama_file)
+            self._antrean["quality"].put(path_file)
         elif nama_file.startswith("restarts_") and nama_file.endswith(".jsonl"):
-            self._proses_file_restart(path_file, nama_file)
+            self._antrean["restarts"].put(path_file)
         # File lain yang bukan output baca_prediksi.py (mis. .tmp, log lain) diabaikan.
 
     def _proses_file_readings(self, path_file: str, nama_file: str):
@@ -569,18 +674,19 @@ class CSVHandler(FileSystemEventHandler):
             self._proses_file(event.src_path)
 
 
-def thread_retry_buffer():
+def thread_retry_buffer(kirim_ulang):
     """
-    Thread terpisah yang jalan berkala HANYA untuk retry buffer (kegagalan
-    jaringan). Ini bukan "polling file" — cuma cek tabel SQLite lokal yang
-    sangat ringan, dan hanya melakukan request jaringan kalau memang ada
-    sesuatu yang perlu dikirim ulang. Readings dan quality dicoba di siklus
-    yang sama, tapi lewat tabel/fungsi masing-masing.
+    Thread yang jalan berkala HANYA untuk retry buffer (kegagalan jaringan),
+    satu thread per jenis data supaya buffer readings yang besar tidak
+    menunda buffer quality atau restart. Ini bukan "polling file" — cuma cek
+    tabel SQLite lokal yang sangat ringan, dan hanya melakukan request
+    jaringan kalau memang ada sesuatu yang perlu dikirim ulang.
     """
     while True:
-        kirim_ulang_buffer()
-        kirim_ulang_buffer_quality()
-        kirim_ulang_buffer_restart()
+        try:
+            kirim_ulang()
+        except Exception as e:
+            print(f"[ERROR] Retry buffer {kirim_ulang.__name__} gagal: {type(e).__name__}: {e}")
         time.sleep(BUFFER_RETRY_INTERVAL)
 
 
@@ -606,8 +712,9 @@ def main():
     if os.path.exists(path_restart_sekarang):
         handler._proses_file(path_restart_sekarang)
 
-    # Thread retry buffer, jalan independen di background
-    threading.Thread(target=thread_retry_buffer, daemon=True).start()
+    # Thread retry buffer, satu per jenis, jalan independen di background
+    for kirim_ulang in (kirim_ulang_buffer, kirim_ulang_buffer_quality, kirim_ulang_buffer_restart):
+        threading.Thread(target=thread_retry_buffer, args=(kirim_ulang,), daemon=True).start()
 
     # Observer inotify — INI YANG MENGGANTIKAN POLLING
     observer = Observer()
