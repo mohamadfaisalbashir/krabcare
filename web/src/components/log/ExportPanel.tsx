@@ -35,25 +35,45 @@ const AMONIA_MAX_PAGES = 20;
  *
  * Lebih sederhana dari fetchAllReadings karena endpoint ini punya `offset`,
  * jadi tidak perlu keyset cursor. `only_measured` menyaring ke horizon 0,
- * yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS. Tanpa `deviceId`,
- * scope backend sudah membatasi ke device milik user. Dengan satu device,
- * device_id dikirim supaya jatah halamannya tidak terbagi ke device lain.
+ * yaitu hasil hitung dari pembacaan nyata, bukan ramalan FTS. Dipanggil per
+ * device dan paralel: satu rantai OFFSET untuk semua device dulu jadi jalur
+ * paling lama di seluruh unduhan.
  */
-async function ambilAmonia(start: string, end: string, deviceId?: number) {
+async function ambilAmonia(
+  start: string,
+  end: string,
+  deviceId: number,
+  intervalMenit: number,
+  onPage: (page: AmmoniaRiskLog[]) => void
+) {
   const semua: AmmoniaRiskLog[] = [];
   for (let i = 0; i < AMONIA_MAX_PAGES; i++) {
     const page = await api.getAmmoniaHistory({
-      ...(deviceId ? { device_id: deviceId } : {}),
+      device_id: deviceId,
       start_time: start,
       end_time: end,
       only_measured: true,
+      interval_minutes: intervalMenit,
       limit: AMONIA_CHUNK,
       offset: i * AMONIA_CHUNK,
     });
     semua.push(...page);
+    onPage(page);
     if (page.length < AMONIA_CHUNK) break;
   }
   return semua;
+}
+
+/**
+ * Seberapa jauh satu rantai paging sudah berjalan, 0..1. Backend tidak memberi
+ * total baris, tapi kedua endpoint urut terbaru dulu, jadi waktu baris terakhir
+ * menunjukkan sudah sampai mana di rentang [start, end]. Halaman tidak penuh
+ * berarti rantainya selesai.
+ */
+function fraksi(waktuTerakhir: string | undefined, penuh: boolean, startMs: number, endMs: number) {
+  if (!penuh || !waktuTerakhir) return 1;
+  const f = (endMs - new Date(waktuTerakhir).getTime()) / (endMs - startMs);
+  return Math.min(1, Math.max(0, f));
 }
 
 export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
@@ -92,25 +112,50 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
     setBusy(true);
     setProgress(0);
     try {
+      const { start, end } = dayRangeToIso(from, to);
+      const startMs = new Date(start).getTime();
+      const endMs = new Date(end).getTime();
+      const satuDevice = sensors.length === 1 ? sensors[0] : null;
+
+      // Satu entri per rantai paging (reading + amonia per device). Persen =
+      // rata-ratanya, ditahan di 99 sampai berkasnya selesai ditulis.
+      const jalan: Record<string, number> = {};
+      const totalRantai = sensors.length * 2;
+      const lapor = (kunci: string, f: number) => {
+        jalan[kunci] = f;
+        const jumlah = Object.values(jalan).reduce((a, b) => a + b, 0);
+        setProgress(Math.min(99, Math.floor((jumlah / totalRantai) * 100)));
+      };
+
       // getPage sebagai parameter, bukan import di lib/export.ts, supaya modul
       // itu tetap bebas dependensi dan bisa diuji `node --test`.
       const getPage: GetPage = async (p) => {
         const rows = await api.getReadings(
           intervalMenit ? { ...p, interval_minutes: intervalMenit } : p
         );
-        setProgress((n) => n + rows.length);
+        lapor(
+          `r${p.device_id}`,
+          fraksi(rows[rows.length - 1]?.time, rows.length === p.limit, startMs, endMs)
+        );
         return rows;
       };
 
-      const { start, end } = dayRangeToIso(from, to);
-      const satuDevice = sensors.length === 1 ? sensors[0] : null;
-      // Paralel antar sensor (maksimal 3), berurutan di dalam satu sensor.
-      // Amonia diambil bersamaan, bukan sesudahnya: tidak bergantung pada
-      // reading, dan kalau berurutan waktu tunggunya jadi kira-kira dua kali.
-      const [results, amoniaRows] = await Promise.all([
+      // Paralel antar sensor, berurutan di dalam satu sensor. Amonia diambil
+      // bersamaan, bukan sesudahnya: tidak bergantung pada reading.
+      const [results, amoniaPerDevice] = await Promise.all([
         Promise.all(sensors.map((s) => fetchAllReadings(getPage, s.deviceId, start, end))),
-        ambilAmonia(start, end, satuDevice?.deviceId),
+        Promise.all(
+          sensors.map((s) =>
+            ambilAmonia(start, end, s.deviceId, intervalMenit, (page) =>
+              lapor(
+                `a${s.deviceId}`,
+                fraksi(page[page.length - 1]?.target_time, page.length === AMONIA_CHUNK, startMs, endMs)
+              )
+            )
+          )
+        ),
       ]);
+      const amoniaRows = amoniaPerDevice.flat();
 
       // flatMap menyambung sensor demi sensor, jadi berkas gabungan melompat
       // mundur tiap ganti sensor. Diurutkan lagi supaya kronologis.
@@ -271,7 +316,7 @@ export default function ExportPanel({ sensors }: { sensors: Sensor[] }) {
         <Button variant="ghost" onClick={handleDownload} disabled={busy}>
           <Download className="mr-1.5 inline h-4 w-4" />
           {busy
-            ? `Mengunduh… (${progress.toLocaleString("id-ID")} baris)`
+            ? `Mengunduh… ${progress}%`
             : `Unduh ${format.toUpperCase()}`}
         </Button>
       </div>
