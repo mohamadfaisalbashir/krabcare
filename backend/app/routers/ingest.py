@@ -1,5 +1,6 @@
 """POST endpoint gateway (Raspberry Pi). Semua endpoint di sini wajib X-API-Key."""
 
+import asyncio
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -19,6 +20,16 @@ router = APIRouter(
     dependencies=[Depends(verify_gateway_api_key)],
 )
 
+# Notifikasi diproses satu per satu, sesuai urutan kiriman masuk. Transition
+# check (kategori sebelumnya -> sekarang) membaca notifikasi terakhir; kalau
+# dua batch diproses bersamaan, keduanya bisa membaca status lama yang sama
+# dan notifikasi "berubah dari X ke Y" jadi dobel atau keliru. asyncio.Lock
+# melayani antrean FIFO, jadi urutannya tetap urutan kedatangan.
+# ponytail: kunci per proses, cukup karena produksi jalan satu worker uvicorn
+# (docker-compose.prod.yml). Kalau worker ditambah, pindah ke advisory lock
+# Postgres (pg_advisory_xact_lock).
+_kunci_notifikasi = asyncio.Lock()
+
 
 async def _latar(fn, *args) -> None:
     """Jalankan notifikasi sesudah respons terkirim, dengan session sendiri.
@@ -30,7 +41,7 @@ async def _latar(fn, *args) -> None:
     request sudah ditutup saat background task jalan, jadi buka yang baru.
     Gagal di sini cukup dicatat: gateway sudah dapat 201.
     """
-    async with AsyncSessionLocal() as db:
+    async with _kunci_notifikasi, AsyncSessionLocal() as db:
         try:
             await fn(db, *args)
         except Exception:
