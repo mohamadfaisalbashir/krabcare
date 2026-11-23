@@ -115,8 +115,9 @@ class _Api {
   const _Api();
 
   // Auth (routers/auth.py)
-  Future<Json> login(String email, String password) async =>
-      await _request('POST', '/auth/login', body: {'email': email, 'password': password});
+  /// [remember] = "Ingat saya": token operator 30 hari. Admin tetap 1 hari (backend).
+  Future<Json> login(String email, String password, {bool remember = false}) async =>
+      await _request('POST', '/auth/login', body: {'email': email, 'password': password, 'remember_me': remember});
   Future<Json> register(String email, String password, String nama) async =>
       await _request('POST', '/auth/register', body: {'email': email, 'password': password, 'nama': nama});
   Future<Json> getMe() async => await _request('GET', '/auth/me');

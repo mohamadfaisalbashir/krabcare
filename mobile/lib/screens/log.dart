@@ -249,7 +249,7 @@ class _LogScreenState extends State<LogScreen> {
                     segments: [
                       for (final p in paramKeys) ButtonSegment(value: p, label: Text(paramUi[p]!.short)),
                       const ButtonSegment(value: _amonia, label: Text('Amonia')),
-                      const ButtonSegment(value: _sistem, label: Text('⚠️ Sistem')),
+                      const ButtonSegment(value: _sistem, label: Text('Sistem')),
                     ],
                     selected: {param},
                     onSelectionChanged: (s) => set(() => param = s.first),

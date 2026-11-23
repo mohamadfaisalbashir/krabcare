@@ -68,6 +68,7 @@ class UserRegisterIn(BaseModel):
 class UserLoginIn(BaseModel):
     email: Email
     password: str = Field(max_length=MAKS_INPUT)
+    remember_me: bool = False
 
 
 class TokenOut(BaseModel):

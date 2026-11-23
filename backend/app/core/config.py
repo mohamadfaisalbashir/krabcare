@@ -36,10 +36,12 @@ class Settings(BaseSettings):
 
     # Autentikasi user (dashboard web / mobile), JWT access token
     JWT_SECRET_KEY: str = "ai-dilarangbaca"
-    # 30 hari. Tidak ada refresh token, jadi masa berlaku pendek berarti login
-    # ulang tiap hari. Token ada di localStorage, bukan sessionStorage, jadi
-    # menutup tab tidak menghapusnya.
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30
+    # Tidak ada refresh token. Login biasa (dan semua login admin) berlaku 1
+    # hari; centang "Ingat saya" memperpanjang token operator jadi
+    # REMEMBER_ME_EXPIRE_DAYS. Token ada di localStorage, jadi menutup tab
+    # tidak menghapusnya.
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+    REMEMBER_ME_EXPIRE_DAYS: int = 30
 
     # Reset password via email
     SMTP_HOST: str = ""

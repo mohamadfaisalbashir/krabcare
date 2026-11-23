@@ -80,16 +80,35 @@ def _sidik_sandi(password_hash: str) -> str:
     ).hexdigest()[:16]
 
 
-def create_access_token(user: User) -> str:
-    """Terbitkan JWT HS256 berisi user_id (sub), sidik sandi (pwd), dan masa berlaku."""
+def create_access_token(user: User, remember: bool = False) -> str:
+    """Terbitkan JWT HS256 berisi user_id (sub), sidik sandi (pwd), dan masa berlaku.
+
+    `remember` ("Ingat saya") memperpanjang token jadi REMEMBER_ME_EXPIRE_DAYS,
+    kecuali untuk admin: akun admin selalu ACCESS_TOKEN_EXPIRE_MINUTES. Klaim
+    `rem` dibawa supaya token pengganti (ganti sandi) tetap sepanjang aslinya.
+    """
+    diingat = remember and user.role != UserRole.ADMIN
+    umur = (
+        timedelta(days=settings.REMEMBER_ME_EXPIRE_DAYS)
+        if diingat
+        else timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
     now = datetime.now(timezone.utc)
     payload = {
         "sub": str(user.id),
         "pwd": _sidik_sandi(user.password_hash),
+        "rem": diingat,
         "iat": now,
-        "exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
+        "exp": now + umur,
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm="HS256")
+
+
+def token_diingat(token: str) -> bool:
+    """True kalau token terbit dengan "Ingat saya". Dipanggil sesudah token
+    lolos get_current_user, jadi decode-nya tidak akan gagal."""
+    payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=["HS256"])
+    return bool(payload.get("rem", False))
 
 async def _resolve_user_from_token(token: str, db: AsyncSession) -> User | None:
     """Decode JWT dan muat User-nya. Return None, bukan raise, kalau token atau

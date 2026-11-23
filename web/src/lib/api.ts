@@ -127,10 +127,10 @@ export const api = {
   // Auth (routers/auth.py)
 
   /** POST /auth/login → TokenOut */
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, remember_me = false) =>
     request<import("./types").TokenOut>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember_me }),
     }),
 
   /** POST /auth/register → UserOut */

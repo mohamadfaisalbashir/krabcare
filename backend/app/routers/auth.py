@@ -1,10 +1,11 @@
 """Router auth: register, login, profil sendiri, ganti password."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.rate_limit import batas_laju
-from app.core.security import get_current_user
+from app.core.security import get_current_user, token_diingat
 from app.db.session import get_db
 from app.models import User
 from app.models.enums import UserRole
@@ -136,15 +137,19 @@ async def delete_me(
 async def change_password(
     payload: PasswordChangeIn,
     current_user: User = Depends(get_current_user),
+    credentials: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
     db: AsyncSession = Depends(get_db),
 ) -> TokenOut:
     """Ganti password sendiri (wajib tahu password lama).
 
     Balasannya token baru: token lama, termasuk di perangkat lain, langsung
-    tidak berlaku. Klien harus menyimpan token ini sebagai pengganti.
+    tidak berlaku. Klien harus menyimpan token ini sebagai pengganti. Umurnya
+    mengikuti token yang dipakai ("Ingat saya" atau tidak).
     """
     try:
-        token = await auth_service.change_password(db, current_user, payload)
+        token = await auth_service.change_password(
+            db, current_user, payload, token_diingat(credentials.credentials)
+        )
     except AuthError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return TokenOut(access_token=token)

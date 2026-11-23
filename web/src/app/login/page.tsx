@@ -14,6 +14,8 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Token operator jadi 30 hari. Admin tetap 1 hari, diputuskan backend.
+  const [ingat, setIngat] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // true = sedang mengecek token lama di localStorage. Form baru ditampilkan
@@ -49,7 +51,7 @@ export default function LoginPage() {
     try {
       // Backend mengembalikan TokenOut { access_token, token_type } tanpa user
       // object; data user diambil terpisah lewat GET /auth/me.
-      const { access_token } = await api.login(email, password);
+      const { access_token } = await api.login(email, password, ingat);
       window.localStorage.setItem("access_token", access_token);
       const me = await api.getMe();
       setUser(me);
@@ -143,7 +145,16 @@ export default function LoginPage() {
                 required
                 autoComplete="current-password"
               />
-              <div className="mt-2 text-right">
+              <div className="mt-2 flex items-center justify-between">
+                <label className="flex cursor-pointer items-center gap-2 py-1 text-sm text-muted">
+                  <input
+                    type="checkbox"
+                    checked={ingat}
+                    onChange={(e) => setIngat(e.target.checked)}
+                    className="h-4 w-4 accent-aksen"
+                  />
+                  Ingat saya
+                </label>
                 <Link
                   href="/lupa-sandi"
                   className="inline-block py-1 text-sm font-medium text-aksen hover:underline"

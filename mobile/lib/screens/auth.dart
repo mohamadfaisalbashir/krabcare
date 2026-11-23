@@ -105,7 +105,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final form = GlobalKey<FormState>();
   final email = TextEditingController(), password = TextEditingController();
-  bool busy = false, hide = true, belumVerifikasi = false;
+  bool busy = false, hide = true, belumVerifikasi = false, ingat = false;
   String? error, info;
 
   Future<void> submit() async {
@@ -117,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
       belumVerifikasi = false;
     });
     try {
-      final res = await api.login(email.text.trim(), password.text);
+      final res = await api.login(email.text.trim(), password.text, remember: ingat);
       await saveToken(res['access_token']);
       await enterApp();
     } catch (e) {
@@ -178,12 +178,19 @@ class _LoginScreenState extends State<LoginScreen> {
           ],
         ),
       ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton(
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaSandiScreen())),
-          child: const Text('Lupa sandi?'),
-        ),
+      Row(
+        children: [
+          Checkbox(value: ingat, onChanged: (v) => setState(() => ingat = v ?? false)),
+          GestureDetector(
+            onTap: () => setState(() => ingat = !ingat),
+            child: Text('Ingat saya', style: TextStyle(color: cInk)),
+          ),
+          const Spacer(),
+          TextButton(
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LupaSandiScreen())),
+            child: const Text('Lupa sandi?'),
+          ),
+        ],
       ),
       ErrorText(error),
       if (info != null) Text(info!, style: TextStyle(color: statusColor('Aman'))),

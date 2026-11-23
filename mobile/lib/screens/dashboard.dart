@@ -284,13 +284,25 @@ class _PondCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = _statusItem(item);
     final r = item.reading;
-    // Sensor error atau tidak terbaca: "---", bukan angka.
-    String v(String p, [String suffix = '']) => nilaiError(r, item.sensor, p)
-        ? '---'
+    // Angka diwarnai statusnya, label tetap abu (PondCard.tsx di web).
+    // Sensor error atau tidak terbaca: "---" biru (warna ERROR), bukan angka.
+    TextSpan v(String p, [String suffix = '']) => nilaiError(r, item.sensor, p)
+        ? TextSpan(text: '---', style: TextStyle(color: statusColor('ERROR')))
         : r?[p] == null
-        ? 'N/A'
-        : '${formatValue(r![p])}$suffix';
+        ? const TextSpan(text: 'N/A')
+        : TextSpan(
+            text: '${formatValue(r![p])}$suffix',
+            style: TextStyle(color: statusColor(statusOf(p, r[p]))),
+          );
     final nh3 = item.ammonia?['fraction_nh3_pct'];
+    final nh3Span = amoniaError(r, item.sensor)
+        ? TextSpan(text: '---', style: TextStyle(color: statusColor('ERROR')))
+        : nh3 == null
+        ? const TextSpan(text: 'N/A')
+        : TextSpan(
+            text: '${formatFraksi(nh3)}%',
+            style: TextStyle(color: statusColor(riskToStatus(item.ammonia?['risk_level']))),
+          );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
@@ -351,12 +363,10 @@ class _PondCard extends StatelessWidget {
                   spacing: 12,
                   runSpacing: 4,
                   children: [
-                    Text('pH ${v('ph')}'),
-                    Text('Suhu ${v('temperature_c', '°')}'),
-                    Text('${v('salinity_ppt')} ppt'),
-                    Text(
-                      'NH₃ ${amoniaError(r, item.sensor) ? '---' : nh3 == null ? 'N/A' : '${formatFraksi(nh3)}%'}',
-                    ),
+                    Text.rich(TextSpan(children: [const TextSpan(text: 'pH '), v('ph')])),
+                    Text.rich(TextSpan(children: [const TextSpan(text: 'Suhu '), v('temperature_c', '°')])),
+                    Text.rich(TextSpan(children: [v('salinity_ppt'), const TextSpan(text: ' ppt')])),
+                    Text.rich(TextSpan(children: [const TextSpan(text: 'NH₃ '), nh3Span])),
                   ],
                 ),
               ),

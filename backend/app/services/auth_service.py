@@ -151,7 +151,7 @@ async def authenticate_user(db: AsyncSession, payload: UserLoginIn) -> str:
         raise EmailBelumTerverifikasi(
             "Email belum diverifikasi. Cek kotak masuk Anda untuk link aktivasi."
         )
-    return create_access_token(user)
+    return create_access_token(user, payload.remember_me)
 
 
 async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdateIn) -> User:
@@ -162,7 +162,9 @@ async def update_profile(db: AsyncSession, user: User, payload: UserProfileUpdat
     return user
 
 
-async def change_password(db: AsyncSession, user: User, payload: PasswordChangeIn) -> str:
+async def change_password(
+    db: AsyncSession, user: User, payload: PasswordChangeIn, remember: bool = False
+) -> str:
     """Ganti password; wajib lolos verifikasi password lama.
 
     Mengembalikan token baru. Token lama (di perangkat ini maupun perangkat
@@ -173,7 +175,7 @@ async def change_password(db: AsyncSession, user: User, payload: PasswordChangeI
         raise AuthError("Password lama salah")
     user.password_hash = await hash_password(payload.new_password)
     await db.commit()
-    return create_access_token(user)
+    return create_access_token(user, remember)
 
 
 async def request_password_reset(db: AsyncSession, email: str) -> None:
