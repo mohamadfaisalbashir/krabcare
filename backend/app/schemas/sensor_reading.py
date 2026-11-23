@@ -72,7 +72,7 @@ class SensorReadingOut(BaseModel):
 
 
 class SystemLogOut(BaseModel):
-    """Satu kejadian sistem untuk tab "Sistem error" di Log Historis."""
+    """Satu kejadian sistem untuk tab "Sistem" di Log Historis."""
 
     id: int
     device_id: int

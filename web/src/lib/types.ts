@@ -204,7 +204,7 @@ export type NotifSource = "classification" | "prediction" | "parameter" | "senso
 /** Filter GET /notifications: NotifSource, atau "sistem" = sensor + restart sekaligus. */
 export type NotifFilterSource = NotifSource | "sistem";
 
-/** GET /readings/system-logs: satu kejadian di tab "Sistem error" Log Historis. */
+/** GET /readings/system-logs: satu kejadian di tab "Sistem" Log Historis. */
 export interface SystemLog {
   id: number;
   device_id: number;

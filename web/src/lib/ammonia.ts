@@ -10,12 +10,12 @@ import { PARAM_KEYS, type ParamKey } from "./parameter";
  *  dan log sistem. Dipisah dari ParamKey supaya amonia dan log sistem tidak
  *  ikut grafik & ekspor sensor. */
 export const LOG_PARAM_AMONIA = "amonia" as const;
-/** Tab "Sistem error": sensor error/pulih dan restart (GET /readings/system-logs). */
+/** Tab "Sistem": sensor error/pulih dan restart (GET /readings/system-logs). */
 export const LOG_PARAM_SISTEM = "sistem" as const;
 export type LogParam = ParamKey | typeof LOG_PARAM_AMONIA | typeof LOG_PARAM_SISTEM;
 
 /** Label tab log sistem; bentuknya sama dengan AMONIA_UI supaya bisa jadi `meta`. */
-export const SISTEM_UI = { label: "Sistem error", short: "Sistem error", unit: "" } as const;
+export const SISTEM_UI = { label: "Sistem", short: "Sistem", unit: "" } as const;
 
 /** `?param=` dari URL -> LogParam, "ph" untuk nilai kosong atau tak dikenal.
  *  Dipakai halaman Log historis dan submenu Sidebar supaya keduanya sepakat. */

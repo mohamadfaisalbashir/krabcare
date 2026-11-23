@@ -13,7 +13,7 @@ import '../ui.dart';
 
 const _page = 25;
 const _amonia = 'amonia';
-/// Tab "Sistem error": sensor error/pulih dan restart (GET /readings/system-logs).
+/// Tab "Sistem": sensor error/pulih dan restart (GET /readings/system-logs).
 const _sistem = 'sistem';
 
 /// Interval tampil/unduh dalam menit; 0 = semua data apa adanya.
@@ -207,7 +207,7 @@ class _LogScreenState extends State<LogScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Log Historis ${isSistem ? 'Sistem Error' : isAmonia ? 'Amonia' : paramUi[param]!.short}'),
+            Text('Log Historis ${isSistem ? 'Sistem' : isAmonia ? 'Amonia' : paramUi[param]!.short}'),
             Text(_deskripsi[param] ?? '', style: TextStyle(fontSize: 12, color: cMuted)),
           ],
         ),

@@ -44,7 +44,7 @@ const STATUS_STYLE: Record<
   ERROR: { icon: CircleAlert, text: "text-status-error", bg: "bg-status-errorBg" },
 };
 
-/** Notifikasi tab "Sistem error": yang bermasalah alatnya, bukan airnya. */
+/** Notifikasi tab "Sistem": yang bermasalah alatnya, bukan airnya. */
 const SUMBER_SISTEM = new Set(["sensor", "restart"]);
 
 /**

@@ -8,7 +8,7 @@ from app.db.base import Base
 
 
 class SystemLog(Base):
-    """Log permanen kejadian sistem untuk tab "Sistem error" di Log Historis.
+    """Log permanen kejadian sistem untuk tab "Sistem" di Log Historis.
 
     Terpisah dari notifications karena notifikasi dihapus setelah 7 hari dan
     bisa dihapus user. Satu baris = satu perubahan status, bukan satu menit:

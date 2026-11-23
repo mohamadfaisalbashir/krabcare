@@ -21,7 +21,7 @@ async def list_notifications(
     unread_only: bool = False,
     limit: int = Query(default=50, gt=0, le=200),
     offset: int = Query(default=0, ge=0),
-    # "sistem" = sensor + restart sekaligus, untuk tab "Sistem error".
+    # "sistem" = sensor + restart sekaligus, untuk tab "Sistem".
     source: Literal["classification", "prediction", "parameter", "sensor", "restart", "sistem"]
     | None = None,
     device_id: IdQuery = None,

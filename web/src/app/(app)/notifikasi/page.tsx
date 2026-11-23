@@ -36,14 +36,13 @@ const FILTER_SOURCE: Record<NotifFilter, NotifFilterSource | undefined> = {
   sistem: "sistem",
 };
 
-/** `pendek`: label di layar sempit. Kelima tab harus muat satu baris di 360px;
- *  "Sistem error" penuh membuat deretannya meluber dan halaman bisa digeser. */
-const FILTER_BUTTONS: { id: NotifFilter; label: string; pendek?: string }[] = [
+/** Kelima tab harus muat satu baris di 360px, jadi labelnya dibuat pendek. */
+const FILTER_BUTTONS: { id: NotifFilter; label: string }[] = [
   { id: "semua", label: "Semua" },
   { id: "kolam", label: "Kualitas Kolam" },
   { id: "parameter", label: "Parameter" },
   { id: "prediksi", label: "Prediksi" },
-  { id: "sistem", label: "Sistem error", pendek: "Sistem" },
+  { id: "sistem", label: "Sistem" },
 ];
 
 export default function NotifikasiPage() {
@@ -379,14 +378,7 @@ function FilterSwitch({
               active ? "text-aksen-kuat" : "text-muted hover:text-ink"
             )}
           >
-            {btn.pendek ? (
-              <>
-                <span className="sm:hidden">{btn.pendek}</span>
-                <span className="hidden sm:inline">{btn.label}</span>
-              </>
-            ) : (
-              btn.label
-            )}
+            {btn.label}
           </button>
         );
       })}
@@ -490,7 +482,7 @@ function PanduanBaca() {
               </li>
               <li>
                 <StatusBadge status="ERROR" size="sm" /> yang bermasalah alatnya, bukan airnya:
-                sensor tidak terbaca atau perangkat restart. Semuanya ada di tab Sistem error.
+                sensor tidak terbaca atau perangkat restart. Semuanya ada di tab Sistem.
               </li>
             </ul>
           </li>

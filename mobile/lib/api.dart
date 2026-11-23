@@ -215,7 +215,7 @@ class _Api {
   /// = semua sehat. Aturannya di backend (services/sensor_status.py).
   Future<Json> getSensorStatus(int deviceId) async =>
       await _request('GET', '/readings/sensor-status', query: {'device_id': deviceId});
-  /// Log sensor error/pulih dan restart (tab "Sistem error" Log Historis), terbaru dulu.
+  /// Log sensor error/pulih dan restart (tab "Sistem" Log Historis), terbaru dulu.
   Future<List<Json>> getSystemLogs({
     int? deviceId,
     String? startTime,

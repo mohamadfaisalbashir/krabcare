@@ -15,7 +15,7 @@ const _tabs = [
   (label: 'Parameter', source: 'parameter'),
   (label: 'Prediksi', source: 'prediction'),
   // 'sistem' = sensor error/pulih + restart; backend memetakannya ke dua source.
-  (label: 'Sistem error', source: 'sistem'),
+  (label: 'Sistem', source: 'sistem'),
 ];
 const _sourceLabel = {
   'classification': 'Kondisi aktual',
@@ -405,7 +405,7 @@ class _PanduanBaca extends StatelessWidget {
           baris(
             const StatusBadge('ERROR'),
             'yang bermasalah alatnya, bukan airnya: sensor tidak terbaca atau perangkat restart. '
-                'Semuanya ada di tab Sistem error.',
+                'Semuanya ada di tab Sistem.',
           ),
           judul('5. Belum dibaca'),
           baris(
