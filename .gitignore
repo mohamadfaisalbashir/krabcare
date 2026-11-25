@@ -68,8 +68,7 @@ krabcare_tests/
 *.jsonl
 *.xlsx
 
-# Raspi
-raspi/
+
 
 # Postman
 .postman/
